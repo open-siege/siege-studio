@@ -10,8 +10,11 @@
 namespace siege::resource::atd
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
-  bool atd_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -40,14 +43,10 @@ namespace siege::resource::atd
     std::array<char, 80> filename;
   };
 
-  atd_resource_reader::atd_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  std::vector<atd_resource_reader::content_info> atd_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
-    std::vector<atd_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     endian::little_uint32_t file_count;
     stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
@@ -77,7 +76,7 @@ namespace siege::resource::atd
     return results;
   }
 
-  void atd_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -85,7 +84,7 @@ namespace siege::resource::atd
     }
   }
 
-  void atd_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
     std::copy_n(std::istreambuf_iterator(stream),
@@ -93,5 +92,15 @@ namespace siege::resource::atd
       std::ostreambuf_iterator(output));
 
     stream.seekg(2, std::ios::cur);
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::atd

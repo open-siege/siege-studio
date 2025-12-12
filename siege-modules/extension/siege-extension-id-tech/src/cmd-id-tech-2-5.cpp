@@ -1,6 +1,4 @@
 #include <siege/platform/win/window_module.hpp>
-#include <siege/resource/zip_resource.hpp>
-#include <siege/resource/pak_resource.hpp>
 #include <algorithm>
 #include <detours.h>
 #include <siege/extension/shared.hpp>

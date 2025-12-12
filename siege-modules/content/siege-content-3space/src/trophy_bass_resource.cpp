@@ -8,6 +8,9 @@
 namespace siege::resource::vol::trophy_bass
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto tbv_tag = platform::to_tag<9>({ 'T', 'B', 'V', 'o', 'l', 'u', 'm', 'e', '\0' });
 
@@ -50,11 +53,7 @@ namespace siege::resource::vol::trophy_bass
 
   using folder_info = siege::platform::folder_info;
 
-  rbx_resource_reader::rbx_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool rbx_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_rbx(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -64,7 +63,7 @@ namespace siege::resource::vol::trophy_bass
     return tag == rbx_tag;
   }
 
-  std::vector<std::variant<folder_info, siege::platform::file_info>> rbx_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<std::variant<folder_info, siege::platform::file_info>> get_rbx_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<siege::platform::file_info> results;
@@ -139,7 +138,7 @@ namespace siege::resource::vol::trophy_bass
     return final_results;
   }
 
-  void rbx_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_rbx_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -151,20 +150,26 @@ namespace siege::resource::vol::trophy_bass
     }
   }
 
-  void rbx_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_rbx_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
-    set_stream_position(stream, info);
+    set_rbx_stream_position(stream, info);
 
     std::copy_n(std::istreambuf_iterator(stream),
       info.size,
       std::ostreambuf_iterator(output));
   }
 
-  tbv_resource_reader::tbv_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  siege::platform::resource_reader make_rbx_resource_reader()
   {
+    return {
+      is_stream_rbx,
+      get_rbx_content_listing,
+      set_rbx_stream_position,
+      extract_rbx_file_contents
+    };
   }
 
-  bool tbv_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_tbv(std::istream& stream)
   {
     std::array<std::byte, 9> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -174,7 +179,7 @@ namespace siege::resource::vol::trophy_bass
     return tag == tbv_tag;
   }
 
-  std::vector<rbx_resource_reader::content_info> tbv_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_tbv_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<siege::platform::file_info> results;
@@ -245,7 +250,7 @@ namespace siege::resource::vol::trophy_bass
     return final_results;
   }
 
-  void tbv_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_tbv_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -257,12 +262,22 @@ namespace siege::resource::vol::trophy_bass
     }
   }
 
-  void tbv_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_tbv_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
-    set_stream_position(stream, info);
+    set_tbv_stream_position(stream, info);
 
     std::copy_n(std::istreambuf_iterator(stream),
       info.size,
       std::ostreambuf_iterator(output));
+  }
+
+  siege::platform::resource_reader make_tbv_resource_reader()
+  {
+    return {
+      is_stream_tbv,
+      get_tbv_content_listing,
+      set_tbv_stream_position,
+      extract_tbv_file_contents
+    };
   }
 }// namespace siege::resource::vol::trophy_bass

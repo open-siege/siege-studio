@@ -7,20 +7,22 @@
 #include <utility>
 #include <zip.h>
 
-#include "siege/resource/zip_resource.hpp"
+#include <siege/resource/common_resources.hpp>
 #include <siege/platform/stream.hpp>
 
 namespace fs = std::filesystem;
 
 namespace siege::resource::zip
 {
-  using folder_info = siege::platform::folder_info;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto file_record_tag = platform::to_tag<4>({ 'P', 'K', 0x03, 0x04 });
   constexpr auto folder_record_tag = platform::to_tag<4>({ 'P', 'K', 0x01, 0x02 });
   constexpr auto end_record_tag = platform::to_tag<4>({ 'P', 'K', 0x05, 0x06 });
 
-  bool stream_is_supported(std::istream& stream)
+  bool is_stream_zip(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -144,7 +146,7 @@ namespace siege::resource::zip
     return std::any_cast<zip_cache&>(cache);
   }
 
-  std::vector<zip_resource_reader::content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     auto& zip_cache = cache_as_zip_cache(cache);
@@ -217,7 +219,7 @@ namespace siege::resource::zip
       zip_close(zip_file);
     }
 
-    std::vector<zip_resource_reader::content_info> results;
+    std::vector<content_info> results;
     for (auto& entry : cache_entry->second.stat_cache)
     {
       fs::path name(entry.name);
@@ -331,5 +333,15 @@ namespace siege::resource::zip
     std::copy_n(reinterpret_cast<char*>(contents.data()),
       info.size,
       std::ostreambuf_iterator(output));
+  }
+
+  siege::platform::resource_reader make_zip_resource_reader()
+  {
+    return {
+      is_stream_zip,
+      get_content_listing,
+      nullptr,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::zip

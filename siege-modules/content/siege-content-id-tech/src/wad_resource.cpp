@@ -24,7 +24,9 @@ namespace fs = std::filesystem;
 namespace siege::resource::wad
 {
   namespace endian = siege::platform;
-  using folder_info = siege::platform::folder_info;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto pod_tag = platform::to_tag<8>("PODFILE");
 
@@ -55,11 +57,7 @@ namespace siege::resource::wad
     endian::little_uint32_t string_offset;
   };
 
-  wad_resource_reader::wad_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool wad_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 8> tag{};
@@ -135,7 +133,7 @@ namespace siege::resource::wad
     }
   }
 
-  std::vector<wad_resource_reader::content_info> wad_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 8> tag{};
@@ -151,7 +149,7 @@ namespace siege::resource::wad
 
       if (header.file_count == 0)
       {
-        return std::vector<wad_resource_reader::content_info>{};
+        return std::vector<content_info>{};
       }
       std::vector<legacy_file_entry> legacy_entries;
       legacy_entries.assign(header.file_count, {});
@@ -164,7 +162,7 @@ namespace siege::resource::wad
       std::string string_table(left_over_space, '\0');
       stream.read(string_table.data(), left_over_space);
 
-      std::vector<wad_resource_reader::content_info> results{};
+      std::vector<content_info> results{};
       results.reserve(header.file_count);
 
       std::optional<std::string_view> current_group = std::nullopt;
@@ -200,7 +198,7 @@ namespace siege::resource::wad
               break;
             }
 
-            results.emplace_back(wad_resource_reader::file_info{
+            results.emplace_back(file_info{
               .filename = std::string(filename) + std::to_string(index) + "." + "wav",
               .offset = wav_offset,
               .size = wav_size + 8u,
@@ -249,7 +247,7 @@ namespace siege::resource::wad
           generate_bitmap_metadata(stream, current_offset + entry.offset, entry.size, default_palette, extension, metadata);
         }
 
-        results.emplace_back(wad_resource_reader::file_info{
+        results.emplace_back(file_info{
           .filename = !extension.empty() ? std::string(filename) + "." + extension : std::string(filename),
           .offset = entry.offset,
           .size = entry.size,
@@ -274,7 +272,7 @@ namespace siege::resource::wad
 
     if (file_count == 0)
     {
-      return std::vector<wad_resource_reader::content_info>{};
+      return std::vector<content_info>{};
     }
 
     std::vector<pod_file_entry> entries;
@@ -291,7 +289,7 @@ namespace siege::resource::wad
 
     auto index = 0;
 
-    std::vector<wad_resource_reader::content_info> results{};
+    std::vector<content_info> results{};
     results.reserve(file_count);
 
     std::optional<std::string_view> current_group = std::nullopt;
@@ -374,7 +372,7 @@ namespace siege::resource::wad
         generate_bitmap_metadata(stream, current_offset + entry.offset, entry.size, current_palette, extension, metadata);
       }
 
-      results.emplace_back(wad_resource_reader::file_info{
+      results.emplace_back(file_info{
         .filename = !extension.empty() ? std::string(filename) + "." + extension : std::string(filename),
         .offset = entry.offset,
         .size = entry.size,
@@ -387,7 +385,7 @@ namespace siege::resource::wad
     return results;
   }
 
-  void wad_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -395,7 +393,7 @@ namespace siege::resource::wad
     }
   }
 
-  void wad_resource_reader::extract_file_contents(std::any&, std::istream& stream,
+  void extract_file_contents(std::any&, std::istream& stream,
     const siege::platform::file_info& info,
     std::ostream& output)
   {
@@ -404,5 +402,15 @@ namespace siege::resource::wad
     std::copy_n(std::istreambuf_iterator(stream),
       info.size,
       std::ostreambuf_iterator(output));
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::wad

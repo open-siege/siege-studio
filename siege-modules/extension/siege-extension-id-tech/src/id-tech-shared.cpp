@@ -10,7 +10,7 @@
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/resource/pak_resource.hpp>
-#include <siege/resource/zip_resource.hpp>
+#include <siege/resource/common_resources.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
@@ -344,7 +344,7 @@ std::optional<siege::configuration::text_game_config> load_config_from_pak(fs::p
   else if (fs::exists(pak_path, last_error))
   {
     std::any cache;
-    siege::resource::pak::pak_resource_reader reader;
+    auto reader = siege::resource::pak::make_resource_reader();
 
     std::ifstream stream(pak_path, std::ios::binary);
     auto contents = reader.get_content_listing(cache, stream, { .archive_path = pak_path, .folder_path = pak_folder_path });
@@ -383,7 +383,7 @@ std::optional<siege::configuration::text_game_config> load_config_from_pk3(fs::p
   else if (fs::exists(pak_path, last_error))
   {
     std::any cache;
-    siege::resource::zip::zip_resource_reader reader;
+    auto reader = siege::resource::pak::make_resource_reader();
 
     std::ifstream stream(pak_path, std::ios::binary);
     auto contents = reader.get_content_listing(cache, stream, { .archive_path = pak_path, .folder_path = pak_folder_path });
@@ -967,13 +967,13 @@ predefined_string*
 
         std::optional<siege::platform::resource_reader> reader;
 
-        if (siege::resource::pak::stream_is_supported(stream))
+        if (siege::resource::pak::is_stream_supported(stream))
         {
-          reader.emplace(siege::resource::pak::pak_resource_reader());
+          reader.emplace(siege::resource::pak::make_resource_reader());
         }
-        else if (siege::resource::zip::stream_is_supported(stream))
+        else if (siege::resource::zip::is_stream_zip(stream))
         {
-          reader.emplace(siege::resource::zip::zip_resource_reader());
+          reader.emplace(siege::resource::zip::make_zip_resource_reader());
         }
         else
         {
@@ -1087,9 +1087,9 @@ predefined_string*
         std::any cache;
         std::ifstream stream(dir_entry, std::ios::binary);
 
-        siege::resource::zip::zip_resource_reader reader;
+        auto reader = siege::resource::zip::make_zip_resource_reader();
 
-        if (!reader.stream_is_supported(stream))
+        if (!reader.is_stream_supported(stream))
         {
           return;
         }

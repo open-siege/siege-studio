@@ -12,6 +12,9 @@ namespace siege::resource::res
 {
   namespace endian = siege::platform;
   namespace fs = std::filesystem;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr static auto riff_tag = platform::to_tag<4>("RIFF");
   constexpr static auto cdxa_tag = platform::to_tag<4>("CDXA");
@@ -56,12 +59,7 @@ namespace siege::resource::res
     endian::little_uint32_t size;
   };
 
-
-  res_resource_reader::res_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool res_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -84,10 +82,10 @@ namespace siege::resource::res
     return false;
   }
 
-  std::vector<res_resource_reader::content_info> res_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
-    std::vector<res_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
 
     res_header header{};
@@ -189,7 +187,7 @@ namespace siege::resource::res
       {
         if (folder.first.parent_path() == query.folder_path)
         {
-          results.emplace_back(res_resource_reader::folder_info{
+          results.emplace_back(folder_info{
             .name = folder.first.filename().string(),
             .file_count = folder.second.size(),
             .full_path = folder.first,
@@ -224,7 +222,7 @@ namespace siege::resource::res
 
         if (parent_path == query.folder_path)
         {
-          results.emplace_back(res_resource_reader::file_info{
+          results.emplace_back(file_info{
             .filename = fs::path(last_string).make_preferred().filename().string(),
             .offset = (std::size_t)main_index + (file.sector_number * total_sector_size),
             .size = file.size,
@@ -239,7 +237,7 @@ namespace siege::resource::res
     return results;
   }
 
-  void res_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -247,7 +245,7 @@ namespace siege::resource::res
     }
   }
 
-  void res_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (!info.compressed_size)
     {
@@ -273,5 +271,15 @@ namespace siege::resource::res
 
       stream.seekg(form_2_data_size - sector_size + 4, std::ios::cur);
     }
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::res

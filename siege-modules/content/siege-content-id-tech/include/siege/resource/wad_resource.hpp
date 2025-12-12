@@ -13,17 +13,8 @@
 
 namespace siege::resource::wad
 {
-  struct wad_resource_reader : siege::platform::resource_reader
-  {
-    wad_resource_reader();
-    static bool stream_is_supported(std::istream& stream);
-    static std::vector<content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query);
-    static void set_stream_position(std::istream& stream, const siege::platform::file_info& info);
-    static void extract_file_contents(std::any&, std::istream& stream,
-      const siege::platform::file_info& info,
-      std::ostream& output);
-  };
-
+  bool is_stream_supported(std::istream& stream);
+  siege::platform::resource_reader make_resource_reader();
 }// namespace siege::resource::wad
 
 

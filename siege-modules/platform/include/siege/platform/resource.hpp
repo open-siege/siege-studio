@@ -114,7 +114,7 @@ namespace siege::platform
     using file_info = siege::platform::file_info;
     using content_info = std::variant<folder_info, siege::platform::file_info>;
 
-    bool (&stream_is_supported)(std::istream&);
+    bool (&is_stream_supported)(std::istream&);
 
     std::vector<content_info> (&get_content_listing)(std::any&, std::istream&, const platform::listing_query& query);
 

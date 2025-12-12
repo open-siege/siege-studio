@@ -62,7 +62,7 @@ namespace siege::resource::pak
 
   using file_entry = std::variant<pak_file_entry, daikatana_pak_file_entry, dat_file_entry, sin_file_entry>;
 
-  bool stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -239,8 +239,7 @@ namespace siege::resource::pak
         for (auto* file : folder.second)
         {
           std::visit([&](auto& entry) {
-            if constexpr (std::is_same_v<std::decay_t<decltype(entry)>, pak_file_entry> || 
-                std::is_same_v<std::decay_t<decltype(entry)>, sin_file_entry>)
+            if constexpr (std::is_same_v<std::decay_t<decltype(entry)>, pak_file_entry> || std::is_same_v<std::decay_t<decltype(entry)>, sin_file_entry>)
             {
               results.emplace_back(platform::file_info{
                 .filename = fs::path(entry.path.data()).make_preferred().filename(),
@@ -398,5 +397,15 @@ namespace siege::resource::pak
         info.size,
         std::ostreambuf_iterator(output));
     }
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::pak

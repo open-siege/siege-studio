@@ -21,6 +21,9 @@ namespace fs = std::filesystem;
 namespace siege::resource::clm
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto clm_tag = platform::to_tag<26>("OP2 Clump File Version 1.0");
 
@@ -31,11 +34,8 @@ namespace siege::resource::clm
     endian::little_uint32_t size;
   };
 
-  clm_resource_reader::clm_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
 
-  bool clm_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     std::array<std::byte, 26> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -45,7 +45,7 @@ namespace siege::resource::clm
     return tag == clm_tag;
   }
 
-  std::vector<clm_resource_reader::content_info> clm_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 26> tag{};
@@ -54,7 +54,7 @@ namespace siege::resource::clm
 
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
-    std::vector<clm_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     if (tag != clm_tag)
     {
@@ -79,7 +79,7 @@ namespace siege::resource::clm
       {
         std::string name = *entry.name.rbegin() == '\0' ? std::string(entry.name.data()) : std::string(entry.name.data(), entry.name.size());
 
-        results.emplace_back(clm_resource_reader::file_info{
+        results.emplace_back(file_info{
           .filename = name + ".wav",
           .offset = entry.offset,
           .size = entry.size,
@@ -93,7 +93,7 @@ namespace siege::resource::clm
     return results;
   }
 
-  void clm_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -101,12 +101,22 @@ namespace siege::resource::clm
     }
   }
 
-  void clm_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
 
     std::copy_n(std::istreambuf_iterator(stream),
       info.size,
       std::ostreambuf_iterator(output));
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::clm

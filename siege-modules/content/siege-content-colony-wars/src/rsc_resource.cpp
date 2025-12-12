@@ -9,6 +9,9 @@
 namespace siege::resource::rsc
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   // actually the number of files in the file
   constexpr static auto rsc_v1_tag = platform::to_tag<4>({ 0xf6, 0x01, 0x00, 0x00 });
@@ -48,11 +51,7 @@ namespace siege::resource::rsc
     endian::little_uint32_t group_entry_index;
   };
 
-  rsc_resource_reader::rsc_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool rsc_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -68,10 +67,10 @@ namespace siege::resource::rsc
     return tag == rsc_v1_tag || tag == rsc_v2_tag || tag == rsc_v3_tag;
   }
 
-  std::vector<rsc_resource_reader::content_info> rsc_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
-    std::vector<rsc_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -93,7 +92,7 @@ namespace siege::resource::rsc
       if (std::isalpha(first.padding[0]) || std::isdigit(first.padding[0]))
       {
         stream.seekg((std::size_t)current_pos + sizeof(rsc_v2_file_entry), std::ios::beg);
-        auto& entry = std::get<rsc_resource_reader::file_info>(results.emplace_back(rsc_resource_reader::file_info{}));
+        auto& entry = std::get<file_info>(results.emplace_back(file_info{}));
         entry.archive_path = query.archive_path;
         entry.folder_path = query.archive_path;
         entry.filename = first.path.data();
@@ -102,7 +101,7 @@ namespace siege::resource::rsc
       }
       else
       {
-        auto& entry = std::get<rsc_resource_reader::file_info>(results.emplace_back(rsc_resource_reader::file_info{}));
+        auto& entry = std::get<file_info>(results.emplace_back(file_info{}));
         entry.archive_path = query.archive_path;
         entry.folder_path = query.archive_path;
         entry.filename = first.path.data();
@@ -124,11 +123,11 @@ namespace siege::resource::rsc
         rsc_v1_file_entry next{};
         stream.read((char*)&next, sizeof(next));
 
-        auto& previous = std::get<rsc_resource_reader::file_info>(results.back());
+        auto& previous = std::get<file_info>(results.back());
 
         if (next.path[0] != '\0')
         {
-          auto& entry = std::get<rsc_resource_reader::file_info>(results.emplace_back(rsc_resource_reader::file_info{}));
+          auto& entry = std::get<file_info>(results.emplace_back(file_info{}));
           entry.archive_path = query.archive_path;
           entry.folder_path = query.archive_path;
           entry.filename = next.path.data();
@@ -145,11 +144,11 @@ namespace siege::resource::rsc
         rsc_v2_file_entry next{};
         stream.read((char*)&next, sizeof(next));
 
-        auto& previous = std::get<rsc_resource_reader::file_info>(results.back());
+        auto& previous = std::get<file_info>(results.back());
 
         if (next.path[0] != '\0')
         {
-          auto& entry = std::get<rsc_resource_reader::file_info>(results.emplace_back(rsc_resource_reader::file_info{}));
+          auto& entry = std::get<file_info>(results.emplace_back(file_info{}));
 
           entry.archive_path = query.archive_path;
           entry.folder_path = query.archive_path;
@@ -200,7 +199,7 @@ namespace siege::resource::rsc
           try
           {
 
-            auto& entry = std::get<rsc_resource_reader::file_info>(results.emplace_back(rsc_resource_reader::file_info{}));
+            auto& entry = std::get<file_info>(results.emplace_back(file_info{}));
             entry.archive_path = query.archive_path;
             entry.folder_path = query.archive_path;
 
@@ -257,7 +256,7 @@ namespace siege::resource::rsc
     return results;
   }
 
-  void rsc_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -265,13 +264,20 @@ namespace siege::resource::rsc
     }
   }
 
-  void rsc_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
 
     std::copy_n(std::istreambuf_iterator(stream),
       info.size,
       std::ostreambuf_iterator(output));
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported, get_content_listing, set_stream_position, extract_file_contents
+    };
   }
 }// namespace siege::resource::rsc
 //

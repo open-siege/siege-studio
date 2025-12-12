@@ -1,5 +1,4 @@
 #include <siege/platform/win/window_module.hpp>
-#include <siege/resource/zip_resource.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 

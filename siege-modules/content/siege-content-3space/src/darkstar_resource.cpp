@@ -15,6 +15,9 @@ namespace siege::resource::vol::darkstar
   using namespace std::literals;
 
   using file_tag = std::array<std::byte, 4>;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using platform_file_info = platform::resource_reader::file_info;
 
   // TODO add some checks for these items
   constexpr auto vol_index_tag = platform::to_tag<4>({ 'v', 'o', 'l', 'i' });
@@ -387,11 +390,7 @@ namespace siege::resource::vol::darkstar
 
   using folder_info = siege::platform::folder_info;
 
-  vol_resource_reader::vol_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool vol_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     platform::read(stream, tag.data(), sizeof(tag));
@@ -401,10 +400,10 @@ namespace siege::resource::vol::darkstar
     return tag == vol_file_tag || tag == alt_vol_file_tag || tag == old_vol_file_tag;
   }
 
-  std::vector<vol_resource_reader::content_info> vol_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
-    std::vector<vol_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     auto raw_results = get_file_metadata(stream);
 
@@ -440,7 +439,7 @@ namespace siege::resource::vol::darkstar
     return results;
   }
 
-  void vol_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -452,7 +451,7 @@ namespace siege::resource::vol::darkstar
     }
   }
 
-  void vol_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (info.compression_type == siege::platform::compression_type::none)
     {
@@ -561,5 +560,15 @@ namespace siege::resource::vol::darkstar
         }
       }
     }
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::vol::darkstar

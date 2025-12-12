@@ -11,12 +11,11 @@
 namespace siege::resource::cln
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
-  cln_resource_reader::cln_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool cln_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -80,8 +79,8 @@ namespace siege::resource::cln
   {
     std::size_t count{};
     for (std::string::size_type pos{};
-         inout.npos != (pos = inout.find(what.data(), pos, what.length()));
-         pos += with.length(), ++count)
+      inout.npos != (pos = inout.find(what.data(), pos, what.length()));
+      pos += with.length(), ++count)
     {
       inout.replace(pos, what.length(), with.data(), with.length());
     }
@@ -110,7 +109,7 @@ namespace siege::resource::cln
     return input.rfind(value_to_find, 0) == 0;
   }
 
-  std::vector<cln_resource_reader::content_info> cln_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     thread_local std::unordered_map<std::string, std::vector<file_entry>> cache;
@@ -121,7 +120,7 @@ namespace siege::resource::cln
       cached_entries = cache.emplace(query.archive_path.string(), get_file_entries(stream)).first;
     }
 
-    std::vector<cln_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     if (cached_entries == cache.end())
     {
@@ -219,7 +218,7 @@ namespace siege::resource::cln
 
   constexpr auto file_data_header = std::string_view("MAGIC_NUMBER");
 
-  void cln_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -231,7 +230,7 @@ namespace siege::resource::cln
     }
   }
 
-  void cln_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (info.compression_type == platform::compression_type::none)
     {
@@ -270,5 +269,15 @@ namespace siege::resource::cln
         output.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
       }
     }
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::cln

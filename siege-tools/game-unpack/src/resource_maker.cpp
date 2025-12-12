@@ -1,28 +1,25 @@
-#include <siege/resource/zip_resource.hpp>
-#include <siege/resource/iso_resource.hpp>
-#include <siege/resource/seven_zip_resource.hpp>
-#include <siege/resource/cab_resource.hpp>
+#include <siege/resource/common_resources.hpp>
 
 namespace siege::resource
 {
   bool is_resource_readable(std::istream& stream)
   {
-    return zip::stream_is_supported(stream) || cab::stream_is_supported(stream) || iso::stream_is_supported(stream);
+    return zip::is_stream_zip(stream) || cab::is_stream_supported(stream) || iso::is_stream_supported(stream);
   }
 
   siege::platform::resource_reader make_resource_reader(std::istream& stream)
   {
-    if (zip::stream_is_supported(stream))
+    if (zip::is_stream_zip(stream))
     {
-      return zip::zip_resource_reader();
+      return zip::make_7zip_resource_reader();
     }
-    else if (cab::stream_is_supported(stream))
+    else if (cab::is_stream_supported(stream))
     {
-      return cab::cab_resource_reader();
+      return cab::make_resource_reader();
     }
-    else if (iso::stream_is_supported(stream))
+    else if (iso::is_stream_supported(stream))
     {
-      return iso::iso_resource_reader();
+      return iso::make_resource_reader();
     }
     else
     {

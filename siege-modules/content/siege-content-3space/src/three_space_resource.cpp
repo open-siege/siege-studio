@@ -12,6 +12,9 @@
 namespace siege::resource::vol::three_space
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto rmf_tags = std::array<std::array<std::byte, 4>, 12>{
     platform::to_tag<4>({ 0x00, 0x01, 0x05, 0x07 }),
@@ -323,11 +326,7 @@ namespace siege::resource::vol::three_space
     return files;
   }
 
-  rmf_resource_reader::rmf_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool rmf_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_rmf(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -349,7 +348,7 @@ namespace siege::resource::vol::three_space
     return result;
   }
 
-  std::vector<rmf_resource_reader::content_info> rmf_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_rmf_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<std::variant<siege::platform::folder_info, siege::platform::file_info>> results;
@@ -380,7 +379,7 @@ namespace siege::resource::vol::three_space
     return results;
   }
 
-  void rmf_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_rmf_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     constexpr auto header_size = sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t);
 
@@ -394,25 +393,28 @@ namespace siege::resource::vol::three_space
     }
   }
 
-  void rmf_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_rmf_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     auto main_path = info.folder_path.parent_path().parent_path();
     auto resource_file = info.folder_path.filename();
 
     auto real_stream = std::ifstream(main_path / resource_file, std::ios::binary);
 
-    set_stream_position(real_stream, info);
+    set_rmf_stream_position(real_stream, info);
 
     std::copy_n(std::istreambuf_iterator(real_stream),
       info.size,
       std::ostreambuf_iterator(output));
   }
 
-  dyn_resource_reader::dyn_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  siege::platform::resource_reader make_rmf_resource_reader()
   {
+    return {
+      is_stream_rmf, get_rmf_content_listing, set_rmf_stream_position, extract_rmf_file_contents
+    };
   }
 
-  bool dyn_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_dyn(std::istream& stream)
   {
     std::array<std::byte, 20> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -422,10 +424,10 @@ namespace siege::resource::vol::three_space
     return tag == dyn_tag;
   }
 
-  std::vector<dyn_resource_reader::content_info> dyn_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_dyn_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
-    std::vector<dyn_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     auto raw_results = get_dyn_data(stream);
 
@@ -440,7 +442,7 @@ namespace siege::resource::vol::three_space
     return results;
   }
 
-  void dyn_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_dyn_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     constexpr auto header_size = sizeof(std::array<std::byte, 13>) + sizeof(endian::little_int32_t);
 
@@ -454,20 +456,23 @@ namespace siege::resource::vol::three_space
     }
   }
 
-  void dyn_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_dyn_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
-    set_stream_position(stream, info);
+    set_dyn_stream_position(stream, info);
 
     std::copy_n(std::istreambuf_iterator(stream),
       info.size,
       std::ostreambuf_iterator(output));
   }
 
-  vol_resource_reader::vol_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
+  siege::platform::resource_reader make_dyn_resource_reader()
   {
+    return {
+      is_stream_dyn, get_dyn_content_listing, set_dyn_stream_position, extract_dyn_file_contents
+    };
   }
 
-  bool vol_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_vol(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -477,10 +482,10 @@ namespace siege::resource::vol::three_space
     return tag == vol_tag;
   }
 
-  std::vector<dyn_resource_reader::content_info> vol_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_vol_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
-    std::vector<dyn_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     if (query.archive_path == query.folder_path)
     {
@@ -518,7 +523,7 @@ namespace siege::resource::vol::three_space
 
   constexpr auto header_size = sizeof(std::byte) + sizeof(std::array<endian::little_uint32_t, 2>);
 
-  void vol_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_vol_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -530,7 +535,7 @@ namespace siege::resource::vol::three_space
     }
   }
 
-  void vol_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_vol_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     auto current_position = stream.tellg();
     stream.seekg(0, std::ios::end);
@@ -538,12 +543,22 @@ namespace siege::resource::vol::three_space
 
     stream.seekg(current_position, std::ios::beg);
 
-    set_stream_position(stream, info);
+    set_vol_stream_position(stream, info);
 
     const auto remaining_bytes = last_byte - info.offset - header_size;
 
     std::copy_n(std::istreambuf_iterator(stream),
       info.size > remaining_bytes ? remaining_bytes : info.size,
       std::ostreambuf_iterator(output));
+  }
+
+  siege::platform::resource_reader make_vol_resource_reader()
+  {
+    return {
+      is_stream_vol,
+      get_vol_content_listing,
+      set_vol_stream_position,
+      extract_vol_file_contents
+    };
   }
 }// namespace siege::resource::vol::three_space

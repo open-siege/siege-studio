@@ -12,6 +12,9 @@
 namespace siege::resource::mw4
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto file_tag = platform::to_tag<4>("#VBD");
 
@@ -40,11 +43,7 @@ namespace siege::resource::mw4
     char string_size;
   };
 
-  mw4_resource_reader::mw4_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool mw4_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     mw4_header header{};
@@ -53,7 +52,7 @@ namespace siege::resource::mw4
     return header.tag == file_tag && header.version == 4;
   }
 
-  std::vector<mw4_resource_reader::content_info> mw4_resource_reader::get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -66,7 +65,7 @@ namespace siege::resource::mw4
     {
       return {};
     }
-    std::vector<mw4_resource_reader::content_info> results;
+    std::vector<content_info> results;
     results.reserve(header.first_file_data_offset / (sizeof(mw4_file_entry) * 2));
 
     std::size_t offset = header.first_file_data_offset;
@@ -85,7 +84,7 @@ namespace siege::resource::mw4
         continue;
       }
 
-      results.emplace_back(mw4_resource_reader::file_info{
+      results.emplace_back(file_info{
         .filename = std::move(filename),
         .offset = (std::size_t)offset,
         .size = entry.uncompressed_size,
@@ -102,7 +101,7 @@ namespace siege::resource::mw4
     return results;
   }
 
-  void mw4_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -110,7 +109,7 @@ namespace siege::resource::mw4
     }
   }
 
-  void mw4_resource_reader::extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (!info.compressed_size)
     {
@@ -122,5 +121,15 @@ namespace siege::resource::mw4
     std::copy_n(std::istreambuf_iterator(stream),
       *info.compressed_size,
       std::ostreambuf_iterator(output));
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      set_stream_position,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::mw4

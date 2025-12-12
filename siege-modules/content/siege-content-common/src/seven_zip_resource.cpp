@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include <siege/resource/seven_zip_resource.hpp>
+#include <siege/resource/common_resources.hpp>
 #include <siege/resource/external_utils.hpp>
 
 namespace fs = std::filesystem;
@@ -21,7 +21,9 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace siege::resource::zip
 {
-  using folder_info = siege::platform::folder_info;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto seven7_file_record_tag = platform::to_tag<4>({ '7', 'z', 0xbc, 0xaf });
   constexpr auto gz_deflate_file_record_tag = platform::to_tag<4>({ 0x1f, 0x8b, 0x08, 0x00 });
@@ -35,11 +37,7 @@ namespace siege::resource::zip
     return str;
   }
 
-  seven_zip_resource_reader::seven_zip_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, nullptr, extract_file_contents }
-  {
-  }
-
-  bool seven_zip_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_7zip(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
@@ -52,16 +50,26 @@ namespace siege::resource::zip
            tag == common_exe_tag;
   }
 
-  std::vector<seven_zip_resource_reader::content_info> seven_zip_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_zip_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     return zip_get_content_listing(cache, query);
   }
 
-  void seven_zip_resource_reader::extract_file_contents(std::any& storage, std::istream& stream,
+  void extract_zip_file_contents(std::any& storage, std::istream& stream,
     const siege::platform::file_info& info,
     std::ostream& output)
   {
     seven_extract_file_contents(storage, info, output);
+  }
+
+  siege::platform::resource_reader make_7zip_resource_reader()
+  {
+    return {
+      is_stream_7zip,
+      get_zip_content_listing,
+      nullptr,
+      extract_zip_file_contents
+    };
   }
 }// namespace darkstar::vol

@@ -210,8 +210,11 @@ namespace siege::mis::darkstar
 namespace siege::resource::mis::darkstar
 {
   using namespace siege::mis::darkstar;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
-  bool mis_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     return is_mission_data(stream);
   }
@@ -252,8 +255,7 @@ namespace siege::resource::mis::darkstar
     return std::any_cast<mis_cache_data&>(cache);
   }
 
-  decltype(mis_cache_data::content_list_info)::iterator cache_data(std::any& cache, std::istream& stream,
-    const std::filesystem::path& archive_or_folder_path)
+  decltype(mis_cache_data::content_list_info)::iterator cache_data(std::any& cache, std::istream& stream, const std::filesystem::path& archive_or_folder_path)
   {
     auto& real_cache = get_cache_data(cache);
     auto archive_path = get_archive_path(archive_or_folder_path);
@@ -284,7 +286,7 @@ namespace siege::resource::mis::darkstar
           {
             auto& child_as_group = static_cast<sim_group&>(real_child);
 
-            mis_resource_reader::folder_info folder{};
+            folder_info folder{};
             folder.full_path = child.first;
             folder.name = child.first.filename().string();
             folder.file_count = child_as_group.children.size();
@@ -305,7 +307,7 @@ namespace siege::resource::mis::darkstar
           {
             auto& child_as_set = static_cast<sim_set&>(real_child);
 
-            mis_resource_reader::folder_info folder{};
+            folder_info folder{};
             folder.full_path = child.first;
             folder.name = child.first.filename().string();
             folder.file_count = child_as_set.children.size();
@@ -324,7 +326,7 @@ namespace siege::resource::mis::darkstar
             if (parent.has_value())
             {
               auto& child_as_vehicle = static_cast<vehicle&>(real_child);
-              mis_resource_reader::file_info file{};
+              file_info file{};
               file.folder_path = child.first.parent_path();
               file.filename = child.first.filename().replace_extension(".veh");
               file.size = sizeof(object_header) + child_as_vehicle.header.object_size;
@@ -347,11 +349,11 @@ namespace siege::resource::mis::darkstar
     return existing_info;
   }
 
-  std::vector<mis_resource_reader::content_info> mis_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     auto existing_info = cache_data(cache, stream, query.folder_path);
-    std::vector<mis_resource_reader::content_info> final_results;
+    std::vector<content_info> final_results;
     final_results.reserve(existing_info->second.size());
 
     for (auto& ref : existing_info->second)
@@ -381,16 +383,12 @@ namespace siege::resource::mis::darkstar
     return final_results;
   }
 
-  mis_resource_reader::mis_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  void mis_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     stream.seekg(info.offset, std::ios::beg);
   }
 
-  void mis_resource_reader::extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
     auto existing_info = cache_data(cache, stream, info.folder_path);
@@ -421,5 +419,10 @@ namespace siege::resource::mis::darkstar
         break;
       }
     }
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return { is_stream_supported, get_content_listing, set_stream_position, extract_file_contents };
   }
 }// namespace siege::resource::mis::darkstar

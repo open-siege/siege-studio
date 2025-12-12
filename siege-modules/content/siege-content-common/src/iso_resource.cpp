@@ -13,7 +13,7 @@
 #include <deque>
 #include <cstring>
 
-#include <siege/resource/iso_resource.hpp>
+#include <siege/resource/common_resources.hpp>
 #include <siege/resource/external_utils.hpp>
 
 namespace fs = std::filesystem;
@@ -37,6 +37,10 @@ namespace siege::resource::iso
 
   constexpr auto iso_offset = 32768;
   constexpr auto iso_file_record_tag = platform::to_tag<6>({ 0x01, 'C', 'D', '0', '0', '1' });
+
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   enum struct mds_medium : std::uint16_t
   {
@@ -173,16 +177,16 @@ namespace siege::resource::iso
   //  test_track-1.cdda
   //  test_track-2.cdda
   //  test_track-3.cdda
-  std::vector<iso_resource_reader::content_info> cue_get_content_listing(std::any& cache, std::istream& input, const platform::listing_query& query)
+  std::vector<content_info> cue_get_content_listing(std::any& cache, std::istream& input, const platform::listing_query& query)
   {
     if (query.archive_path == query.folder_path)
     {
-      std::vector<iso_resource_reader::content_info> results;
+      std::vector<content_info> results;
       results.reserve(16);
 
       auto lines = read_lines(input);
 
-      std::vector<iso_resource_reader::file_info> tracks;
+      std::vector<file_info> tracks;
 
       while (!lines.empty())
       {
@@ -262,9 +266,7 @@ namespace siege::resource::iso
           }
           else
           {
-            auto iso_contents = iso_get_content_listing(cache, platform::listing_query{
-              query.archive_path.parent_path() / file_name,
-              query.archive_path.parent_path() / file_name });
+            auto iso_contents = iso_get_content_listing(cache, platform::listing_query{ query.archive_path.parent_path() / file_name, query.archive_path.parent_path() / file_name });
 
             // TODO make the result optional so that we know if the correct software is installed or not
 
@@ -316,10 +318,7 @@ namespace siege::resource::iso
       return {};
     }
 
-    auto listing = iso_get_content_listing(cache, platform::listing_query {
-      bin_path,
-      bin_path / relative_path
-    });
+    auto listing = iso_get_content_listing(cache, platform::listing_query{ bin_path, bin_path / relative_path });
 
     if (!listing.empty())
     {
@@ -357,19 +356,17 @@ namespace siege::resource::iso
 
     const auto temp_archive_path = fs::temp_directory_path() / bin_path.filename();
 
-    auto temp_results = iso_get_content_listing(cache, platform::listing_query {
-      temp_archive_path,
-      temp_archive_path / relative_path  });
+    auto temp_results = iso_get_content_listing(cache, platform::listing_query{ temp_archive_path, temp_archive_path / relative_path });
 
     static std::unordered_map<std::string, siege::resource::content_info> mapped_paths;
 
     // TODO this doesn't compile in MSVC :(
-      // ICE errors are the worst
+    // ICE errors are the worst
     std::transform(temp_results.begin(), temp_results.end(), temp_results.begin(), [&](auto& info) {
       return std::visit(
-        overloaded {
+        overloaded{
           [&](siege::platform::folder_info& arg) -> siege::resource::content_info {
-          // commented out to fix ICE
+            // commented out to fix ICE
             // auto original = arg;
 
             // // TODO remap the directory to the archive path and not temp
@@ -379,8 +376,8 @@ namespace siege::resource::iso
 
             return std::move(arg);
           },
-            [&](siege::platform::file_info& arg) -> siege::resource::content_info  {
-              // commented out to fix ICE
+          [&](siege::platform::file_info& arg) -> siege::resource::content_info {
+            // commented out to fix ICE
             // auto original = arg;
             // // TODO remap the directory to the archive path and not temp
             // arg.folder_path = query.archive_path / fs::relative(arg.folder_path, temp_archive_path);
@@ -389,16 +386,16 @@ namespace siege::resource::iso
             // mapped_paths.emplace((arg.folder_path / arg.filename).string(), std::move(original));
 
             return std::move(arg);
-            }
-        }, info);
+          } },
+        info);
     });
 
     return temp_results;
   }
 
-  std::vector<iso_resource_reader::content_info> mds_get_content_listing(std::istream& input, const platform::listing_query& query)
+  std::vector<content_info> mds_get_content_listing(std::istream& input, const platform::listing_query& query)
   {
-    std::vector<iso_resource_reader::content_info> results;
+    std::vector<content_info> results;
 
     auto pos = input.tellg();
     mds_header header{};
@@ -508,7 +505,7 @@ namespace siege::resource::iso
     return results;
   }
 
-  bool stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     std::vector<std::byte> tag(16);
     stream.read(reinterpret_cast<char*>(tag.data()), std::streamsize(tag.size()));
@@ -528,16 +525,24 @@ namespace siege::resource::iso
     return to_array<iso_file_record_tag.size()>(tag) == iso_file_record_tag;
   }
 
-  std::vector<iso_resource_reader::content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     return iso_get_content_listing(cache, query);
   }
 
-  void extract_file_contents(std::any& cache, std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output)
+  void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     iso_extract_file_contents(cache, info, output);
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported,
+      get_content_listing,
+      nullptr,
+      extract_file_contents
+    };
   }
 }// namespace siege::resource::iso

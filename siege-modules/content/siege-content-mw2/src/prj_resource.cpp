@@ -11,6 +11,9 @@
 namespace siege::resource::prj
 {
   namespace endian = siege::platform;
+  using content_info = platform::resource_reader::content_info;
+  using folder_info = platform::resource_reader::folder_info;
+  using file_info = platform::resource_reader::file_info;
 
   constexpr auto header_tag = platform::to_tag<4>({ 'P', 'R', 'O', 'J' });
   constexpr auto folder_index_tag = platform::to_tag<4>({ 'D', 'D', 'I', 'T' });
@@ -75,11 +78,7 @@ namespace siege::resource::prj
     std::array<char, 16> filename;
   };
 
-  prj_resource_reader::prj_resource_reader() : resource_reader{ stream_is_supported, get_content_listing, set_stream_position, extract_file_contents }
-  {
-  }
-
-  bool prj_resource_reader::stream_is_supported(std::istream& stream)
+  bool is_stream_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -96,10 +95,10 @@ namespace siege::resource::prj
 
   struct prj_cache
   {
-    std::map<std::filesystem::path, prj_resource_reader::file_info> files;
+    std::map<std::filesystem::path, file_info> files;
   };
 
-  std::vector<prj_resource_reader::content_info> prj_resource_reader::get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
+  std::vector<content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
   {
     prj_cache storage;
     prj_cache& file_cache = storage;
@@ -142,7 +141,7 @@ namespace siege::resource::prj
     dir_entries.resize(folder_count);
     temp.read((char*)dir_entries.data(), sizeof(dir_entry) * dir_entries.size());
 
-    std::vector<prj_resource_reader::content_info> results;
+    std::vector<content_info> results;
     results.reserve(folder_count);
 
     if (query.folder_path != query.archive_path)
@@ -170,7 +169,7 @@ namespace siege::resource::prj
 
         auto name = std::string((char*)entry.tag.data(), entry.tag[3] == std::byte{} ? 3 : 4);
 
-        results.emplace_back(prj_resource_reader::folder_info{
+        results.emplace_back(folder_info{
           .name = name,
           .full_path = query.archive_path / name,
           .archive_path = query.archive_path });
@@ -250,7 +249,7 @@ namespace siege::resource::prj
       name_entries.resize(symbol_header.real_file_count);
       temp.read((char*)name_entries.data(), sizeof(file_symbol_entry) * name_entries.size());
 
-      std::vector<prj_resource_reader::file_info> file_results;
+      std::vector<file_info> file_results;
       file_results.reserve(name_entries.size());
 
       for (auto& name_entry : name_entries)
@@ -330,7 +329,7 @@ namespace siege::resource::prj
     return results;
   }
 
-  void prj_resource_reader::set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) != info.offset)
     {
@@ -350,7 +349,7 @@ namespace siege::resource::prj
     std::vector<char> data;
   };
 
-  void prj_resource_reader::extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  void extract_file_contents(std::any& cache, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     set_stream_position(stream, info);
 
@@ -365,12 +364,12 @@ namespace siege::resource::prj
       constexpr auto mgdf_entry_tag = platform::to_tag<4>({ 'M', 'G', 'D', 'F' });
       constexpr auto asnd_entry_tag = platform::to_tag<4>({ 'A', 'S', 'N', 'D' });
 
-      std::map<std::uint16_t, prj_resource_reader::file_info*> wtb_files_by_index;// obj
-      std::map<std::uint16_t, prj_resource_reader::file_info*> tdi_files_by_index;// anim
-      std::map<std::uint16_t, prj_resource_reader::file_info*> cpi_files_by_index;// cptf
-      std::map<std::uint16_t, prj_resource_reader::file_info*> hdi_files_by_index;// hudf
-      std::map<std::uint16_t, prj_resource_reader::file_info*> bwd_files_by_index;// pitf
-      std::map<std::uint16_t, prj_resource_reader::file_info*> sfl_files_by_index;// asnd
+      std::map<std::uint16_t, file_info*> wtb_files_by_index;// obj
+      std::map<std::uint16_t, file_info*> tdi_files_by_index;// anim
+      std::map<std::uint16_t, file_info*> cpi_files_by_index;// cptf
+      std::map<std::uint16_t, file_info*> hdi_files_by_index;// hudf
+      std::map<std::uint16_t, file_info*> bwd_files_by_index;// pitf
+      std::map<std::uint16_t, file_info*> sfl_files_by_index;// asnd
 
       auto& file_cache = *std::any_cast<prj_cache>(&cache);
 
@@ -594,5 +593,12 @@ namespace siege::resource::prj
         info.size,
         std::ostreambuf_iterator(output));
     }
+  }
+
+  siege::platform::resource_reader make_resource_reader()
+  {
+    return {
+      is_stream_supported, get_content_listing, set_stream_position, extract_file_contents
+    };
   }
 }// namespace siege::resource::prj

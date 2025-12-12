@@ -13,18 +13,9 @@
 
 namespace siege::resource::clm
 {
-  struct clm_resource_reader : siege::platform::resource_reader
-  {
-    clm_resource_reader();
-    static bool stream_is_supported(std::istream& stream);
-    static std::vector<content_info> get_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query);
-    static void set_stream_position(std::istream& stream, const siege::platform::file_info& info);
-    static void extract_file_contents(std::any& cache, std::istream& stream,
-      const siege::platform::file_info& info,
-      std::ostream& output);
-  };
-
-}// namespace siege::resource::pak
+  bool is_stream_supported(std::istream& stream);
+  siege::platform::resource_reader make_resource_reader();
+}// namespace siege::resource::clm
 
 
 #endif// DARKSTARDTSCONVERTER_SEVEN_PAK_VOLUME_HPP
