@@ -11,7 +11,13 @@ if (NOT DEFINED SIEGE_CHANNEL_TYPE)
 endif()
 
 if (WIN32)
-	set(STUDIO_FILES src/siege-studio-core.cpp src/views/about_view.cpp src/views/default_view.cpp src/views/preferences_view.cpp src/views/siege_main_window.cpp src/views/stack_layout.cpp)
+	set(STUDIO_FILES src/siege-studio-core.cpp 
+					 src/views/about_view.cpp 
+					 src/views/default_view.cpp 
+					 src/views/preferences_view.cpp 
+					 src/views/siege_main_window.cpp 
+					 src/views/stack_layout.cpp
+					 src/views/sqlite_test.cpp)
 	add_library(siege-studio-core SHARED ${STUDIO_FILES} src/siege-studio-core.def)
 	target_compile_definitions(siege-studio-core PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
 	target_link_libraries(siege-studio-core PUBLIC siege-win-desktop Imagehlp)

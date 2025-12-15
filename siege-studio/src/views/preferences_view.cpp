@@ -5,6 +5,9 @@
 #include <siege/platform/win/basic_window.hpp>
 #include <set>
 #include <type_traits>
+#include <winsqlite/winsqlite3.h>
+
+int SQLITE_CALLBACK test_vtab_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* api);
 
 namespace siege::views
 {
@@ -53,6 +56,10 @@ namespace siege::views
     win32::window list_views;
     win32::window tab_controls;
 
+    win32::edit sql_query;
+    win32::button sql_query_confirm;
+    win32::list_view sql_results;
+
     std::array<COLORREF, 16> colors{};
 
     // simple settings has preferred theme option (from system or user-defined)
@@ -77,6 +84,7 @@ namespace siege::views
 
       options.InsertString(-1, L"Theming (Simple)");
       options.InsertString(-1, L"Theming (Advanced - Incomplete)");
+      options.InsertString(-1, L"Query Console");
       options.SetCurrentSelection(0);
       options_unbind = options.bind_lbn_sel_change(std::bind_front(&preferences_view::options_lbn_sel_change, this));
 
@@ -383,6 +391,176 @@ namespace siege::views
           .hwndParent = text_inputs,
           .style = WS_CHILD | WS_VISIBLE,
           .lpszClass = UPDOWN_CLASSW });
+
+        auto module = ::LoadLibraryExW(L"winsqlite3.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+        if (!module)
+        {
+          return 0;
+        }
+
+        auto* auto_extension = (decltype(sqlite3_auto_extension)*)::GetProcAddress(module, "sqlite3_auto_extension");
+        auto* open = (decltype(sqlite3_open)*)::GetProcAddress(module, "sqlite3_open");
+        auto* exec = (decltype(sqlite3_exec)*)::GetProcAddress(module, "sqlite3_exec");
+
+        sqlite3* db = nullptr;
+        if (auto_extension && open && exec && malloc && free)
+        {
+          auto* temp = (void(__stdcall*)())test_vtab_init;
+
+
+          if (auto_extension(temp) != SQLITE_OK)
+          {
+            return 0;
+          }
+
+          if (open(":memory:", &db) != SQLITE_OK)
+          {
+            return 0;
+          }
+
+          exec(db, "CREATE VIRTUAL TABLE windows USING magic_module", nullptr, nullptr, nullptr);
+        }
+
+        sql_query = *win32::CreateWindowExW<win32::edit>(::CREATESTRUCTW{
+          .hwndParent = *this,
+          .style = WS_CHILD });
+
+        sql_query_confirm = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
+          .hwndParent = *this,
+          .style = WS_CHILD | BS_DEFPUSHBUTTON,
+          .lpszName = L"Execute",
+        });
+
+        sql_query_confirm.bind_bn_clicked([this](auto, const auto&) {
+          auto module = this->GetPropW<HMODULE>(L"module");
+          auto db = this->GetPropW<sqlite3*>(L"database");
+          auto* malloc = (decltype(sqlite3_malloc)*)::GetProcAddress(module, "sqlite3_malloc");
+          auto* free = (decltype(sqlite3_free)*)::GetProcAddress(module, "sqlite3_free");
+          auto* exec = (decltype(sqlite3_exec)*)::GetProcAddress(module, "sqlite3_exec");
+
+          auto message = std::shared_ptr<char>((char*)malloc(255), free);
+          auto raw = message.get();
+          std::memset(raw, 0, 255);
+
+          struct context
+          {
+            int column_count = 0;
+            bool columns_updated = false;
+            std::wstring temp;
+            HWND results;
+          };
+          struct callback
+          {
+            static int SQLITE_CALLBACK do_callback(void* raw, int count, char** values, char** columns)
+            {
+              context* info = (context*)raw;
+              static std::wstring empty{};
+
+              if (!info->columns_updated)
+              {
+                if (info->column_count > count)
+                {
+                  for (auto i = count; i < info->column_count; ++i)
+                  {
+                    ListView_DeleteColumn(info->results, i);
+                  }
+
+                  info->column_count = count;
+                }
+                else if (info->column_count < count)
+                {
+
+                  int width = 0;
+                  RECT rect{};
+                  if (count > 0 && ::GetClientRect(info->results, &rect))
+                  {
+                    width = (rect.right - rect.left) / count;
+                  }
+
+                  ::LVCOLUMNW col{
+                    .mask = LVCF_TEXT | LVCF_WIDTH,
+                    .cx = width,
+                    .pszText = empty.data(),
+                    .cchTextMax = (int)empty.size(),
+                  };
+
+                  for (auto i = info->column_count; i < count; ++i)
+                  {
+                    ListView_InsertColumn(info->results, i, &col);
+                  }
+
+                  info->column_count = count;
+                }
+
+
+                for (auto i = 0; i < info->column_count; ++i)
+                {
+                  info->temp.resize(std::strlen(columns[i]));
+                  info->temp.resize(::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, columns[i], info->temp.size(), info->temp.data(), info->temp.size()));
+                  ::LVCOLUMNW col{
+                    .mask = LVCF_TEXT,
+                    .pszText = info->temp.data(),
+                    .cchTextMax = (int)info->temp.size(),
+                  };
+                  ListView_SetColumn(info->results, i, &col);
+                }
+                info->columns_updated = true;
+              }
+
+              int last_item = ListView_GetItemCount(info->results);
+              for (auto i = 0; i < info->column_count; ++i)
+              {
+                info->temp.resize(std::strlen(values[i]));
+                info->temp.resize(::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, values[i], info->temp.size(), info->temp.data(), info->temp.size()));
+
+                if (i == 0)
+                {
+                  ::LVITEMW item{
+                    .mask = LVCF_TEXT,
+                    .pszText = empty.data(),
+                    .cchTextMax = (int)empty.size(),
+                  };
+                  last_item = ListView_InsertItem(info->results, &item);
+                }
+                ListView_SetItemText(info->results, last_item, i, info->temp.data());
+              }
+
+              return 0;
+            }
+          };
+
+          context info{
+            .results = sql_results.get()
+          };
+          ::LVCOLUMNW col{
+            .mask = LVCF_WIDTH
+          };
+
+          while (ListView_GetColumn(sql_results, info.column_count, &col))
+          {
+            info.column_count++;
+          }
+          ListView_DeleteAllItems(sql_results);
+
+          std::string query;
+          query.resize(::GetWindowTextLengthA(sql_query));
+          ::GetWindowTextA(sql_query, query.data(), query.size() + 1),
+
+            exec(db, query.data(), callback::do_callback, &info, &raw);
+        });
+
+        sql_results = *win32::CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
+          .hwndParent = *this,
+          .style = WS_CHILD | LVS_REPORT });
+
+        ShowWindow(sql_query, SW_HIDE);
+        ShowWindow(sql_query_confirm, SW_HIDE);
+        ShowWindow(sql_results, SW_HIDE);
+
+
+        ::SetPropW(*this, L"module", module);
+        ::SetPropW(*this, L"database", db);
       }
 
       // Combo box simple
@@ -405,6 +583,39 @@ namespace siege::views
 
       ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
 
+      return 0;
+    }
+
+    LRESULT wm_destroy()
+    {
+      HMODULE module = (HMODULE)::GetPropW(*this, L"module");
+
+      if (!module)
+      {
+        return 0;
+      }
+
+      ::RemovePropW(*this, L"module");
+
+      sqlite3* db = (sqlite3*)::GetPropW(*this, L"database");
+      if (!db)
+      {
+        return 0;
+      }
+      ::RemovePropW(*this, L"database");
+
+      auto* close = (decltype(sqlite3_close)*)::GetProcAddress(module, "sqlite3_close");
+      auto* cancel_auto_extension = (decltype(sqlite3_cancel_auto_extension)*)::GetProcAddress(module, "sqlite3_cancel_auto_extension");
+
+      if (close && cancel_auto_extension)
+      {
+        close(db);
+
+        auto* temp = (void(__stdcall*)())test_vtab_init;
+        cancel_auto_extension(temp);
+      }
+
+      ::FreeLibrary(module);
       return 0;
     }
 
@@ -453,6 +664,9 @@ namespace siege::views
       ShowWindow(by_system, SW_HIDE);
       ShowWindow(forced_dark, SW_HIDE);
       ShowWindow(forced_light, SW_HIDE);
+      ShowWindow(sql_query, SW_HIDE);
+      ShowWindow(sql_query_confirm, SW_HIDE);
+      ShowWindow(sql_results, SW_HIDE);
 
       if (options.GetCurrentSelection() == 0)
       {
@@ -475,6 +689,12 @@ namespace siege::views
       else if (options.GetCurrentSelection() == 1)
       {
         ShowWindow(advanced_options, SW_SHOW);
+      }
+      else if (options.GetCurrentSelection() == 2)
+      {
+        ShowWindow(sql_query, SW_SHOW);
+        ShowWindow(sql_query_confirm, SW_SHOW);
+        ShowWindow(sql_results, SW_SHOW);
       }
     }
 
@@ -601,6 +821,21 @@ namespace siege::views
       forced_light.SetWindowPos(POINT{ .x = left_size.cx + width + width + 15, .y = 15 });
       forced_light.SetWindowPos(SIZE{ .cx = width, .cy = height });
 
+
+      auto top_height = client_size.cy / 12;
+
+      sql_query.SetWindowPos(POINT{ .x = left_size.cx });
+      sql_query.SetWindowPos(SIZE{ .cx = middle_size.cx, .cy = top_height });
+      sql_query_confirm.SetWindowPos(POINT{ .x = left_size.cx + middle_size.cx });
+      sql_query_confirm.SetWindowPos(SIZE{ .cx = right_size.cx, .cy = top_height });
+
+      sql_results.SetWindowPos(POINT{ .x = left_size.cx, .y = top_height });
+      sql_results.SetWindowPos(SIZE{ .cx = middle_size.cx + right_size.cx, .cy = middle_size.cy + right_size.cy });
+
+      ShowWindow(sql_query, SW_SHOW);
+      ShowWindow(sql_query_confirm, SW_SHOW);
+      ShowWindow(sql_results, SW_SHOW);
+
       return 0;
     }
 
@@ -610,6 +845,8 @@ namespace siege::views
       {
       case WM_CREATE:
         return wm_create();
+      case WM_DESTROY:
+        return wm_destroy();
       case WM_SIZE:
         return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
       default:
