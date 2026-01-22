@@ -128,6 +128,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
   bool enable_controller = save_bindings_to_config(*args, config);
+  unbind_joystick_for_quake_2_config(config);
 
   if (enable_controller)
   {

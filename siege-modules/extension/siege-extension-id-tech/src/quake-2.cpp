@@ -115,6 +115,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   std::ofstream custom_bindings("baseq2/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  unbind_joystick_for_quake_2_config(config);
 
   for (auto& alias : quake2_aliases)
   {

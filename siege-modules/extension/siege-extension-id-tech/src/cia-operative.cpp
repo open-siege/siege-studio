@@ -102,6 +102,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   std::ofstream custom_bindings("main/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  unbind_joystick_for_quake_1_config(config);
 
   bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 

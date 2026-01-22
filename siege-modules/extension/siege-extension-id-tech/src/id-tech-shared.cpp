@@ -620,10 +620,54 @@ void unbind_joystick_for_quake_1_config(siege::configuration::text_game_config& 
   config.emplace(key_type({ "joyadvaxisr" }), key_type("0"));
   config.emplace(key_type({ "joyadvaxisu" }), key_type("0"));
   config.emplace(key_type({ "joyadvaxisv" }), key_type("0"));
+  config.emplace(key_type({ "unbind", "AUX29" }), key_type{});
 
   for (auto i = 0; i < 15; ++i)
   {
     auto index = hardware_index_to_button_name_id_tech_2_0(i);
+    assert(index.has_value());
+    config.emplace(key_type({ "unbind", *index }), key_type{});
+  }
+}
+
+void unbind_joystick_for_quake_2_config(siege::configuration::text_game_config& config)
+{
+  using siege::configuration::key_type;
+  config.emplace(key_type({ "joy_advaxisx" }), key_type("0"));
+  config.emplace(key_type({ "joy_advaxisy" }), key_type("0"));
+  config.emplace(key_type({ "joy_advaxisz" }), key_type("0"));
+  config.emplace(key_type({ "joy_advaxisr" }), key_type("0"));
+  config.emplace(key_type({ "joy_advaxisu" }), key_type("0"));
+  config.emplace(key_type({ "joy_advaxisv" }), key_type("0"));
+
+  config.emplace(key_type({ "unbind", "AUX29" }), key_type{});
+  for (auto i = 0; i < 15; ++i)
+  {
+    auto index = hardware_index_to_button_name_id_tech_2_0(i);
+    assert(index.has_value());
+    config.emplace(key_type({ "unbind", *index }), key_type{});
+  }
+}
+
+void unbind_joystick_for_quake_3_config(siege::configuration::text_game_config& config, mapping_context context)
+{
+  assert(context.index_to_axis != nullptr);
+  assert(context.index_to_button != nullptr);
+  using siege::configuration::key_type;
+
+  config.emplace(key_type({ "unbind", "JOY17" }), key_type{});
+  config.emplace(key_type({ "unbind", "JOY16" }), key_type{});
+  config.emplace(key_type({ "unbind", "JOY18" }), key_type{});
+  config.emplace(key_type({ "unbind", "JOY19" }), key_type{});
+
+  // dpad
+  config.emplace(key_type({ "unbind", "JOY24" }), key_type{});
+  config.emplace(key_type({ "unbind", "JOY25" }), key_type{});
+  config.emplace(key_type({ "unbind", "JOY27" }), key_type{});
+  config.emplace(key_type({ "unbind", "JOY26" }), key_type{});
+  for (auto i = 0; i < 15; ++i)
+  {
+    auto index = context.index_to_button(i);
     assert(index.has_value());
     config.emplace(key_type({ "unbind", *index }), key_type{});
   }
@@ -816,54 +860,6 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
       free_mapping->to_context = keyboard->context;
       break;
     }
-  }
-}
-
-void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args,
-  hardware_context expected_context,
-  WORD expected_vkey,
-  std::string_view target_action,
-  std::optional<WORD> not_target_vkey)
-{
-  auto right_stick_left = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [=](auto& binding) {
-    return binding.context == expected_context && binding.vkey == expected_vkey;
-  });
-
-
-  if (right_stick_left != args.action_bindings.end())
-  {
-    auto fallback = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& binding) {
-      return (binding.context == hardware_context::global || binding.context == hardware_context::keyboard) && binding.vkey != not_target_vkey && std::string_view{ binding.action_name.data() } == target_action;
-    });
-
-    if (fallback != args.action_bindings.end())
-    {
-      bind_axis_to_send_input(args, right_stick_left->action_name.data(), target_action, not_target_vkey);
-    }
-
-    fallback = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& binding) {
-      return (binding.context == hardware_context::mouse) && binding.vkey != not_target_vkey && std::string_view{ binding.action_name.data() } == target_action;
-    });
-
-    if (fallback != args.action_bindings.end())
-    {
-      bind_axis_to_send_input(args, right_stick_left->action_name.data(), target_action, not_target_vkey);
-    }
-  }
-}
-
-void bind_controller_send_input_fallback(siege::platform::game_command_line_args& args,
-  hardware_context expected_context,
-  WORD expected_vkey,
-  std::optional<WORD> not_target_vkey)
-{
-  auto right_stick_left = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [=](auto& binding) {
-    return binding.context == expected_context && binding.vkey == expected_vkey;
-  });
-
-  if (right_stick_left != args.action_bindings.end())
-  {
-    bind_controller_send_input_fallback(args, expected_context, expected_vkey, right_stick_left->action_name.data(), not_target_vkey);
   }
 }
 

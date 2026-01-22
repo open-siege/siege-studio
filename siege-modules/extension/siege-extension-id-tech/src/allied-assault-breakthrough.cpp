@@ -116,6 +116,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   std::ofstream custom_bindings("maintt/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  unbind_joystick_for_quake_3_config(config);
 
   for (auto& vstr : moh_vstrs)
   {
@@ -135,13 +136,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   }
 
   config.save(custom_bindings);
-
-  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_LEFT);
-  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_RIGHT);
-  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_LEFT_TRIGGER, "+left", VK_RIGHT);
-  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_TRIGGER, "+right", VK_LEFT);
-  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_LEFT_TRIGGER);
-  bind_controller_send_input_fallback(*args, hardware_context::controller_xbox, VK_GAMEPAD_RIGHT_TRIGGER);
 
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
