@@ -1,0 +1,10 @@
+EXPORTS
+	game_actions DATA PRIVATE
+	controller_input_backends DATA PRIVATE
+	command_line_caps DATA PRIVATE
+	executable_is_supported
+	is_input_mapping_valid PRIVATE
+	apply_prelaunch_settings_ex PRIVATE
+	init_mouse_inputs PRIVATE
+	init_keyboard_inputs PRIVATE
+	init_controller_inputs PRIVATE

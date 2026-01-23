@@ -1,0 +1,29 @@
+RequiresVersion( 12 );
+
+struct
+{
+    LittleEndian();
+    int unknown[2];
+    int fov;
+    int horizon_distance;
+    int unknown2;
+    int sky_enabled;
+    int unknown4;
+    int shadows_enabled;
+    int smoke_level;
+    int debris;
+    int player_name_count;
+    char player_name[player_name_count];
+    int last_map_count;
+    char last_map[last_map_count];
+    int unknown6;
+    int unknown7;
+    int screen_size;
+    int unknown8[3];
+    int flip_mouse;
+    float mouse_acceleration;
+    float mouse_sensitivity;
+    int joystick_type;
+    int music_volume;
+    int sound_effects_volume;
+}Uprising1;

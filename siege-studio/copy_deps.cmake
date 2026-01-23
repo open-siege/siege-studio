@@ -53,6 +53,7 @@ endforeach()
 
 set(EXTENSION_PROJECTS siege-extension-id-tech 
                    siege-extension-3space 
+                   siege-extension-cyclone 
                    siege-extension-other)
 set(EXT_TARGETS)
 

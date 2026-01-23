@@ -1,0 +1,47 @@
+struct UprisingKeymap
+{
+    LittleEndian();
+    enum Action{
+        none, 
+        move_forward,
+        move_back,
+        strafe_right,
+        strafe_left,
+        turn_right,
+        turn_left,
+        call_in_infantry = 9,
+        call_in_heavy_tank,
+        call_in_aav,
+        call_in_bomber,
+        call_in_gatling_turret,
+        call_in_sam_site,
+        call_in_patriot_turret,
+        call_in_bms_strike,
+        auto_call_in = 18
+        pause_menu = 48
+
+    };
+    int padding;
+    Action keyboard_mappings[254];
+    struct JoystickMappings
+    {
+        int fire_weapon_1;
+        int fire_weapon_2;
+        int weapon_1_up;
+        int weapon_1_down;
+        int weapon_2_up;
+        int weapon_2_down;
+        int overhead_map;
+        int call_in_something_1;
+        int call_in_something_2;
+        int call_in_something_3;
+        int call_in_something_4;
+        int call_in_something_5;
+        int call_in_something_6;
+        int unknown1;
+        int unknown2;
+        int unknown3;
+        int unknown4;        
+        int unknown[15];
+    } joystick;
+}keymap;

@@ -467,8 +467,10 @@ namespace siege::views
 
       if (action_iter == action_settings.end())
       {
-        action_settings.emplace_back(ui_context{ 0, siege::platform::hardware_context::global, action, action_index++ });
+        action_settings.emplace_back(ui_context{ 0, siege::platform::hardware_context::global, action, action_index });
       }
+
+      action_index++;
     }
 
     for (auto& context : action_settings)

@@ -1,0 +1,32 @@
+struct
+{
+    LittleEndian();
+    int unknown[2];
+    int fov;
+    int unknown1;
+    int horizon_distance;
+    int unknown2;
+    int unknown3;
+    int map_style;
+    int sky_type;
+    int unknown4;
+    int shadows;
+    int unknown5;
+    int debris;
+    int unknown6;
+    int player_name_count;
+    char player_name[player_name_count];
+    int last_map_count;
+    char last_map[last_map_count];
+    int unknown7a[2];
+    int screen_size;
+    int unknown7b[4];
+    float mouse_sensitivity;
+    float mouse_acceleration;
+    int unknown8[2];
+    int game_volume;
+    int game_difficulty;
+    int game_resolution;
+    int cd_audio_enabled;
+    int unknown9[6];
+}Uprising2;

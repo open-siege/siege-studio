@@ -269,7 +269,7 @@ namespace siege::views
             {
               binding.vkey = virtual_key;
               binding.action_name = action.action_name;
-              binding.hardware_index = ::MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC);
+              binding.hardware_index = ::MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC_EX);
               binding.hardware_input_type = input_type::button;
               binding.context = context;
 

@@ -23,6 +23,7 @@ add_subdirectory(extension/siege-input-filtration)
 add_subdirectory(extension/wsock-over-zero-tier)
 add_subdirectory(extension/siege-extension-3space)
 add_subdirectory(extension/siege-extension-id-tech)
+add_subdirectory(extension/siege-extension-cyclone)
 add_subdirectory(extension/siege-extension-other)
 
 add_subdirectory(installation/siege-installation-dynamix)

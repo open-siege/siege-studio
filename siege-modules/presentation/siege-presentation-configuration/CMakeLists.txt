@@ -5,7 +5,7 @@ file(GLOB_RECURSE LIB_SRC_FILES src/*.cpp)
 file(GLOB_RECURSE WIN32_SRC_FILES src/*.win32.cpp)     
 list(REMOVE_ITEM LIB_SRC_FILES ${WIN32_SRC_FILES})
 
-set(CONTENT_TARGETS siege-content-3space-scripting siege-content-id-tech-scripting)
+set(CONTENT_TARGETS siege-content-3space-scripting siege-content-id-tech-scripting siege-content-cyclone-scripting)
 
 if (WIN32)
     add_library(${PROJECT_NAME} SHARED ${LIB_SRC_FILES} ${WIN32_SRC_FILES} src/${PROJECT_NAME}.def)
