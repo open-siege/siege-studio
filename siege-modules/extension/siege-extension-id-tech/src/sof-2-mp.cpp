@@ -28,12 +28,13 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 using key_type = siege::configuration::key_type;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode", L"net_noipx", L"r_fullscreen", L"cg_autoReload", L"cg_drawGun", L"cg_fov", L"scorelimit", L"timelimit" } },
+  .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode", L"net_noipx", L"r_fullscreen", L"cg_autoReload", L"cg_drawGun", L"cg_fov", L"scorelimit", L"timelimit", L"in_joystick" } },
   .string_settings = { { L"name", L"connect", L"map", L"r_glDriver", L"g_gametype" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .listen_setting = L"net_noipx",
   .dedicated_setting = L"dedicated",
+  .controller_enabled_setting = L"in_joystick"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -106,8 +107,8 @@ constexpr static auto sof_aliases = std::array<std::array<std::string_view, 3>, 
     { "grenade-toggle-stop", "weaplast;set grenade-toggle vstr grenade-toggle-start" },
     { "pistol-toggle", "vstr pistol-toggle-start" },
     { "pistol-toggle-start", "vstr grenade-toggle-stop;vstr melee-toggle-stop;weapon 2;set pistol-toggle vstr pistol-toggle-stop" },
-    { "pistol-toggle-stop", "weaplast;set pistol-toggle vstr pistol-toggle-start" }     
-}};
+    { "pistol-toggle-stop", "weaplast;set pistol-toggle vstr pistol-toggle-start" } }
+};
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -154,12 +155,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   // TODO fix issue with lower case bindings that do not exist in default.cfg
   config.emplace(key_type({ "bind", "z" }), key_type("vstr pistol-toggle"));
 
-  bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
-
-  if (enable_controller)
-  {
-    config.emplace(siege::configuration::key_type({ "seta", "in_joystick" }), siege::configuration::key_type("1"));
-  }
+  save_bindings_to_config(*args, config, q3_mapping_context{});
 
   config.save(custom_bindings);
 

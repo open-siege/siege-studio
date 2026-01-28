@@ -28,8 +28,9 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 using key_type = siege::configuration::key_type;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode" } },
-  .string_settings = { { L"map", L"r_glDriver" } }
+  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick" } },
+  .string_settings = { { L"map", L"r_glDriver" } },
+  .controller_enabled_setting = L"in_joystick"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -119,12 +120,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
   unbind_joystick_for_quake_3_config(config, raven_mapping_context{});
 
-  bool enable_controller = save_bindings_to_config(*args, config, raven_mapping_context{});
-
-  if (enable_controller)
-  {
-    config.emplace(siege::configuration::key_type({ "seta", "in_joystick" }), siege::configuration::key_type("1"));
-  }
+  save_bindings_to_config(*args, config, raven_mapping_context{});
 
   config.save(custom_bindings);
 

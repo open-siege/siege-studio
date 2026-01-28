@@ -25,13 +25,14 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"gl_mode", L"dedicated" } },
+  .int_settings = { { L"gl_mode", L"dedicated", L"in_joystick" } },
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver", L"game" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
   .selected_game_setting = L"game",
+  .controller_enabled_setting = L"in_joystick"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -128,7 +129,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   {
     // engine bug - mouse needs to be enabled for the right analog stick to work
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_sidesensitivity" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));

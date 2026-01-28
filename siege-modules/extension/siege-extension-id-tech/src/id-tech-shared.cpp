@@ -864,7 +864,7 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
 }
 
 extern "C" {
-std::errc is_id_tech_3_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
+std::errc is_id_tech_2_0_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
 {
   using namespace siege::platform;
   if (mapping == nullptr)
@@ -882,19 +882,15 @@ std::errc is_id_tech_3_input_mapping_valid(const siege::platform::hardware_conte
     return std::errc::bad_message;
   }
 
-  if (caps->caps_size < sizeof(hardware_context_caps))
-  {
-    return std::errc::bad_message;
-  }
-  if (caps->context == hardware_context::mouse)
+  if (mapping->context == hardware_context::mouse)
   {
     if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
-        && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+        && !(mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
     {
       return std::errc::not_supported;
     }
     if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 1
-        && (mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+        && !(mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
     {
       return std::errc::not_supported;
     }
@@ -908,20 +904,25 @@ std::errc is_id_tech_3_input_mapping_valid(const siege::platform::hardware_conte
       return std::errc::not_supported;
     }
 
-    if (caps->axis_count >= 6)
+    if (mapping->action_name == std::array<char, 32>{})
     {
-      if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 4
-          && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
-      {
-        return std::errc::not_supported;
-      }
-      if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 5
-          && (mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
-      {
-        return std::errc::not_supported;
-      }
+      return std::errc{};
     }
-    else if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index > 3)
+
+    constexpr static std::array<std::array<char, 32>, 10> axis_only{ {
+      "+forward",
+      "+back",
+      "+left",
+      "+right",
+      "+moveleft",
+      "+moveright",
+      "+lookup",
+      "+lookdown",
+      "+jump",
+      "+movedown",
+    } };
+
+    if (!std::ranges::any_of(axis_only, [&](auto& item) { return item == mapping->action_name; }) && mapping->hardware_input_type == siege::platform::controller_input_type::axis)
     {
       return std::errc::not_supported;
     }
@@ -956,12 +957,12 @@ std::errc is_id_tech_2_5_input_mapping_valid(const siege::platform::hardware_con
   if (caps->context == hardware_context::mouse)
   {
     if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
-        && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+        && !(mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
     {
       return std::errc::not_supported;
     }
     if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 1
-        && (mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+        && !(mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
     {
       return std::errc::not_supported;
     }
@@ -973,6 +974,11 @@ std::errc is_id_tech_2_5_input_mapping_valid(const siege::platform::hardware_con
     if (caps->hardware_index != 0)
     {
       return std::errc::not_supported;
+    }
+
+    if (mapping->action_name == std::array<char, 32>{})
+    {
+      return std::errc{};
     }
 
     constexpr static std::array<std::array<char, 32>, 10> axis_only{ {
@@ -999,7 +1005,7 @@ std::errc is_id_tech_2_5_input_mapping_valid(const siege::platform::hardware_con
 }
 
 
-std::errc is_id_tech_2_0_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
+std::errc is_id_tech_3_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
 {
   using namespace siege::platform;
   if (mapping == nullptr)
@@ -1017,7 +1023,87 @@ std::errc is_id_tech_2_0_input_mapping_valid(const siege::platform::hardware_con
     return std::errc::bad_message;
   }
 
-  if (mapping->context == hardware_context::mouse)
+  if (caps->caps_size < sizeof(hardware_context_caps))
+  {
+    return std::errc::bad_message;
+  }
+  if (caps->context == hardware_context::mouse)
+  {
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
+        && !(mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+    {
+      return std::errc::not_supported;
+    }
+    if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 1
+        && !(mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+    {
+      return std::errc::not_supported;
+    }
+    return std::errc{};
+  }
+
+  if (is_for_controller(caps->context))
+  {
+    if (caps->hardware_index != 0)
+    {
+      return std::errc::not_supported;
+    }
+
+    if (caps->axis_count < 6 && mapping->action_name == std::array<char, 32>{})
+    {
+      return std::errc{};
+    }
+
+    if (mapping->hardware_index <= 3 && mapping->action_name == std::array<char, 32>{})
+    {
+      return std::errc{};
+    }
+
+    if (caps->axis_count >= 6)
+    {
+      if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 4
+          && !(mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+      {
+        return std::errc::not_supported;
+      }
+      if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 5
+          && !(mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+      {
+        return std::errc::not_supported;
+      }
+    }
+    else if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index > 3)
+    {
+      return std::errc::not_supported;
+    }
+  }
+
+  return std::errc{};
+}
+
+std::errc is_moh_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
+{
+  using namespace siege::platform;
+  if (mapping == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (caps == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  if (mapping->mapping_size < sizeof(input_mapping_ex))
+  {
+    return std::errc::bad_message;
+  }
+
+  if (caps->caps_size < sizeof(hardware_context_caps))
+  {
+    return std::errc::bad_message;
+  }
+  if (caps->context == hardware_context::mouse)
   {
     if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
         && (mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
@@ -1039,28 +1125,36 @@ std::errc is_id_tech_2_0_input_mapping_valid(const siege::platform::hardware_con
       return std::errc::not_supported;
     }
 
-    constexpr static std::array<std::array<char, 32>, 10> axis_only{ {
-      "+forward",
-      "+back",
-      "+left",
-      "+right",
-      "+moveleft",
-      "+moveright",
-      "+lookup",
-      "+lookdown",
-      "+jump",
-      "+movedown",
-    } };
-
-    if (!std::ranges::any_of(axis_only, [&](auto& item) { return item == mapping->action_name; }) && mapping->hardware_input_type == siege::platform::controller_input_type::axis)
+    if (mapping->hardware_input_type == controller_input_type::axis)
     {
-      return std::errc::not_supported;
+      if (mapping->hardware_index == 0
+          && !(mapping->action_name == std::array<char, 32>{ "+moveleft" } || mapping->action_name == std::array<char, 32>{ "+moveright" }))
+      {
+        return std::errc::not_supported;
+      }
+
+      if (mapping->hardware_index == 1
+          && !(mapping->action_name == std::array<char, 32>{ "+forward" } || mapping->action_name == std::array<char, 32>{ "+back" }))
+      {
+        return std::errc::not_supported;
+      }
+
+      if (mapping->hardware_index == 2
+          && !(mapping->action_name == std::array<char, 32>{ "+left" } || mapping->action_name == std::array<char, 32>{ "+right" }))
+      {
+        return std::errc::not_supported;
+      }
+
+      if (mapping->hardware_index == 3
+          && !(mapping->action_name == std::array<char, 32>{ "+lookup" } || mapping->action_name == std::array<char, 32>{ "+lookdown" }))
+      {
+        return std::errc::not_supported;
+      }
     }
   }
 
   return std::errc{};
 }
-
 
 std::errc apply_dpi_awareness(const wchar_t* exe_path_str)
 {

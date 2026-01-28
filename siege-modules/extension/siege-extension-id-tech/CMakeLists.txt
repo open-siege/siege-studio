@@ -85,10 +85,10 @@ if (WIN32)
     
     add_library(siege-extension-fakk-2 SHARED src/fakk-2.cpp src/fakk-2.def)
     add_library(siege-extension-alice SHARED src/alice.cpp src/id-tech-3.def)
-    add_library(siege-extension-allied-assault SHARED src/allied-assault.cpp src/id-tech-3.def)
-    add_library(siege-extension-allied-assault-breakthrough SHARED src/allied-assault-breakthrough.cpp src/id-tech-3.def)
-    add_library(siege-extension-allied-assault-spearhead SHARED src/allied-assault-spearhead.cpp src/id-tech-3.def)
-    add_library(siege-extension-pacific-assault SHARED src/pacific-assault.cpp src/id-tech-3.def)
+    add_library(siege-extension-allied-assault SHARED src/allied-assault.cpp src/id-tech-3-moh.def)
+    add_library(siege-extension-allied-assault-breakthrough SHARED src/allied-assault-breakthrough.cpp src/id-tech-3-moh.def)
+    add_library(siege-extension-allied-assault-spearhead SHARED src/allied-assault-spearhead.cpp src/id-tech-3-moh.def)
+    add_library(siege-extension-pacific-assault SHARED src/pacific-assault.cpp src/id-tech-3-moh.def)
 
     
     get_property(ID_TECH_TARGETS

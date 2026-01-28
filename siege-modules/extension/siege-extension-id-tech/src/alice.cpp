@@ -27,10 +27,11 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode" } },
+  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick" } },
   .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .controller_enabled_setting = L"in_joystick"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -64,8 +65,7 @@ constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 1>, 1>
   { "UIAlice3D"sv, std::size_t(0x540f68) },
 } } } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ { 
-  { "ctrlbindlist"sv, "unbind"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> function_name_ranges{ { { "ctrlbindlist"sv, "unbind"sv },
   { "cl_dumpallclasses"sv, "cl_eventlist"sv },
   { "-cameralook"sv, "+moveup"sv },
   { "dointro"sv, "pushmenu"sv } } };
@@ -104,21 +104,18 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
   unbind_joystick_for_quake_3_config(config);
 
-  bool enable_controller = save_bindings_to_config(*args, config, q3_mapping_context{});
-
-  if (enable_controller)
-  {
-    config.emplace(siege::configuration::key_type({ "seta", "in_joystick" }), siege::configuration::key_type("1"));
-  }
+  save_bindings_to_config(*args, config, q3_mapping_context{});
 
   config.save(custom_bindings);
 
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
   insert_string_setting_once(*args, L"s_Alice2URL", L".");
-  
-  auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; });
-  *free_iter = L"-RunningFromAlice2";
+
+  if (auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; }); free_iter != args->flags.end())
+  {
+    *free_iter = L"-RunningFromAlice2";
+  }
 
   return std::errc{};
 }

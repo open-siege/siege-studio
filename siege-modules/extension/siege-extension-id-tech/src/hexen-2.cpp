@@ -28,7 +28,7 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 
 extern auto command_line_caps = game_command_line_caps{
   .flags = { { L"listen", L"dedicated" } },
-  .int_settings = { { L"width", L"height", L"vid_mode", L"chase_active", L"chase_back", L"chase_up", L"chase_right" } },// width and height are GL Hexen only
+  .int_settings = { { L"width", L"height", L"vid_mode", L"chase_active", L"chase_back", L"chase_up", L"chase_right", L"joystick" } },// width and height are GL Hexen only
   .string_settings = { { L"name", L"connect", L"map", L"preferred_exe", L"game" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
@@ -36,6 +36,7 @@ extern auto command_line_caps = game_command_line_caps{
   .dedicated_setting = L"dedicated",
   .selected_game_setting = L"game",
   .preferred_exe_setting = L"preferred_exe",
+  .controller_enabled_setting = L"joystick"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

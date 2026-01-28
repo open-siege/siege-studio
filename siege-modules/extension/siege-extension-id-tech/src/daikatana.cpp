@@ -30,11 +30,12 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"dedicated", L"gl_mode" } },
-  .string_settings = { { L"name", L"connect", L"map", L"gl_driver" } },
+  .string_settings = { { L"name", L"connect", L"map", L"gl_driver", L"in_joystick" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
+  .controller_enabled_setting = L"in_joystick"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

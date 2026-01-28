@@ -58,6 +58,12 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
       string_args.emplace_back(L"+exec");
       string_args.emplace_back(setting.value);
     }
+    //else if (std::wstring_view(setting.name) == L"in_joystick")
+    //{
+    //  string_args.emplace_back(L"+seta");
+    //  string_args.emplace_back(setting.name);
+    //  string_args.emplace_back(setting.value);
+    //}
     else
     {
       string_args.emplace_back(L"+set");

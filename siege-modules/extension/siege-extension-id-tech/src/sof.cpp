@@ -30,28 +30,13 @@ namespace fs = std::filesystem;
 extern "C" {
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"dedicated", L"deathmatch", L"timelimit", L"fraglimit", L"maxclients", L"numbots", L"gl_mode", L"in_joystick" } },
-  // fov
   .string_settings = { { L"name", L"connect", L"map", L"gl_driver", L"game" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
-  .selected_game_setting = L"game"
-  // skin
-  // teamname
-  // bestweap
-  // welcome_mess
-  // joy_name
-  // set adr0 "" to adr19
-  //
-  //
-  // bool settings
-  // s_musicenabled
-  // s_nosound
-
-  // float settings
-  // s_musicvolume
-  // s_volume
+  .selected_game_setting = L"game",
+  .controller_enabled_setting = L"in_joystick"
 };
 
 extern auto game_actions = std::array<game_action, 33>{ {
