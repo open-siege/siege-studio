@@ -1933,6 +1933,72 @@ namespace siege::views
     return false;
   }
 
+  bool controller_can_be_toggled(std::any& state)
+  {
+    if (!has_extension_module(state))
+    {
+      return false;
+    }
+    auto& extension = get_extension(state);
+
+    if (!extension.caps)
+    {
+      return false;
+    }
+
+    return extension.caps->controller_enabled_setting && extension.caps->controller_enabled_setting[0] != '\0';
+  }
+
+  void enable_controller_for_extension(std::any& state)
+  {
+    if (!controller_can_be_toggled(state))
+    {
+      return;
+    }
+
+    auto& extension = get_extension(state);
+    assert(extension.caps != std::nullopt);
+    assert(extension.caps->controller_enabled_setting != nullptr);
+    assert(extension.caps->controller_enabled_setting[0] != '\0');
+
+    auto& self = get(state);
+
+    auto setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](auto& item) {
+      return item.setting_name == extension.caps->controller_enabled_setting;
+    });
+
+
+    if (setting != self.launch_settings.end())
+    {
+      enable_setting(*setting);
+      setting->persist();
+    }
+  }
+
+  void disable_controller_for_extension(std::any& state)
+  {
+    if (!controller_can_be_toggled(state))
+    {
+      return;
+    }
+    auto& extension = get_extension(state);
+    assert(extension.caps != std::nullopt);
+    assert(extension.caps->controller_enabled_setting != nullptr);
+    assert(extension.caps->controller_enabled_setting[0] != '\0');
+
+    auto& self = get(state);
+
+    auto setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](auto& item) {
+      return item.setting_name == extension.caps->controller_enabled_setting;
+    });
+
+
+    if (setting != self.launch_settings.end())
+    {
+      disable_setting(*setting);
+      setting->persist();
+    }
+  }
 
   const registry_settings& load_game_settings(std::any& state)
   {

@@ -206,6 +206,11 @@ namespace siege::views
 
   void set_ip_for_current_network(std::any& state, std::string ip_address);
 
+  bool controller_can_be_toggled(std::any& state);
+
+  void disable_controller_for_extension(std::any& state);
+  void enable_controller_for_extension(std::any& state);
+
   bool is_exe_or_lib(std::istream& stream) noexcept;
   siege::platform::owning_packaged_args get_packaged_args(std::any& state);
 

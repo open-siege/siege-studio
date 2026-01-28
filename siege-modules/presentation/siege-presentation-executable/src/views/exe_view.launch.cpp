@@ -422,12 +422,19 @@ namespace siege::views
               .hat_count = mapped_hat_count(controller),
             };
 
+            struct bound_mapping
+            {
+              siege::views::input_action_binding bound_action;
+              siege::platform::input_mapping_ex binding;
+              bool is_unbindable = false;
+              bool is_bindable = false;
+            };
+            std::vector<bound_mapping> bindings{};
+
             for (auto& bound_action : controller_actions)
             {
-              auto virtual_key = bound_action.vkey;
-
               auto preference = actions[bound_action.action_index].type == actions[bound_action.action_index].analog ? controller_info::prefer_axis : controller_info::prefer_button;
-              auto hardware_index = controller.get_hardware_index(virtual_key, preference);
+              auto hardware_index = controller.get_hardware_index(bound_action.vkey, preference);
 
               if (!hardware_index)
               {
@@ -435,28 +442,58 @@ namespace siege::views
                 continue;
               }
 
-              auto& binding = action_bindings.emplace_back();
-              binding.vkey = virtual_key;
-              binding.action_name = actions[bound_action.action_index].action_name;
-              binding.context = controller.detected_context;
+              auto& binding = bindings.emplace_back(bound_action);
+              binding.binding.vkey = bound_action.vkey;
+              binding.binding.context = controller.detected_context;
+              binding.binding.action_name = actions[bound_action.action_index].action_name;
 
               if (uses_winmm)
               {
                 auto mapped = map_hid_to_winmm(*hardware_index, axes);
-                binding.hardware_index = mapped.index;
-                binding.hardware_input_type = mapped.type;
+                binding.binding.hardware_index = mapped.index;
+                binding.binding.hardware_input_type = mapped.type;
               }
               else
               {
-                binding.hardware_index = hardware_index->index;
-                binding.hardware_input_type = hardware_index->type;
+                binding.binding.hardware_index = hardware_index->index;
+                binding.binding.hardware_input_type = hardware_index->type;
               }
+            }
 
-              if (!extension.is_input_mapping_valid(controller_caps, binding))
+            for (auto& binding : bindings)
+            {
+              auto empty_binding = binding.binding;
+              empty_binding.action_name.fill('\0');
+              binding.is_unbindable = extension.is_input_mapping_valid(controller_caps, empty_binding);
+              binding.is_bindable = extension.is_input_mapping_valid(controller_caps, binding.binding);
+            }
+
+            const auto can_bind_game_backend = stl::all_of(bindings, [](auto& binding) {
+              return binding.is_bindable || binding.is_unbindable;
+            });
+
+
+            if (can_bind_game_backend)
+            {
+              enable_controller_for_extension(state);
+              for (auto& binding : bindings)
               {
-                action_bindings.pop_back();
-                add_fallback(bound_action, controller.detected_context);
+                if (binding.is_bindable)
+                {
+                  action_bindings.emplace_back(binding.binding);
+                }
+                else
+                {
+                  add_fallback(binding.bound_action, controller.detected_context);
+                }
               }
+            }
+            else
+            {
+              disable_controller_for_extension(state);
+              stl::for_each(bindings, [&](auto& binding) {
+                add_fallback(binding.bound_action);
+              });
             }
           }
         }
