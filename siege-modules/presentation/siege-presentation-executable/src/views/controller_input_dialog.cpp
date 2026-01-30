@@ -169,7 +169,7 @@ namespace siege::views
 
             // remove axes which have not moved enough
             changes = std::span(changes.begin(), std::remove_if(changes.begin(), changes.end(), [](auto& item) {
-              return item.second < std::numeric_limits<std::uint16_t>::max() / 2;
+              return item.new_value < std::numeric_limits<std::uint16_t>::max() / 2;
             }));
 
             if (changes.empty())
@@ -179,15 +179,15 @@ namespace siege::views
 
             // get the highest values
             std::sort(changes.begin(), changes.begin(), [](const auto& a, const auto& b) {
-              return a.second < b.second;
+              return a.new_value < b.new_value;
             });
 
             // but prefer buttons
             std::stable_partition(changes.begin(), changes.begin(), [](auto& item) {
-              return item.first >= VK_GAMEPAD_A && item.first <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON && item.second != 0;
+              return item.vkey >= VK_GAMEPAD_A && item.vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON && item.new_value != 0;
             });
 
-            ::EndDialog(dialog, MAKELRESULT(changes.begin()->first, info->second.info.detected_context));
+            ::EndDialog(dialog, MAKELRESULT(changes.begin()->vkey, info->second.info.detected_context));
           }
 
           return 0;

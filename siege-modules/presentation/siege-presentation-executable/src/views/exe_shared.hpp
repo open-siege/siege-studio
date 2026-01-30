@@ -64,17 +64,24 @@ namespace siege::views
 
   winmm_hardware_index map_hid_to_winmm(hardware_index, const std::set<std::uint32_t>& axis_indexes);
 
+  struct input_state_change
+  {
+    WORD vkey;
+    std::uint16_t new_value;
+    std::uint16_t old_value;
+  };
+
   struct controller_state
   {
     controller_info info;
     std::any caps;
     XINPUT_STATE last_state;
-    std::array<std::pair<WORD, std::uint16_t>, 64> buffer;
+    std::array<input_state_change, 64> buffer;
   };
 
   using input_type = decltype(siege::views::hardware_index::type);
 
-  std::span<std::pair<WORD, std::uint16_t>> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<std::pair<WORD, std::uint16_t>> buffer);
+  std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer);
   std::vector<controller_info> get_connected_controllers();
   std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDLE handle);
   std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT handle);

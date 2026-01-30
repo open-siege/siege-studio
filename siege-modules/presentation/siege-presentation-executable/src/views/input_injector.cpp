@@ -265,7 +265,7 @@ namespace siege::views
             break;
           }
 
-          if (mapping.from_vkey != mapped_vkey.first)
+          if (mapping.from_vkey != mapped_vkey.vkey)
           {
             continue;
           }
@@ -275,21 +275,24 @@ namespace siege::views
             continue;
           }
 
-          if (mapped_vkey.second > 0)
+          constexpr static auto dead_zone = std::numeric_limits<std::uint16_t>::max() / 4;
+
+          if (mapped_vkey.new_value > dead_zone && mapped_vkey.old_value < dead_zone)
           {
             simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::down));
           }
-          else
+          else if (mapped_vkey.new_value < dead_zone && mapped_vkey.old_value > dead_zone)
           {
             simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::up));
           }
         }
       }
 
-
       if (!simulated_inputs.empty())
       {
-        assert(::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT)) == simulated_inputs.size());
+        const auto size = ::SendInput(simulated_inputs.size(), simulated_inputs.data(), sizeof(INPUT));
+
+        assert(size == simulated_inputs.size());
       }
 
       info->second.last_state = new_state;

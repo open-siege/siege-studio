@@ -937,7 +937,7 @@ namespace siege::views
     return (std::uint32_t)indexes.size();
   }
 
-  std::span<std::pair<WORD, std::uint16_t>> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<std::pair<WORD, std::uint16_t>> buffer)
+  std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer)
   {
     std::size_t result = 0;
     if (a.Gamepad.wButtons != b.Gamepad.wButtons)
@@ -949,25 +949,50 @@ namespace siege::views
 
         if (a_is_set != b_is_set)
         {
-          buffer[result++] = (std::make_pair(button.first, b_is_set ? std::numeric_limits<std::uint16_t>::max() : 0));
+          buffer[result++] = input_state_change{
+            .vkey = button.first,
+            .new_value = b_is_set ? std::numeric_limits<std::uint16_t>::max() : std::uint16_t{ 0 },
+            .old_value = a_is_set ? std::numeric_limits<std::uint16_t>::max() : std::uint16_t{ 0 },
+          };
         }
       }
     }
 
-    auto process_axis = [&](auto a, auto b, auto key_positive, auto key_negative) {
+    auto process_axis = [&](std::int16_t a, std::int16_t b, WORD key_positive, WORD key_negative) {
       if (a == b)
       {
         return;
       }
 
+      auto scale_value = [](auto value) { return static_cast<std::uint16_t>(static_cast<std::uint16_t>(value) * 2 + 1); };
+
       if (b > 0)
       {
-        buffer[result++] = (std::make_pair(key_positive, static_cast<std::uint16_t>(b) * 2 + 1));
+        buffer[result++] = input_state_change{
+          .vkey = key_positive,
+          .new_value = scale_value(b),
+          .old_value = a > 0 ? scale_value(a) : std::uint16_t{0}
+        };
+        buffer[result++] = input_state_change{
+          .vkey = key_negative,
+          .new_value = 0,
+          .old_value = a < 0 ? scale_value(-static_cast<std::uint16_t>(a)) : std::uint16_t{ 0 }
+        };
       }
       else
       {
         b = b + 1;
-        buffer[result++] = (std::make_pair(key_negative, -static_cast<std::uint16_t>(b) * 2 + 1));
+        buffer[result++] = input_state_change{
+          .vkey = key_negative,
+          .new_value = scale_value(-static_cast<std::uint16_t>(b)),
+          .old_value = a < 0 ? scale_value(-static_cast<std::uint16_t>(a)) : std::uint16_t{ 0 }
+        };
+
+        buffer[result++] = input_state_change{
+          .vkey = key_positive,
+          .new_value = 0,
+          .old_value = a > 0 ? scale_value(a) : std::uint16_t{ 0 }
+        };
       }
     };
 
@@ -978,14 +1003,24 @@ namespace siege::views
 
     if (a.Gamepad.bLeftTrigger != b.Gamepad.bLeftTrigger)
     {
-      auto trigger = (std::uint16_t)b.Gamepad.bLeftTrigger;
-      buffer[result++] = (std::make_pair(VK_GAMEPAD_LEFT_TRIGGER, trigger * 257));
+      auto trigger_b = (std::uint16_t)b.Gamepad.bLeftTrigger;
+      auto trigger_a = (std::uint16_t)b.Gamepad.bLeftTrigger;
+      buffer[result++] = input_state_change{
+        .vkey = VK_GAMEPAD_LEFT_TRIGGER,
+        .new_value = static_cast<std::uint16_t>(trigger_b * 257),
+        .old_value = static_cast<std::uint16_t>(trigger_a * 257)
+      };
     }
 
     if (a.Gamepad.bRightTrigger != b.Gamepad.bRightTrigger)
     {
-      auto trigger = (std::uint16_t)b.Gamepad.bRightTrigger;
-      buffer[result++] = (std::make_pair(VK_GAMEPAD_RIGHT_TRIGGER, trigger * 257));
+      auto trigger_b = (std::uint16_t)b.Gamepad.bRightTrigger;
+      auto trigger_a = (std::uint16_t)a.Gamepad.bRightTrigger;
+      buffer[result++] = input_state_change{
+        .vkey = VK_GAMEPAD_RIGHT_TRIGGER,
+        .new_value = static_cast<std::uint16_t>(trigger_b * 257),
+        .old_value = static_cast<std::uint16_t>(trigger_a * 257)
+      };
     }
 
     return std::span(buffer.begin(), buffer.begin() + result);
