@@ -16,7 +16,8 @@
 
 namespace siege::views
 {
-  using controller_state = siege::views::controller_state;
+  using siege::views::controller_state;
+  using siege::platform::hardware_context;
 
   enum class input_state
   {
@@ -24,7 +25,7 @@ namespace siege::views
     up
   };
 
-  ::INPUT vk_to_input(WORD vkey, siege::platform::hardware_context context, std::uint32_t device_id, input_state state, std::optional<WORD> intensity = std::nullopt);
+  ::INPUT vk_to_input(WORD vkey, hardware_context context, std::uint32_t device_id, input_state state, int intensity);
 
   struct input_injector
   {
@@ -39,6 +40,9 @@ namespace siege::views
     std::set<HANDLE> registered_keyboards;
     std::map<HANDLE, controller_state> registered_controllers;
     std::map<std::string_view, bool> action_states;
+
+    std::function<bool()> mouse_timer;
+    POINT mouse_intensity{};
 
     input_injector(win32::hwnd_t target_window, input_injector_args args) : target_window(target_window), injector_args(std::move(args))
     {
@@ -127,6 +131,11 @@ namespace siege::views
         // registration failed. Call GetLastError for the cause of the error.
       }
 
+      if (mouse_timer)
+      {
+        mouse_timer();
+      }
+
       ::CloseHandle(process_handle);
       ::CloseHandle(thread_handle);
     }
@@ -159,7 +168,7 @@ namespace siege::views
       return std::make_pair(x, y);
     }
 
-    LRESULT wm_input(win32::input_message message)
+    LRESULT wm_input(win32::window_ref window, win32::input_message message)
     {
       DWORD exit_code = 0;
       if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
@@ -256,6 +265,9 @@ namespace siege::views
         return 0;
       }
 
+      std::unordered_map<WORD, input_state_change> x_mouse_changes;
+      std::unordered_map<WORD, input_state_change> y_mouse_changes;
+
       for (auto mapped_vkey : changes)
       {
         for (auto& mapping : mappings)
@@ -270,23 +282,130 @@ namespace siege::views
             continue;
           }
 
-          if (!(mapping.to_context == siege::platform::hardware_context::global || mapping.to_context == siege::platform::hardware_context::keyboard || mapping.to_context == siege::platform::hardware_context::mouse))
+          if (!(mapping.to_context == hardware_context::global || mapping.to_context == hardware_context::keyboard || mapping.to_context == hardware_context::mouse))
           {
             continue;
           }
 
           constexpr static auto dead_zone = std::numeric_limits<std::uint16_t>::max() / 4;
 
+          if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == VK_LEFT || mapping.to_vkey == VK_RIGHT))
+          {
+
+            x_mouse_changes[mapping.to_vkey] = mapped_vkey;
+            continue;
+          }
+
+          if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == VK_UP || mapping.to_vkey == VK_DOWN))
+          {
+
+            y_mouse_changes[mapping.to_vkey] = mapped_vkey;
+            continue;
+          }
+
           if (mapped_vkey.new_value > dead_zone && mapped_vkey.old_value < dead_zone)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::down));
+            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::down, mapped_vkey.new_value));
           }
           else if (mapped_vkey.new_value < dead_zone && mapped_vkey.old_value > dead_zone)
           {
-            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::up));
+            simulated_inputs.emplace_back(vk_to_input(mapping.to_vkey, mapping.to_context, *device_id, input_state::up, mapped_vkey.new_value));
           }
         }
       }
+
+      if (!(x_mouse_changes.empty() || y_mouse_changes.empty()))
+      {
+
+        constexpr static auto dead_zone = std::numeric_limits<std::uint16_t>::max() / 8;
+
+        bool should_reset = std::all_of(x_mouse_changes.begin(), x_mouse_changes.end(), [](auto& item) {
+          return item.second.new_value < dead_zone;
+        }) && std::all_of(y_mouse_changes.begin(), y_mouse_changes.end(), [](auto& item) {
+          return item.second.new_value < dead_zone;
+        });
+
+        if (should_reset)
+        {
+          if (mouse_timer)
+          {
+            mouse_timer();
+          }
+          mouse_timer = nullptr;
+          mouse_intensity = {};
+        }
+        else
+        {
+          auto max_x = std::max_element(x_mouse_changes.begin(), x_mouse_changes.end(), [](const auto& a, const auto& b) {
+            return a.second.new_value < b.second.new_value;
+          });
+
+          auto max_y = std::max_element(y_mouse_changes.begin(), y_mouse_changes.end(), [](const auto& a, const auto& b) {
+            return a.second.new_value < b.second.new_value;
+          });
+
+          if (max_x != x_mouse_changes.end())
+          {
+            if (max_x->first == VK_RIGHT)
+            {
+              mouse_intensity.x = max_x->second.new_value / 1000;
+            }
+            else if (max_x->first == VK_LEFT)
+            {
+              mouse_intensity.x = -int(max_x->second.new_value / 1000);
+            }
+            else
+            {
+              assert(false);
+              mouse_intensity.x = 0;
+            }
+          }
+          else
+          {
+            mouse_intensity.x = 0;
+          }
+
+          if (max_y != y_mouse_changes.end())
+          {
+            if (max_y->first == VK_DOWN)
+            {
+              mouse_intensity.y = max_y->second.new_value / 1000;
+            }
+            else if (max_y->first == VK_UP)
+            {
+              mouse_intensity.y = -int(max_y->second.new_value / 1000);
+            }
+            else
+            {
+              assert(false);
+              mouse_intensity.y = 0;
+            }
+          }
+          else
+          {
+            mouse_intensity.y = 0;
+          }
+
+
+          if (!mouse_timer)
+          {
+            mouse_timer = win32::SetTimer(window.ref(), 10, [this](auto, auto, auto, auto) {
+              ::INPUT mouse_move{
+                .type = INPUT_MOUSE
+              };
+              mouse_move.type = INPUT_MOUSE;
+              mouse_move.mi.dwFlags = MOUSEEVENTF_MOVE;
+
+              mouse_move.mi.dx = mouse_intensity.x;
+              mouse_move.mi.dy = mouse_intensity.y;
+              const auto size = ::SendInput(1, &mouse_move, sizeof(INPUT));
+
+              assert(size == 1);
+            });
+          }
+        }
+      }
+
 
       if (!simulated_inputs.empty())
       {
@@ -376,7 +495,7 @@ namespace siege::views
       if (message == WM_INPUT && uIdSubclass)
       {
         auto* self = (input_injector*)uIdSubclass;
-        return self->wm_input(win32::input_message(wparam, lparam));
+        return self->wm_input(win32::window_ref(hwnd), win32::input_message(wparam, lparam));
       }
 
       if (message == WM_INPUT_DEVICE_CHANGE && uIdSubclass)
@@ -394,7 +513,7 @@ namespace siege::views
     }
   };
 
-  ::INPUT vk_to_input(WORD vkey, siege::platform::hardware_context context, std::uint32_t device_id, input_state state, std::optional<WORD> intensity)
+  ::INPUT vk_to_input(WORD vkey, hardware_context context, std::uint32_t device_id, input_state state, int intensity)
   {
     ::INPUT result{};
 
@@ -445,13 +564,8 @@ namespace siege::views
       result.type = INPUT_KEYBOARD;
       result.ki.wVk = vkey;
 
-
       result.ki.dwFlags = state == input_state::up ? KEYEVENTF_KEYUP : 0;
-
-      std::uint16_t controller_intensity = intensity ? *intensity : state == input_state::up ? 0
-                                                                                             : (std::uint16_t)-1;
-
-      result.ki.dwExtraInfo = MAKELPARAM(device_id, controller_intensity);
+      result.ki.dwExtraInfo = MAKELPARAM(device_id, intensity);
 
       return result;
     }
@@ -462,12 +576,12 @@ namespace siege::views
     result.ki.dwFlags = state == input_state::up ? KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP : KEYEVENTF_SCANCODE;
     result.ki.dwExtraInfo = device_id;
 
-    if (context == siege::platform::hardware_context::keyboard && (vkey == VK_HOME || vkey == VK_INSERT || vkey == VK_DELETE || vkey == VK_END || vkey == VK_NEXT || vkey == VK_PRIOR))
+    if (context == hardware_context::keyboard && (vkey == VK_HOME || vkey == VK_INSERT || vkey == VK_DELETE || vkey == VK_END || vkey == VK_NEXT || vkey == VK_PRIOR))
     {
       result.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
     }
 
-    if (context == siege::platform::hardware_context::keypad && (vkey == VK_RETURN))
+    if (context == hardware_context::keypad && (vkey == VK_RETURN))
     {
       result.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
     }

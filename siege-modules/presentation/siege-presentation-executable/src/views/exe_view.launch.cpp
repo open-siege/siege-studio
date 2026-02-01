@@ -225,6 +225,9 @@ namespace siege::views
       }
     });
 
+    using siege::platform::hardware_context;
+    using siege::platform::hardware_context_caps;
+
     exe_actions.bind_nm_click([this](win32::tool_bar exe_actions, const NMMOUSE& message) {
       if (message.dwItemSpec != this->launch.launch_selected_id)
       {
@@ -234,6 +237,14 @@ namespace siege::views
       auto actions = has_extension_module(state) ? get_extension(state).game_actions : std::span<siege::platform::game_action>{};
 
       auto bound_actions = get_action_bindings(state);
+
+      // TODO instead of partitioning things,
+      // it's better to bind things according to the action
+      // type
+      std::partition(bound_actions.begin(), bound_actions.end(), [](auto& binding) {
+        return binding.context == hardware_context::mouse || binding.context == hardware_context::mouse_wheel;
+      });
+
       auto controller_actions = std::vector(bound_actions.begin(), bound_actions.end());
       controller_actions.erase(std::remove_if(controller_actions.begin(), controller_actions.end(), [](auto& item) {
         return !is_vkey_for_controller(item.vkey);
@@ -262,9 +273,7 @@ namespace siege::views
             auto& action = actions[action_index];
 
             auto& binding = action_bindings.emplace_back();
-            using siege::platform::hardware_context;
-            using siege::platform::hardware_context_caps;
-
+            
             if (context == hardware_context::keyboard || context == hardware_context::keyboard_shifted || context == hardware_context::keypad)
             {
               binding.vkey = virtual_key;
