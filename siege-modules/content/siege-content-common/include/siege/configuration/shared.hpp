@@ -87,7 +87,7 @@ namespace siege::configuration
             void save(std::ostream&) const;
         private:
             persist& save_config;
-            std::unique_ptr<char[]>  raw_data;
+            std::shared_ptr<const char[]>  raw_data;
             std::vector<config_line> line_entries;
     };
 
