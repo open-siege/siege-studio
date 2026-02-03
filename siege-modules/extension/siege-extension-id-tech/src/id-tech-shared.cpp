@@ -510,8 +510,7 @@ void load_keyboard_bindings(siege::configuration::text_game_config& config, sieg
     }
   }
 }
-
-void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding, mouse_context default_context)
+void upsert_mouse_axis_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding, mouse_context default_context)
 {
   for (auto action_str : actions)
   {
@@ -527,7 +526,7 @@ void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_ac
     {
 
       std::memcpy(existing->action_name.data(), action->action_name.data(), action->action_name.size());
-      existing->input_type = siege::platform::controller_input_type::button;
+      existing->input_type = siege::platform::controller_input_type::axis;
       existing->virtual_key = action_str.first;
       continue;
     }
@@ -540,49 +539,7 @@ void upsert_mouse_defaults(const std::span<siege::platform::game_action> game_ac
     }
 
     std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-    first_available->input_type = siege::platform::controller_input_type::button;
-    first_available->virtual_key = action_str.first;
-    first_available->context = default_context;
-  }
-}
-
-void upsert_keyboard_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::keyboard_binding& binding, bool ignore_case, keyboard_context default_context)
-{
-  for (auto action_str : actions)
-  {
-    auto action = std::find_if(game_actions.begin(), game_actions.end(), [&](auto& action) { return std::string_view(action.action_name.data()) == action_str.second; });
-
-    if (action == game_actions.end())
-    {
-      continue;
-    }
-
-    auto existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == action_str.first; });
-
-    if (!ignore_case && existing == binding.inputs.end() && std::isalpha(action_str.first))
-    {
-      existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == (std::uint16_t)std::tolower(action_str.first); });
-    }
-
-    if (existing != binding.inputs.end())
-    {
-
-      std::memcpy(existing->action_name.data(), action->action_name.data(), action->action_name.size());
-      existing->input_type = siege::platform::controller_input_type::button;
-      existing->virtual_key = action_str.first;
-      continue;
-    }
-
-
-    auto first_available = std::find_if(binding.inputs.begin(), binding.inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
-
-    if (first_available == binding.inputs.end())
-    {
-      continue;
-    }
-
-    std::memcpy(first_available->action_name.data(), action->action_name.data(), action->action_name.size());
-    first_available->input_type = siege::platform::controller_input_type::button;
+    first_available->input_type = siege::platform::controller_input_type::axis;
     first_available->virtual_key = action_str.first;
     first_available->context = default_context;
   }

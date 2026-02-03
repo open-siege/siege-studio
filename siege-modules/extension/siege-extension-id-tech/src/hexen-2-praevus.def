@@ -11,5 +11,5 @@ EXPORTS
 	init_keyboard_inputs PRIVATE
 	format_command_line PRIVATE
 	init_mouse_inputs PRIVATE
-	init_controller_inputs PRIVATE
+	default_controller_inputs PRIVATE
 	apply_prelaunch_settings PRIVATE

@@ -1,7 +1,6 @@
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/registry.hpp>
-#include <siege/platform/extension_module.hpp>
 #include <siege/platform/shared.hpp>
 #include <locale>
 #include <codecvt>

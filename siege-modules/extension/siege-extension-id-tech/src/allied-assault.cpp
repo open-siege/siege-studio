@@ -161,36 +161,16 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> buttons{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+attacksecondary"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
-  };
-
-  upsert_mouse_defaults(game_actions, buttons, *binding);
-
-  std::array<std::pair<WORD, std::array<char, 32>>, 4> axes{
+  std::array<std::pair<WORD, std::string_view>, 4> axes{
     {
-      std::make_pair(WORD{ VK_UP }, std::array<char, 32>{ "+lookup" }),
-      std::make_pair(WORD{ VK_DOWN }, std::array<char, 32>{ "+lookdown" }),
-      std::make_pair(WORD{ VK_LEFT }, std::array<char, 32>{ "+left" }),
-      std::make_pair(WORD{ VK_RIGHT }, std::array<char, 32>{ "+right" }),
+      std::make_pair<WORD, std::string_view>(VK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
     }
   };
 
-  for (auto& axis : axes)
-  {
-    auto first_available = std::find_if(binding->inputs.begin(), binding->inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
-
-    if (first_available == binding->inputs.end())
-    {
-      break;
-    }
-
-    first_available->virtual_key = axis.first;
-    first_available->action_name = axis.second;
-    first_available->context = siege::platform::mouse_context::mouse;
-    first_available->input_type = siege::platform::controller_input_type::axis;
-  }
+  upsert_mouse_axis_defaults(game_actions, axes, *binding);
 
   return std::errc{};
 }
@@ -209,31 +189,21 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 9> actions{
-    {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
-      std::make_pair<WORD, std::string_view>('F', "+melee-attack"),
-      std::make_pair<WORD, std::string_view>('v', "+attackprimary"),
-      std::make_pair<WORD, std::string_view>('b', "+attacksecondary"),
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
-      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
-    }
-  };
-
-  upsert_keyboard_defaults(game_actions, actions, *binding);
-
   return std::errc{};
 }
 
-std::errc init_controller_inputs(controller_binding* binding)
+std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {
   if (binding == nullptr)
   {
     return std::errc::bad_address;
   }
+
+  if (layout_index > 0)
+  {
+    return std::errc::invalid_argument;
+  }
+
   std::array<std::pair<WORD, std::string_view>, 24> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attackprimary"),

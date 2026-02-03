@@ -156,16 +156,21 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-
   return std::errc{};
 }
 
-std::errc init_controller_inputs(controller_binding* binding)
+std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {
   if (binding == nullptr)
   {
     return std::errc::bad_address;
   }
+
+  if (layout_index > 0)
+  {
+    return std::errc::invalid_argument;
+  }
+
 
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {

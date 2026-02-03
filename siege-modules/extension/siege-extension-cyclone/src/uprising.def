@@ -7,4 +7,4 @@ EXPORTS
 	apply_prelaunch_settings_ex PRIVATE
 	init_mouse_inputs PRIVATE
 	init_keyboard_inputs PRIVATE
-	init_controller_inputs PRIVATE
+	default_controller_inputs PRIVATE

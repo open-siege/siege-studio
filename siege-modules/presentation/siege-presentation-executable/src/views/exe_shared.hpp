@@ -10,7 +10,7 @@
 #include <map>
 #include <span>
 #include <array>
-#include <siege/platform/extension_module.hpp>
+#include <siege/platform/extension_module_client.hpp>
 #include <xinput.h>
 
 #define DIRECTINPUT_VERSION 0x800

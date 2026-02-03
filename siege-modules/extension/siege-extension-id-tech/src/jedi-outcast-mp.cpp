@@ -152,13 +152,16 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  std::array<std::pair<WORD, std::string_view>, 4> axes{
+    {
+      std::make_pair<WORD, std::string_view>(VK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
+    }
   };
 
-  upsert_mouse_defaults(game_actions, actions, *binding);
-
+  upsert_mouse_axis_defaults(game_actions, axes, *binding);
 
   return std::errc{};
 }
@@ -177,29 +180,21 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 8> actions{
-    {
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_LEFT, "+moveleft"),
-      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+moveright"),
-      std::make_pair<WORD, std::string_view>(VK_OEM_COMMA, "+left"),
-      std::make_pair<WORD, std::string_view>(VK_OEM_PERIOD, "+right"),
-    }
-  };
-
-  upsert_keyboard_defaults(game_actions, actions, *binding);
-
   return std::errc{};
 }
 
-std::errc init_controller_inputs(controller_binding* binding)
+std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {
   if (binding == nullptr)
   {
     return std::errc::bad_address;
   }
+
+  if (layout_index > 0)
+  {
+    return std::errc::invalid_argument;
+  }
+
   std::array<std::pair<WORD, std::string_view>, 24> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),

@@ -10,6 +10,6 @@ EXPORTS
 	format_command_line PRIVATE
 	init_keyboard_inputs PRIVATE
 	init_mouse_inputs PRIVATE
-	init_controller_inputs PRIVATE
+	default_controller_inputs PRIVATE
 	apply_prelaunch_settings PRIVATE
 	is_input_mapping_valid=is_moh_input_mapping_valid PRIVATE

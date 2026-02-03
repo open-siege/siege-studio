@@ -8,7 +8,7 @@
 #include <siege/platform/presentation_module.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
-#include <siege/platform/extension_module.hpp>
+#include <siege/platform/extension_module_client.hpp>
 #include <utility>
 #include <fstream>
 #include <execution>

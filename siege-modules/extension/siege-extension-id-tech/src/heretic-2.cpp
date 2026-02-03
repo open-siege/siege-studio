@@ -145,19 +145,16 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+defend"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "defnext") }
+  std::array<std::pair<WORD, std::string_view>, 4> axes{
+    {
+      std::make_pair<WORD, std::string_view>(VK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
+    }
   };
 
-  upsert_mouse_defaults(game_actions, actions, *binding);
-
-  std::array<std::pair<WORD, std::string_view>, 2> mouse_wheel_actions{
-    { std::make_pair<WORD, std::string_view>(VK_UP, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_DOWN, "weaprev") }
-  };
-
-  upsert_mouse_defaults(game_actions, mouse_wheel_actions, *binding, mouse_context::mouse_wheel);
+  upsert_mouse_axis_defaults(game_actions, axes, *binding);
 
   return std::errc{};
 }
@@ -176,34 +173,21 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 12> actions{
-    {
-      std::make_pair<WORD, std::string_view>('W', "+forward"),
-      std::make_pair<WORD, std::string_view>('A', "+moveleft"),
-      std::make_pair<WORD, std::string_view>('S', "+back"),
-      std::make_pair<WORD, std::string_view>('D', "+moveright"),
-      std::make_pair<WORD, std::string_view>('F', "+defend"),
-      std::make_pair<WORD, std::string_view>('Z', "defprev"),
-      std::make_pair<WORD, std::string_view>('X', "defnext"),
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+defend"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_TAB, "score"),
-      std::make_pair<WORD, std::string_view>('C', "+creep"),
-    }
-  };
-
-  upsert_keyboard_defaults(game_actions, actions, *binding, true);
-
   return std::errc{};
 }
 
-std::errc init_controller_inputs(controller_binding* binding)
+std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {
   if (binding == nullptr)
   {
     return std::errc::bad_address;
   }
+
+  if (layout_index > 0)
+  {
+    return std::errc::invalid_argument;
+  }
+
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),

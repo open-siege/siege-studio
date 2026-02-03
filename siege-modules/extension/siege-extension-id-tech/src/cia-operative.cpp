@@ -109,7 +109,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   if (enable_controller)
   {
-    config.emplace(siege::configuration::key_type({ "joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joyadvanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joysidesensitivity" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "joypitchsensitivity" }), siege::configuration::key_type("1"));
@@ -145,10 +144,16 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{ { std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use"),
-    std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+zoom") } };
+  std::array<std::pair<WORD, std::string_view>, 4> axes{
+    {
+      std::make_pair<WORD, std::string_view>(VK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
+    }
+  };
 
-  upsert_mouse_defaults(game_actions, actions, *binding);
+  upsert_mouse_axis_defaults(game_actions, axes, *binding);
 
 
   return std::errc{};
@@ -168,29 +173,21 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 7> actions{
-    {
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_OEM_5, "+mlook"),
-      std::make_pair<WORD, std::string_view>(VK_LSHIFT, "+speed"),
-      std::make_pair<WORD, std::string_view>('f', "+use"),
-      std::make_pair<WORD, std::string_view>('e', "+use"),
-      std::make_pair<WORD, std::string_view>('r', "reload"),
-    }
-  };
-
-  upsert_keyboard_defaults(game_actions, actions, *binding);
-
   return std::errc{};
 }
 
-std::errc init_controller_inputs(controller_binding* binding)
+std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {
   if (binding == nullptr)
   {
     return std::errc::bad_address;
   }
+
+  if (layout_index > 0)
+  {
+    return std::errc::invalid_argument;
+  }
+
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),

@@ -59,8 +59,7 @@ extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { 
-        std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
   { "cmdlist"sv, std::size_t(0x45189c) },
   { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
 
@@ -73,11 +72,9 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> fu
   { "gamedir"sv, "which"sv },
 } };
 
-constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> variable_name_ranges{ {
-  { "cl_gameplayfix_nudgeoutofsolid_separation"sv, "cl_explosions_alpha_start"sv },
+constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> variable_name_ranges{ { { "cl_gameplayfix_nudgeoutofsolid_separation"sv, "cl_explosions_alpha_start"sv },
   { "cl_movement_stopspeed"sv, "cl_itembobspeed"sv },
-  { "qw_svc_maxspeed"sv, "scr_printspeed"sv }
-} };
+  { "qw_svc_maxspeed"sv, "scr_printspeed"sv } } };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
 {
@@ -158,13 +155,16 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  std::array<std::pair<WORD, std::string_view>, 4> axes{
+    {
+      std::make_pair<WORD, std::string_view>(VK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
+    }
   };
 
-  upsert_mouse_defaults(game_actions, actions, *binding);
-
+  upsert_mouse_axis_defaults(game_actions, axes, *binding);
 
   return std::errc{};
 }
@@ -183,26 +183,21 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 5> actions{
-    {
-      std::make_pair<WORD, std::string_view>('G', "+throw-grenade"),
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-    }
-  };
-
-  upsert_keyboard_defaults(game_actions, actions, *binding);
-
   return std::errc{};
 }
 
-std::errc init_controller_inputs(controller_binding* binding)
+std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {
   if (binding == nullptr)
   {
     return std::errc::bad_address;
   }
+
+  if (layout_index > 0)
+  {
+    return std::errc::invalid_argument;
+  }
+
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),

@@ -55,8 +55,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { 
-  { "exec"sv, std::size_t(0x101ff54) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x101ff54) },
   { "cmdlist"sv, std::size_t(0x1022e94) },
   { "cl_pitchspeed"sv, std::size_t(0x1022738) } } } } };
 
@@ -108,7 +107,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   // TODO the input and console systems in this game
   // are completely broken.
   // I'll have to do keyboard + mouse emulation instead
-  
+
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
 
@@ -128,12 +127,16 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     load_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 2> actions{
-    { std::make_pair<WORD, std::string_view>(VK_RBUTTON, "+altattack"),
-      std::make_pair<WORD, std::string_view>(VK_MBUTTON, "+use") }
+  std::array<std::pair<WORD, std::string_view>, 4> axes{
+    {
+      std::make_pair<WORD, std::string_view>(VK_UP, "+lookup"),
+      std::make_pair<WORD, std::string_view>(VK_DOWN, "+lookdown"),
+      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
+      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
+    }
   };
 
-  upsert_mouse_defaults(game_actions, actions, *binding);
+  upsert_mouse_axis_defaults(game_actions, axes, *binding);
 
   return std::errc{};
 }
@@ -152,20 +155,10 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     load_keyboard_bindings(*config, *binding);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 3> actions{
-    {
-      std::make_pair<WORD, std::string_view>(VK_RETURN, "+use"),
-      std::make_pair<WORD, std::string_view>(VK_SPACE, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_LCONTROL, "+movedown"),
-    }
-  };
-
-  upsert_keyboard_defaults(game_actions, actions, *binding);
-
   return std::errc{};
 }
 
-std::errc init_controller_inputs(controller_binding* binding)
+std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {
   if (binding == nullptr)
   {
