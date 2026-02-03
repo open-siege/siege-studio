@@ -107,20 +107,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  bool enable_controller = save_bindings_to_config(*args, config);
-
-  if (enable_controller)
-  {
-    // engine bug - mouse needs to be enabled for the right analog stick to work
-    config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
-  }
+  save_bindings_to_config(*args, config);
 
   config.save(custom_bindings);
-
-  bind_axis_to_send_input(*args, "+lookup", "+mlook");
-  bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
@@ -133,11 +122,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   std::advance(iter, 1);
   iter->name = L"console";
   iter->value = L"1";
-
-  std::advance(iter, 1);
-  iter->name = L"map";
-  iter->value = L"trdm01a";
-
 
   return std::errc{};
 }
@@ -152,7 +136,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
 
   if (config)
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
   }
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
@@ -180,7 +164,7 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
 
   if (config)
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
   }
 
   return std::errc{};

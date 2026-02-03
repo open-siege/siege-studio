@@ -171,11 +171,15 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pk3(L"base\\sof2mp_default.cfg", L"base/mp.pk3", L"base/mp.pk3");
 
-  if (config)
+  if (auto config = load_config_from_pk3(L"base\\sof2mp_default.cfg", L"base/mp.pk3", L"base/mp.pk3"))
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"base\\sof2mp.cfg"))
+  {
+    upsert_mouse_bindings(*config, *binding);
   }
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
@@ -199,12 +203,16 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pk3(L"base\\sof2mp_default.cfg", L"base/mp.pk3", L"base/mp.pk3");
-
-  if (config)
+  if (auto config = load_config_from_pk3(L"base\\sof2mp_default.cfg", L"base/mp.pk3", L"base/mp.pk3"))
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
   }
+
+  if (auto config = load_config_from_file(L"base\\sof2mp.cfg"))
+  {
+    upsert_keyboard_bindings(*config, *binding);
+  }
+
 
   return std::errc{};
 }

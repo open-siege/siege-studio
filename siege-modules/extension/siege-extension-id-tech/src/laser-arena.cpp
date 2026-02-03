@@ -11,9 +11,7 @@
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -151,11 +149,15 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pak", L"main/pak0.pak");
-
-  if (config)
+  
+  if (auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pak", L"main/pak0.pak"))
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"main\\config.cfg"))
+  {
+    upsert_mouse_bindings(*config, *binding);
   }
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
@@ -179,11 +181,14 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pak", L"main/pak0.pak");
-
-  if (config)
+  if (auto config = load_config_from_pak(L"main\\default.cfg", L"main/pak0.pak", L"main/pak0.pak"))
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"main\\config.cfg"))
+  {
+    upsert_keyboard_bindings(*config, *binding);
   }
 
   return std::errc{};

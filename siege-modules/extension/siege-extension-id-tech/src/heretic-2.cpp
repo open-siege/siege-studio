@@ -13,7 +13,6 @@
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
 
 namespace fs = std::filesystem;
@@ -138,11 +137,15 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pak(L"base\\Default.cfg", L"base/Htic2-0.pak", L"base/Htic2-0.pak");
-
-  if (config)
+  
+  if (auto config = load_config_from_pak(L"base\\Default.cfg", L"base/Htic2-0.pak", L"base/Htic2-0.pak"))
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"base\\config.cfg"))
+  {
+    upsert_mouse_bindings(*config, *binding);
   }
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
@@ -166,11 +169,14 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"base\\Default.cfg", L"base/Htic2-0.pak", L"base/Htic2-0.pak");
-
-  if (config)
+  if (auto config = load_config_from_pak(L"base\\Default.cfg", L"base/Htic2-0.pak", L"base/Htic2-0.pak"))
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"base\\config.cfg"))
+  {
+    upsert_keyboard_bindings(*config, *binding);
   }
 
   return std::errc{};

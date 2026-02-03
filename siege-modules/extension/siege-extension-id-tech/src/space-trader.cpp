@@ -120,11 +120,15 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pak(L"st\\default.cfg", L"st/pak0.hwp", L"st/pak0.hwp");
-
-  if (config)
+  
+  if (auto config = load_config_from_pk3(L"st\\default.cfg", L"st/pak0.hwp", L"st/pak0.hwp"))
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"st\\stxp.cfg"))
+  {
+    upsert_mouse_bindings(*config, *binding);
   }
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
@@ -148,11 +152,14 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"st\\default.cfg", L"st/pak0.hwp", L"st/pak0.hwp");
-
-  if (config)
+  if (auto config = load_config_from_pk3(L"st\\default.cfg", L"st/pak0.hwp", L"st/pak0.hwp"))
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"st\\stxp.cfg"))
+  {
+    upsert_keyboard_bindings(*config, *binding);
   }
 
   return std::errc{};

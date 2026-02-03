@@ -114,7 +114,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   {
     // engine bug - mouse needs to be enabled for the right analog stick to work
     config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_sidesensitivity" }), siege::configuration::key_type("1"));
     config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));
@@ -138,11 +137,14 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"data\\default_keys.cfg", L"data/pak1.pak", L"data/pak1.pak");
-
-  if (config)
+  if (auto config = load_config_from_pak(L"data\\default_keys.cfg", L"data/pak1.pak", L"data/pak1.pak"))
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"data\\current.cfg"))
+  {
+    upsert_mouse_bindings(*config, *binding);
   }
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
@@ -166,11 +168,14 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"data\\default_keys.cfg", L"data/pak1.pak", L"data/pak1.pak");
-
-  if (config)
+  if (auto config = load_config_from_pak(L"data\\default_keys.cfg", L"data/pak1.pak", L"data/pak1.pak"))
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
+  }
+
+  if (auto config = load_config_from_file(L"data\\current.cfg"))
+  {
+    upsert_keyboard_bindings(*config, *binding);
   }
 
   return std::errc{};

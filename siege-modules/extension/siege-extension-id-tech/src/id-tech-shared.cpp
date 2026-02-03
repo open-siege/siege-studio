@@ -333,6 +333,20 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD
   }
 }
 
+std::optional<siege::configuration::text_game_config> load_config_from_file(fs::path real_file_path)
+{
+  std::error_code last_error;
+
+  if (fs::exists(real_file_path, last_error))
+  {
+    std::ifstream stream(real_file_path, std::ios::binary);
+    auto size = fs::file_size(real_file_path, last_error);
+    return siege::configuration::id_tech::id_tech_2::load_config(stream, size);
+  }
+
+  return std::nullopt;
+}
+
 std::optional<siege::configuration::text_game_config> load_config_from_pak(fs::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path)
 {
   std::error_code last_error;
@@ -384,7 +398,7 @@ std::optional<siege::configuration::text_game_config> load_config_from_pk3(fs::p
   else if (fs::exists(pak_path, last_error))
   {
     std::any cache;
-    auto reader = siege::resource::pak::make_resource_reader();
+    auto reader = siege::resource::zip::make_zip_resource_reader();
 
     std::ifstream stream(pak_path, std::ios::binary);
     auto contents = reader.get_content_listing(cache, stream, { .archive_path = pak_path, .folder_path = pak_folder_path });
@@ -411,10 +425,10 @@ std::optional<siege::configuration::text_game_config> load_config_from_pk3(fs::p
   return std::nullopt;
 }
 
-void load_mouse_bindings(siege::configuration::text_game_config& config, siege::platform::mouse_binding& binding)
+void upsert_mouse_bindings(siege::configuration::text_game_config& config, siege::platform::mouse_binding& binding)
 {
   std::string temp;
-  int index = 0;
+
   for (auto& item : config.keys())
   {
     if (item.at(0) != "bind")
@@ -441,31 +455,42 @@ void load_mouse_bindings(siege::configuration::text_game_config& config, siege::
     }
     temp = entry.at(0);
 
-    if (temp.size() - 1 > binding.inputs[index].action_name.size())
+    if (temp.size() - 1 > binding.inputs[0].action_name.size())
     {
-      temp.resize(binding.inputs[index].action_name.size() - 1);
+      temp.resize(binding.inputs[0].action_name.size() - 1);
     }
 
     temp = siege::platform::to_lower(temp);
 
-    // TODO handle mouse wheel too
-    std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
-    binding.inputs[index].virtual_key = vkey->first;
-    binding.inputs[index].input_type = siege::platform::controller_input_type::button;
-    binding.inputs[index].context = siege::platform::mouse_context::mouse;
-    index++;
+    auto existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == vkey->first; });
 
-    if (index > binding.inputs.size())
+    if (existing != binding.inputs.end())
+    {
+
+      std::memcpy(existing->action_name.data(), temp.data(), temp.size());
+      existing->input_type = siege::platform::controller_input_type::button;
+      existing->virtual_key = vkey->first;
+      existing->context = siege::platform::mouse_context::mouse;
+      continue;
+    }
+
+    auto first_available = std::find_if(binding.inputs.begin(), binding.inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
+
+    if (first_available == binding.inputs.end())
     {
       break;
     }
+
+    std::memcpy(first_available->action_name.data(), temp.data(), temp.size());
+    first_available->input_type = siege::platform::controller_input_type::button;
+    first_available->virtual_key = vkey->first;
+    first_available->context = siege::platform::mouse_context::mouse;
   }
 }
 
-void load_keyboard_bindings(siege::configuration::text_game_config& config, siege::platform::keyboard_binding& binding)
+void upsert_keyboard_bindings(siege::configuration::text_game_config& config, siege::platform::keyboard_binding& binding)
 {
   std::string temp;
-  int index = 0;
   for (auto& item : config.keys())
   {
     if (item.at(0) != "bind")
@@ -492,22 +517,32 @@ void load_keyboard_bindings(siege::configuration::text_game_config& config, sieg
     }
     temp = entry.at(0);
 
-    if (temp.size() - 1 > binding.inputs[index].action_name.size())
+    if (temp.size() - 1 > binding.inputs[0].action_name.size())
     {
-      temp.resize(binding.inputs[index].action_name.size() - 1);
+      temp.resize(binding.inputs[0].action_name.size() - 1);
+    }
+    auto existing = std::find_if(binding.inputs.begin(), binding.inputs.end(), [&](auto& input) { return input.virtual_key == vkey->first; });
+
+    if (existing != binding.inputs.end())
+    {
+      std::memcpy(existing->action_name.data(), temp.data(), temp.size());
+      existing->input_type = siege::platform::controller_input_type::button;
+      existing->virtual_key = vkey->first;
+      existing->context = (siege::platform::keyboard_context)vkey->second;
+      continue;
     }
 
-    std::memcpy(binding.inputs[index].action_name.data(), temp.data(), temp.size());
-    binding.inputs[index].virtual_key = vkey->first;
-    binding.inputs[index].input_type = siege::platform::controller_input_type::button;
-    binding.inputs[index].context = (siege::platform::keyboard_context)vkey->second;
+    auto first_available = std::find_if(binding.inputs.begin(), binding.inputs.end(), [](auto& input) { return input.action_name[0] == '\0'; });
 
-    index++;
-
-    if (index > binding.inputs.size())
+    if (first_available == binding.inputs.end())
     {
       break;
     }
+
+    std::memcpy(first_available->action_name.data(), temp.data(), temp.size());
+    first_available->input_type = siege::platform::controller_input_type::button;
+    first_available->virtual_key = vkey->first;
+    first_available->context = (siege::platform::keyboard_context)vkey->second;
   }
 }
 void upsert_mouse_axis_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding, mouse_context default_context)

@@ -106,10 +106,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   config.save(custom_bindings);
 
-  // TODO bind everything
-  // bind_axis_to_send_input(*args, "+lookup", "+mlook");
-  // bind_axis_to_send_input(*args, "+lookdown", "+mlook");
-
   auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
   if (iter != args->string_settings.end())
@@ -135,7 +131,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
 
   if (config)
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
   }
 
 
@@ -153,7 +149,7 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
 
   if (config)
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
   }
 
   return std::errc{};

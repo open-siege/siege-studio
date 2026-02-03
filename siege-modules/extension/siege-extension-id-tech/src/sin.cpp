@@ -157,12 +157,13 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pak(L"base\\default.cfg", L"base/pak0.sin", L"base/pak0.sin/default.cfg");
 
-  if (config)
+  if (auto config = load_config_from_pak(L"base\\default.cfg", L"base/pak0.sin", L"base/pak0.sin/default.cfg"))
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
   }
+
+  // TODO load player config dynamically
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
     {
@@ -185,12 +186,12 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"base\\default.cfg", L"base/pak0.sin", L"base/pak0.sin/default.cfg");
-
-  if (config)
+  if (auto config = load_config_from_pak(L"base\\default.cfg", L"base/pak0.sin", L"base/pak0.sin/default.cfg"))
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
   }
+
+  // TODO load player config dynamically
 
   return std::errc{};
 }

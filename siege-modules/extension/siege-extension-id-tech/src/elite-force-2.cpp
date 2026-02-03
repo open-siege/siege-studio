@@ -197,12 +197,13 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pk3(L"base\\global\\default.cfg", L"base/pak0.pk3", L"main/pak0.pk3/global");
 
-  if (config)
+  if (auto config = load_config_from_pk3(L"base\\global\\default.cfg", L"base/pak0.pk3", L"main/pak0.pk3/global"))
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
   }
+
+  // TODO load player config dynamically
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
     {
@@ -225,12 +226,12 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pk3(L"base\\global\\default.cfg", L"base/pak0.pk3", L"main/pak0.pk3/global");
-
-  if (config)
+  if (auto config = load_config_from_pk3(L"base\\global\\default.cfg", L"base/pak0.pk3", L"main/pak0.pk3/global"))
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
   }
+
+    // TODO load player config dynamically
 
   return std::errc{};
 }
@@ -241,7 +242,7 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
   {
     return std::errc::bad_address;
   }
-  
+
   if (layout_index > 0)
   {
     return std::errc::invalid_argument;

@@ -11,9 +11,7 @@
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-
 #include "id-tech-shared.hpp"
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -93,9 +91,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   auto exe_path = std::filesystem::path(filename);
   auto parent_path = exe_path.parent_path();
 
-  if (exe_path.stem().string().starts_with("quakelive") && 
-      exe_path.extension() == ".exe" && 
-      std::filesystem::is_directory(parent_path / "baseq3", last_error))
+  if (exe_path.stem().string().starts_with("quakelive") && exe_path.extension() == ".exe" && std::filesystem::is_directory(parent_path / "baseq3", last_error))
   {
     return std::errc{};
   }
@@ -119,20 +115,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
-  bool enable_controller = save_bindings_to_config(*args, config);
-
-  if (enable_controller)
-  {
-    // engine bug - mouse needs to be enabled for the right analog stick to work
-    config.emplace(siege::configuration::key_type({ "set", "in_mouse" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
-    config.emplace(siege::configuration::key_type({ "set", "joy_advanced" }), siege::configuration::key_type("1"));
-  }
+  save_bindings_to_config(*args, config);
 
   config.save(custom_bindings);
-
-  bind_axis_to_send_input(*args, "+lookup", "+mlook");
-  bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
@@ -146,11 +131,11 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pak(L"baseq3\\default.cfg", L"baseq3/pak0.pak", L"baseq3/pak0.pak");
+  auto config = load_config_from_pk3(L"baseq3\\default.cfg", L"baseq3/pak0.pak", L"baseq3/pak0.pak");
 
   if (config)
   {
-    load_mouse_bindings(*config, *binding);
+    upsert_mouse_bindings(*config, *binding);
   }
 
   std::array<std::pair<WORD, std::string_view>, 4> axes{
@@ -174,11 +159,11 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"baseq3\\default.cfg", L"baseq3/pak0.pak", L"baseq3/pak0.pak");
+  auto config = load_config_from_pk3(L"baseq3\\default.cfg", L"baseq3/pak0.pak", L"baseq3/pak0.pak");
 
   if (config)
   {
-    load_keyboard_bindings(*config, *binding);
+    upsert_keyboard_bindings(*config, *binding);
   }
 
   return std::errc{};
