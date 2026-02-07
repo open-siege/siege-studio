@@ -6,7 +6,7 @@ namespace id_tech = siege::configuration::id_tech;
 
 using namespace std::literals;
 
-TEST_CASE("When data is empty nullopt returned")
+TEST_CASE("When data is empty for id Tech 2.5 nullopt returned")
 {
   std::stringstream data;
   auto value = id_tech::id_tech_2::load_config(data, 0);

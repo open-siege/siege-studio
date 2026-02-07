@@ -39,6 +39,8 @@ extern auto command_line_caps = game_command_line_caps{
   .controller_enabled_setting = L"in_joystick"
 };
 
+extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
+
 extern auto game_actions = std::array<game_action, 33>{ {
   game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
   game_action{ game_action::analog, "+back", u"Move Backward", u"Movement" },
@@ -67,16 +69,6 @@ extern auto game_actions = std::array<game_action, 33>{ {
   game_action{ game_action::digital, "+weapon-extra", u"Weapon Fiddle", u"Misc" },
 } };
 
-constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8>{ { { "+melee-attack", "weaponselect 1; +attack" },
-  { "-melee-attack", "weaponbestsafe; -attack" },
-  { "+weapon-extra1", "+weaponextra1;" },
-  { "-weapon-extra1", "-weaponextra1;alias +weapon-extra +weapon-extra2; alias -weapon-extra -weapon-extra2" },
-  { "+weapon-extra2", "+weaponextra2;" },
-  { "-weapon-extra2", "-weaponextra2;alias +weapon-extra +weapon-extra1; alias -weapon-extra -weapon-extra1" },
-  { "+weapon-extra", "+weapon-extra1" },
-  { "-weapon-extra", "-weapon-extra1" } } };
-
-extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
@@ -120,6 +112,15 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
   unbind_joystick_for_quake_2_config(config);
+
+  constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8>{ { { "+melee-attack", "weaponselect 1; +attack" },
+    { "-melee-attack", "weaponbestsafe; -attack" },
+    { "+weapon-extra1", "+weaponextra1;" },
+    { "-weapon-extra1", "-weaponextra1;alias +weapon-extra +weapon-extra2; alias -weapon-extra -weapon-extra2" },
+    { "+weapon-extra2", "+weaponextra2;" },
+    { "-weapon-extra2", "-weaponextra2;alias +weapon-extra +weapon-extra1; alias -weapon-extra -weapon-extra1" },
+    { "+weapon-extra", "+weapon-extra1" },
+    { "-weapon-extra", "-weapon-extra1" } } };
 
   for (auto& alias : sof_aliases)
   {

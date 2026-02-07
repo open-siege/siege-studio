@@ -33,9 +33,7 @@ install(TARGETS ${PROJECT_TARGETS}
 
 # test code
 file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
-if (NOT WIN32)
-        list(REMOVE_ITEM TESTABLE_SRC_FILES ${TEST_SRC_FILES} ${WIN32_SRC_FILES})
-endif()
+
 add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
 set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
