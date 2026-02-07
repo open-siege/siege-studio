@@ -59,6 +59,7 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 9> fu
   { "-speed"sv, "+strafeleft"sv },
   { "A_LoadPosMarkFile"sv, "A_MoveActor"sv },
   { "vp_rendertorches"sv, "vp_enginecmd"sv },
+  { "transwarp"sv, "changerule"sv },
 } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 4> variable_name_ranges{ { { "a_acceleration"sv, "a_friction"sv },

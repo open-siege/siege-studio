@@ -158,14 +158,14 @@ namespace siege::configuration::id_tech
           continue;
         }
 
-        if (segment.find(' ') != std::string_view::npos)
+        if (segment.contains(' '))
         {
           result.push_back('\"');
         }
 
         result.append(segment);
 
-        if (segment.find(' ') != std::string_view::npos)
+        if (segment.contains(' '))
         {
           result.push_back('\"');
         }
@@ -175,9 +175,19 @@ namespace siege::configuration::id_tech
 
       if (!line.value.empty())
       {
-        result.push_back('\"');
+        bool should_add_quotes = line.value.at(0).contains(' ') || line.value.at(0).contains(';') || !line.value.at(0).starts_with('+');
+
+        if (should_add_quotes)
+        {
+          result.push_back('\"');
+        }
+
         result.append(line.value.at(0));
-        result.push_back('\"');
+
+        if (should_add_quotes)
+        {
+          result.push_back('\"');
+        }
       }
       else if (result.back() == ' ')
       {

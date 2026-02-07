@@ -1405,7 +1405,7 @@ namespace siege::views
     case VK_HOME:
       return L"Home";
     case VK_DELETE:
-      return L"Insert";
+      return L"Delete";
     case VK_ESCAPE:
       return L"Escape";
     case VK_INSERT:

@@ -98,9 +98,29 @@ namespace siege::platform
     std::uint32_t hat_count;
   };
 
-  inline bool is_for_controller(hardware_context context)
+  constexpr bool is_for_controller(hardware_context context)
   {
     return static_cast<int>(context) >= static_cast<int>(hardware_context::controller_xbox);
+  }
+
+  constexpr bool is_up_direction(WORD vkey)
+  {
+    return vkey == VK_GAMEPAD_DPAD_UP || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_Y;
+  }
+
+  constexpr bool is_down_direction(WORD vkey)
+  {
+    return vkey == VK_GAMEPAD_DPAD_DOWN || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_DOWN || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN || vkey == VK_GAMEPAD_A;
+  }
+
+  constexpr bool is_left_direction(WORD vkey)
+  {
+    return vkey == VK_GAMEPAD_DPAD_LEFT || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_LEFT || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT || vkey == VK_GAMEPAD_X;
+  }
+
+  constexpr bool is_right_direction(WORD vkey)
+  {
+    return vkey == VK_GAMEPAD_DPAD_RIGHT || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_B;
   }
 
   struct game_action
@@ -132,6 +152,7 @@ namespace siege::platform
     const fs_char* selected_game_setting = FSL "";
     const fs_char* preferred_exe_setting = FSL "";
     const fs_char* controller_enabled_setting = FSL "";
+    const fs_char* mouse_enabled_setting = FSL "";
   };
 
   template<typename TValue>

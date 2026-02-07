@@ -2642,7 +2642,6 @@ namespace siege::views
       if (extension.supports_apply_prelaunch_settings_ex() == false || extension.supports_format_command_line_ex() == false)
       {
         legacy_args = std::make_unique<siege::platform::game_command_line_args>();
-        copy_args(game_args, *legacy_args);
       }
 
       auto create_args = [&] {
@@ -2673,6 +2672,7 @@ namespace siege::views
       }
       if (extension.supports_apply_prelaunch_settings_ex() == false)
       {
+        copy_args(game_args, *legacy_args);
         if (extension.apply_prelaunch_settings(self.loaded_path, *legacy_args) != std::errc{})
         {
           return E_ABORT;
@@ -2688,6 +2688,7 @@ namespace siege::views
       }
       if (extension.supports_format_command_line_ex() == false)
       {
+        copy_args(game_args, *legacy_args);
         argv = extension.format_command_line(*legacy_args);
       }
 

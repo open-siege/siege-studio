@@ -32,6 +32,7 @@ void upsert_keyboard_bindings(siege::configuration::text_game_config& config, si
 void upsert_mouse_axis_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding, mouse_context default_context = mouse_context::mouse);
 void append_controller_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::controller_binding& binding);
 void insert_string_setting_once(siege::platform::game_command_line_args& args, std::wstring_view name, std::wstring_view value);
+void insert_string_setting_once(std::span<siege::platform::game_command_line_args::string_setting> settings, std::wstring_view name, std::wstring_view value);
 
 struct mapping_context
 {
