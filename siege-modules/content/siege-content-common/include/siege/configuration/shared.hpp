@@ -17,52 +17,6 @@
 
 namespace siege::configuration
 {
-    struct little_endian_stream_reader
-    {
-        std::istream& stream;
-
-        std::uint32_t read_uint32();
-        std::uint8_t read_uint8();
-    };
-
-    struct little_endian_stream_writer
-    {
-        std::ostream& stream;
-        void write(const std::uint32_t&);
-        void write(const std::uint8_t&);
-        void write(const std::string_view);
-    };
-
-    void write(little_endian_stream_writer&, const config_value&);
-
-    class binary_game_config
-    {
-        public:
-            struct config_entry
-            {
-                std::string_view key;
-                config_value value;
-            };
-
-            using persist = void(&)(const std::vector<config_entry>&, std::ostream&);
-
-            binary_game_config(persist);
-            binary_game_config(std::vector<config_entry>&&, persist);
-            binary_game_config(binary_game_config&&) = default;
-            binary_game_config() = delete;
-            binary_game_config(const binary_game_config&) = delete;
-
-            std::vector<std::string_view> keys() const;
-            std::optional<config_value> find(std::string_view key) const;
-            void emplace(std::string_view key, config_value value);
-            void remove(std::string_view key);
-
-            void save(std::ostream&) const;
-        private: 
-            persist save_config;
-            std::vector<config_entry> entries;
-    };
-
     class text_game_config
     {
         public:
