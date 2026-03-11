@@ -5,8 +5,8 @@ if (WIN32)
     add_library(siege-extension-id-tech-2-0 STATIC src/id-tech-shared.cpp src/cmd-id-tech-2-0.cpp)
     target_include_directories(siege-extension-id-tech-2-0 PUBLIC src)
     
-    add_library(siege-extension-take-no-prisoners SHARED src/take-no-prisoners.cpp src/take-no-prisoners.def)
-    add_library(siege-extension-mageslayer SHARED src/mageslayer.cpp src/mageslayer.def)
+    add_library(siege-extension-take-no-prisoners SHARED src/vampire-shared.cpp src/take-no-prisoners.cpp src/vampire.def)
+    add_library(siege-extension-mageslayer SHARED src/vampire-shared.cpp src/mageslayer.cpp src/vampire.def)
 
     set(VAMPIRE_TARGETS siege-extension-take-no-prisoners 
                         siege-extension-mageslayer) 

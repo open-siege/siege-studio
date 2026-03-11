@@ -1184,10 +1184,12 @@ std::errc apply_dpi_awareness(const wchar_t* exe_path_str)
 }
 
 predefined_string*
-  get_predefined_id_tech_2_map_command_line_settings(const wchar_t* base_dir, bool include_zip) noexcept
+  get_predefined_id_tech_2_map_command_line_settings_with_extension(const wchar_t* base_dir, bool include_zip, std::string_view map_ext) noexcept
 {
   static std::vector<std::wstring> storage;
   static std::vector<predefined_string> results;
+
+  auto upper_ext = siege::platform::to_upper(map_ext);
 
   if (!results.empty())
   {
@@ -1207,7 +1209,9 @@ predefined_string*
 
       for (auto const& dir_entry : std::filesystem::directory_iterator{ base_dir })
       {
-        if ((include_zip && dir_entry.path().extension() == L".zip" || include_zip && dir_entry.path().extension() == L".ZIP") || (dir_entry.path().extension() == L".dat" || dir_entry.path().extension() == L".DAT") || dir_entry.path().extension() == L".sin" || dir_entry.path().extension() == L".SIN" || dir_entry.path().extension() == L".pak" || dir_entry.path().extension() == L".PAK")
+        if ((include_zip && dir_entry.path().extension() == L".zip" || include_zip && dir_entry.path().extension() == L".ZIP") || (dir_entry.path().extension() == L".dat" || dir_entry.path().extension() == L".DAT") || dir_entry.path().extension() == L".sin" || dir_entry.path().extension() == L".SIN"
+            || dir_entry.path().extension() == L".pak" || dir_entry.path().extension() == L".PAK"
+            || dir_entry.path().extension() == L".vpk" || dir_entry.path().extension() == L".VPK")
         {
           pak_files.emplace_back(dir_entry.path());
         }
@@ -1217,7 +1221,7 @@ predefined_string*
       {
         for (auto const& file_iter : std::filesystem::directory_iterator{ maps_dir })
         {
-          if (!file_iter.is_directory() && (file_iter.path().extension() == ".bsp" || file_iter.path().extension() == ".BSP"))
+          if (!file_iter.is_directory() && (file_iter.path().extension() == map_ext || file_iter.path().extension() == upper_ext))
           {
             if (file_iter.path().parent_path() == maps_dir)
             {
@@ -1241,7 +1245,7 @@ predefined_string*
 
       storage.reserve(pak_files.size() * pak_files.size());
 
-      std::for_each(pak_files.begin(), pak_files.end(), [](auto& dir_entry) {
+      std::for_each(pak_files.begin(), pak_files.end(), [&](auto& dir_entry) {
         std::any cache;
         std::ifstream stream(dir_entry, std::ios::binary);
 
@@ -1260,55 +1264,61 @@ predefined_string*
           return;
         }
 
-        auto contents = reader->get_content_listing(cache, stream, { .archive_path = dir_entry, .folder_path = dir_entry / "maps" });
-
-        for (auto& content : contents)
+        for (auto& sub : { "maps", "MAPS" })
         {
-          if (auto* folder_info = std::get_if<siege::platform::resource_reader::folder_info>(&content); folder_info)
+          auto contents = reader->get_content_listing(cache, stream, { .archive_path = dir_entry, .folder_path = dir_entry / sub });
+
+          for (auto& content : contents)
           {
-            contents.append_range(reader->get_content_listing(cache, stream, { .archive_path = dir_entry, .folder_path = folder_info->full_path }));
-          }
-        }
-
-        if (storage.capacity() == 0)
-        {
-          storage.reserve(contents.size());
-        }
-
-        for (auto& content : contents)
-        {
-          if (std::get_if<siege::platform::folder_info>(&content) != nullptr)
-          {
-            continue;
-          }
-          auto& file_info = std::get<siege::platform::file_info>(content);
-
-          if (file_info.filename.extension() == ".bsp" || file_info.filename.extension() == ".BSP")
-          {
-            auto temp = fs::relative(file_info.folder_path, file_info.archive_path);
-
-            if (temp.string() == "maps" || temp.string().starts_with("maps/") || temp.string().starts_with("maps\\"))
+            if (auto* folder_info = std::get_if<siege::platform::resource_reader::folder_info>(&content); folder_info)
             {
-              temp = temp.string().replace(0, 5, "");
+              contents.append_range(reader->get_content_listing(cache, stream, { .archive_path = dir_entry, .folder_path = folder_info->full_path }));
             }
+          }
 
-            if (temp.string() == "" || temp.string() == "/" || temp.string() == "\\")
+          if (storage.capacity() == 0)
+          {
+            storage.reserve(contents.size());
+          }
+
+          for (auto& content : contents)
+          {
+            if (std::get_if<siege::platform::folder_info>(&content) != nullptr)
             {
-              storage.emplace_back(file_info.filename.stem().wstring());
+              continue;
             }
-            else
-            {
-              std::wstring final_name = (temp / file_info.filename.stem()).wstring();
+            auto& file_info = std::get<siege::platform::file_info>(content);
 
-              while (final_name.contains(std::filesystem::path::preferred_separator))
+            if (file_info.filename.extension() == map_ext || file_info.filename.extension() == upper_ext)
+            {
+              auto temp = fs::relative(file_info.folder_path, file_info.archive_path);
+
+              if (temp.string() == sub || 
+                  temp.string().starts_with(std::string(sub) + "/") || 
+                  temp.string().starts_with(std::string(sub) + "\\"))
               {
-                final_name = final_name.replace(final_name.find(std::filesystem::path::preferred_separator), 1, std::wstring(L"/"));
+                temp = temp.string().replace(0, 5, "");
               }
 
-              storage.emplace_back(std::move(final_name));
+              if (temp.string() == "" || temp.string() == "/" || temp.string() == "\\")
+              {
+                storage.emplace_back(file_info.filename.stem().wstring());
+              }
+              else
+              {
+                std::wstring final_name = (temp / file_info.filename.stem()).wstring();
+
+                while (final_name.contains(std::filesystem::path::preferred_separator))
+                {
+                  final_name = final_name.replace(final_name.find(std::filesystem::path::preferred_separator), 1, std::wstring(L"/"));
+                }
+
+                storage.emplace_back(std::move(final_name));
+              }
             }
           }
         }
+        
       });
     }
 
@@ -1331,6 +1341,13 @@ predefined_string*
   {
     return nullptr;
   }
+}
+
+
+predefined_string*
+  get_predefined_id_tech_2_map_command_line_settings(const wchar_t* base_dir, bool include_zip) noexcept
+{
+  return get_predefined_id_tech_2_map_command_line_settings_with_extension(base_dir, include_zip, ".bsp");
 }
 
 

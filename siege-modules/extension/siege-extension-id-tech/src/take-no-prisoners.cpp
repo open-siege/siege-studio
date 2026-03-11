@@ -63,9 +63,13 @@ extern "C" {
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"dinput" } };
 
 extern auto command_line_caps = game_command_line_caps{
+  .flags = { { L"listen", L"serve", L"join" } },
   .int_settings = { { L"Joystick", L"Mouse" } },
-  .string_settings = { { L"name" } },
+  .string_settings = { { L"name", L"map" } },
+  .ip_connect_setting = L"join",
   .player_name_setting = L"name",
+  .listen_setting = L"listen",
+  .dedicated_setting = L"serve",
   .controller_enabled_setting = L"Joystick",
   .mouse_enabled_setting = L"Mouse",
 };
@@ -79,11 +83,11 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+down", u"Prone", u"Movement" },
   game_action{ game_action::digital, "+up", u"Stand-up", u"Movement" },
   game_action{ game_action::digital, "+speed", u"Run", u"Movement" },
-  game_action{ game_action::analog, "+turnleft", u"Turn Left", u"Aiming" },
-  game_action{ game_action::analog, "+turnright", u"Turn Right", u"Aiming" },
-  game_action{ game_action::digital, "+raisecamera", u"Raise Camera", u"Aiming" },
-  game_action{ game_action::digital, "+midcamera", u"Center Camera", u"Aiming" },
-  game_action{ game_action::digital, "+lowercamera", u"Lower Camera", u"Aiming" },
+  game_action{ game_action::analog, "+turnleft", u"Turn Left", u"Movement" },
+  game_action{ game_action::analog, "+turnright", u"Turn Right", u"Movement" },
+  game_action{ game_action::digital, "+raisecamera", u"Raise Camera", u"Camera" },
+  game_action{ game_action::digital, "+midcamera", u"Center Camera", u"Camera" },
+  game_action{ game_action::digital, "+lowercamera", u"Lower Camera", u"Camera" },
   game_action{ game_action::digital, "+aimup", u"Aim Up", u"Aiming" },
   game_action{ game_action::digital, "aimcenter", u"Aim Center", u"Aiming" },
   game_action{ game_action::digital, "+aimdown", u"Aim Down", u"Aiming" },
@@ -97,7 +101,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "prevweapon", u"Previous Weapon", u"Combat" },
   game_action{ game_action::digital, "dropweapon", u"Drop Weapon", u"Combat" },
   game_action{ game_action::digital, "showscore", u"Show Scores", u"Interface" },
-  game_action{ game_action::digital, "looktoggle", u"Look Toggle", u"Misc" },
+  game_action{ game_action::digital, "looktoggle", u"Look Toggle", u"Camera" },
   game_action{ game_action::digital, "pause", u"Pause", u"Misc" },
 } };
 
@@ -137,7 +141,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-std::errc is_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping)
+std::errc is_input_mapping_valid(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping) noexcept
 {
   using namespace siege::platform;
   if (mapping == nullptr)
@@ -300,75 +304,6 @@ std::errc apply_prelaunch_settings_ex(const wchar_t* exe_path_str, siege::platfo
   insert_string_setting_once(packaged_args.string_settings, L"exec", L"siege_studio_inputs.cfg");
 
   return std::errc{};
-}
-
-const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
-{
-  if (!args)
-  {
-    return nullptr;
-  }
-
-  if (!new_size)
-  {
-    return nullptr;
-  }
-
-  static std::vector<std::wstring> string_args;
-  string_args.clear();
-
-  for (auto& setting : args->string_settings)
-  {
-    if (!setting.name)
-    {
-      continue;
-    }
-
-    if (std::wstring_view(setting.name) == command_line_caps.ip_connect_setting)
-    {
-      continue;
-    }
-
-    if (std::wstring_view(setting.name) == command_line_caps.preferred_exe_setting)
-    {
-      continue;
-    }
-
-    if (!setting.value)
-    {
-      continue;
-    }
-
-    if (!setting.value[0])
-    {
-      continue;
-    }
-
-    if (std::wstring_view(setting.name) == L"map")
-    {
-      string_args.emplace_back(L"+map");
-      string_args.emplace_back(setting.value);
-    }
-    else if (std::wstring_view(setting.name) == L"exec")
-    {
-      string_args.emplace_back(L"+exec");
-      string_args.emplace_back(setting.value);
-    }
-    else
-    {
-      continue;
-    }
-  }
-
-  static std::vector<const wchar_t*> raw_args;
-  raw_args.resize(string_args.size());
-  *new_size = (std::uint32_t)string_args.size();
-
-  std::transform(string_args.begin(), string_args.end(), raw_args.begin(), [](const std::wstring& value) {
-    return value.c_str();
-  });
-
-  return raw_args.data();
 }
 
 std::errc init_mouse_inputs(mouse_binding* binding) noexcept
@@ -580,250 +515,18 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
 
   return std::errc{};
 }
+
+predefined_string*
+  get_predefined_id_tech_2_map_command_line_settings_with_extension(const wchar_t* base_dir, bool include_zip, std::string_view map_ext) noexcept;
+
+predefined_string*
+  get_predefined_string_command_line_settings(const wchar_t* name) noexcept
+{
+  if (name && std::wstring_view(name) == L"map")
+  {
+    return get_predefined_id_tech_2_map_command_line_settings_with_extension(L".", false, ".vbm");
+  }
+
+  return nullptr;
 }
-
-std::optional<std::string_view> mouse_key_for_vkey(const input_mapping_ex& mapping) noexcept
-{
-  if (mapping.vkey == VK_LBUTTON)
-  {
-    return "mouse1"sv;
-  }
-
-  if (mapping.vkey == VK_RBUTTON)
-  {
-    return "mouse2"sv;
-  }
-
-  if (mapping.vkey == VK_MBUTTON)
-  {
-    return "mouse3"sv;
-  }
-
-  return std::nullopt;
-}
-
-std::optional<input_mapping_ex> vkey_for_mouse_key(const std::string_view& mapping) noexcept
-{
-  input_mapping_ex result{};
-  result.vkey = VK_LBUTTON;
-
-  if (mouse_key_for_vkey(result) == mapping)
-  {
-    return result;
-  }
-
-  result.vkey = VK_RBUTTON;
-
-  if (mouse_key_for_vkey(result) == mapping)
-  {
-    return result;
-  }
-  result.vkey = VK_MBUTTON;
-
-  if (mouse_key_for_vkey(result) == mapping)
-  {
-    return result;
-  }
-  return std::nullopt;
-}
-
-std::optional<std::string_view> joy_key_for_vkey(const input_mapping_ex& mapping) noexcept
-{
-  constexpr static std::array<std::string_view, 15> buttons{ {
-    "joy1"sv,
-    "joy2"sv,
-    "joy3"sv,
-    "joy4"sv,
-    "joy5"sv,
-    "joy6"sv,
-    "joy7"sv,
-    "joy8"sv,
-    "joy9"sv,
-    "joy10"sv,
-    "joy11"sv,
-    "joy12"sv,
-    "joy13"sv,
-    "joy14"sv,
-    "joy15"sv,
-  } };
-
-  if (siege::platform::is_for_controller(mapping.context) && mapping.hardware_input_type == controller_input_type::button && mapping.hardware_index < buttons.size())
-  {
-    return buttons[mapping.hardware_index];
-  }
-
-  return std::nullopt;
-}
-
-struct mapping
-{
-  WORD vkey;
-  std::string_view name;
-};
-
-constexpr auto& get_ascii_keys()
-{
-  constexpr static auto uppercase_keys = [] {
-    std::array<mapping, 36> results{};
-    auto upper_keys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"sv;
-
-    for (auto i = 0; i < upper_keys.size(); ++i)
-    {
-      results[i].vkey = (WORD)upper_keys[i];
-      results[i].name = upper_keys.substr(i, 1);
-    }
-    return results;
-  }();
-
-  static_assert(uppercase_keys[0].vkey == 0x41);
-  static_assert(uppercase_keys[0].name == "A"sv);
-
-  static_assert(uppercase_keys[uppercase_keys.size() - 1].vkey == 0x39);
-  static_assert(uppercase_keys[uppercase_keys.size() - 1].name == "9"sv);
-  return uppercase_keys;
-}
-
-constexpr auto& get_special_keys()
-{
-  constexpr static auto special_keys = std::array<mapping, 46>{ {
-    { .vkey = VK_UP, .name = "UPARROW"sv },
-    { VK_DOWN, "DOWNARROW"sv },
-    { VK_LEFT, "LEFTARROW"sv },
-    { VK_RIGHT, "UPARROW"sv },
-    { VK_LCONTROL, "CTRL"sv },
-    { VK_RETURN, "ENTER"sv },
-    { VK_LSHIFT, "SHIFT"sv },
-    { VK_LMENU, "ALT"sv },
-    { VK_HOME, "HOME"sv },
-    { VK_PRIOR, "PGUP"sv },
-    { VK_ESCAPE, "ESCAPE"sv },
-    { VK_NEXT, "PGDN"sv },
-    { VK_END, "END"sv },
-    { VK_DELETE, "DEL"sv },
-    { VK_INSERT, "INS"sv },
-    { VK_PRINT, "PRINTSCREEN"sv },
-    { VK_CAPITAL, "CAPS"sv },
-    { VK_PAUSE, "PAUSE"sv },
-    { VK_TAB, "TAB"sv },
-    { VK_SPACE, "SPACE"sv },
-    { VK_OEM_1, "SEMICOLON"sv },
-    { VK_OEM_7, "QUOTE"sv },
-    { VK_SCROLL, "SCROLL"sv },
-    { VK_F1, "F1"sv },
-    { VK_F2, "F2"sv },
-    { VK_F3, "F3"sv },
-    { VK_F4, "F4"sv },
-    { VK_F5, "F5"sv },
-    { VK_F6, "F6"sv },
-    { VK_F7, "F7"sv },
-    { VK_F8, "F8"sv },
-    { VK_F9, "F9"sv },
-    { VK_F10, "F10"sv },
-    { VK_F11, "F11"sv },
-    { VK_F12, "F12"sv },
-    { VK_OEM_COMMA, ","sv },
-    { VK_OEM_PERIOD, "."sv },
-    { VK_OEM_MINUS, "-"sv },
-    { VK_OEM_PLUS, "="sv },
-    { VK_OEM_1, ";"sv },
-    { VK_OEM_2, "/"sv },
-    { VK_OEM_3, "`"sv },
-    { VK_OEM_4, "["sv },
-    { VK_OEM_5, "\\"sv },
-    { VK_OEM_6, "]"sv },
-    { VK_OEM_7, "'"sv },
-  } };
-  return special_keys;
-}
-
-std::optional<std::string_view> bind_key_for_vkey(const input_mapping_ex& mapping) noexcept
-{
-  auto is_valid_key = [&](auto& key) {
-    return key.vkey == mapping.vkey;
-  };
-  auto iter = stl::find_if(get_special_keys(), is_valid_key);
-
-  if (iter != get_special_keys().end())
-  {
-    return iter->name;
-  }
-
-  auto letter_iter = stl::find_if(get_ascii_keys(), is_valid_key);
-
-  if (letter_iter != get_ascii_keys().end())
-  {
-    return letter_iter->name;
-  }
-
-  return std::nullopt;
-}
-
-std::optional<input_mapping_ex> vkey_for_bind_key(const std::string_view& mapping) noexcept
-{
-  auto is_valid_key = [&](auto& key) {
-    return key.name == mapping;
-  };
-  auto is_valid_key_lower = [&](auto& key) {
-    return key.name == siege::platform::to_upper(mapping);
-  };
-
-  auto iter = stl::find_if(get_special_keys(), is_valid_key);
-
-  if (iter == get_special_keys().end())
-  {
-    iter = stl::find_if(get_special_keys(), is_valid_key_lower);
-  }
-
-  input_mapping_ex result{
-    .context = hardware_context::keyboard
-  };
-
-  if (iter != get_special_keys().end())
-  {
-    result.vkey = iter->vkey;
-    return result;
-  }
-
-  auto letter_iter = stl::find_if(get_ascii_keys(), is_valid_key);
-
-  if (letter_iter == get_ascii_keys().end())
-  {
-    letter_iter = stl::find_if(get_ascii_keys(), is_valid_key_lower);
-  }
-
-  if (letter_iter != get_ascii_keys().end())
-  {
-    result.vkey = letter_iter->vkey;
-    return result;
-  }
-
-  return std::nullopt;
-}
-
-std::optional<std::string_view> pov_key_for_vkey(const input_mapping_ex& mapping) noexcept
-{
-  if (mapping.hardware_input_type == controller_input_type::hat && mapping.hardware_index == 0)
-  {
-    if (siege::platform::is_up_direction(mapping.vkey))
-    {
-      return "hat1";
-    }
-
-    if (siege::platform::is_down_direction(mapping.vkey))
-    {
-      return "hat2";
-    }
-
-    if (siege::platform::is_left_direction(mapping.vkey))
-    {
-      return "hat3";
-    }
-
-    if (siege::platform::is_right_direction(mapping.vkey))
-    {
-      return "hat4";
-    }
-  }
-
-  return std::nullopt;
 }
