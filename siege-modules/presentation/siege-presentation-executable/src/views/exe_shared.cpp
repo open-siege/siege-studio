@@ -450,6 +450,10 @@ namespace siege::views
                 return setting.type == extension_setting_type::string_setting && setting.setting_name == caps.ip_connect_setting;
               });
 
+              auto connect_flag = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+                return setting.type == extension_setting_type::flag_setting && setting.setting_name == caps.ip_connect_setting;
+              });
+
               auto should_connect = value == pref_options[1];// connect to server
 
               if (connect_setting != self.launch_settings.end())
@@ -467,6 +471,17 @@ namespace siege::views
                 {
                   connect_setting->persist();
                 }
+              }
+              else if (connect_flag != self.launch_settings.end())
+              {
+                connect_flag->enabled = should_connect;
+                connect_flag->value = should_connect;
+
+                if (connect_flag->persist)
+                {
+                  connect_flag->persist();
+                }
+
               }
             }
 
@@ -771,6 +786,13 @@ namespace siege::views
         return false;
       }
 
+      std::wstring_view ip_setting = caps.ip_connect_setting ? caps.ip_connect_setting : L"";
+
+      if (setting == ip_setting)
+      {
+        return false;
+      }
+
       return true;
     };
 
@@ -848,7 +870,7 @@ namespace siege::views
         .type = extension_setting_type::flag_setting,
         .value = L"",
         .display_name = setting,
-        .visible = is_visible(setting, extension_setting_type::float_setting),
+        .visible = is_visible(setting, extension_setting_type::flag_setting),
         .group_id = 2 });
     }
 
