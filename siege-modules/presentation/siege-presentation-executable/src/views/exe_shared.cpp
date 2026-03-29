@@ -12,6 +12,8 @@
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 namespace stl = std::ranges;
+using siege::platform::predefined_int;
+using siege::platform::predefined_string;
 
 namespace siege::views
 {
@@ -404,7 +406,7 @@ namespace siege::views
         .value = std::wstring{ pref_options[index] },
         .display_name = L"Hosting",
         .group_id = 1,
-        .get_predefined_string = [real_options = std::move(real_options), results = std::vector<siege::platform::predefined_string>{}](auto name) mutable -> std::span<siege::platform::predefined_string> {
+        .get_predefined_string = [real_options = std::move(real_options), results = std::vector<predefined_string>{}](auto name) mutable -> std::span<const siege::platform::predefined_string> {
           if (name == hosting_pref_name)
           {
             if (!results.empty())
@@ -413,14 +415,14 @@ namespace siege::views
             }
             for (auto& string : real_options)
             {
-              results.emplace_back(siege::platform::predefined_string{
+              results.emplace_back(predefined_string{
                 .label = string.data(),
                 .value = string.data() });
             }
             return results;
           }
 
-          return std::span<siege::platform::predefined_string>{};
+          return std::span<const predefined_string>{};
         },
         .persist = [&self, &state]() {
           siege::platform::game_command_line_caps default_caps{};
@@ -560,23 +562,18 @@ namespace siege::views
         .value = (int)settings.zero_tier_enabled,
         .display_name = L"Enable Zero Tier",
         .group_id = 1,
-        .get_predefined_int = [results = std::vector<siege::platform::predefined_int>{}](auto name) mutable -> std::span<siege::platform::predefined_int> {
-          if (name == L"ZERO_TIER_ENABLED")
+        .get_predefined_int = [results = std::vector<predefined_int>{
+                                 predefined_int{
+                                   .label = L"Yes",
+                                   .value = 1 },
+                                 predefined_int{
+                                   .label = L"No",
+                                   .value = 0 } }](auto name) -> std::span<const predefined_int> {
+          if (name != L"ZERO_TIER_ENABLED")
           {
-            if (!results.empty())
-            {
-              return results;
-            }
-
-            results.emplace_back(siege::platform::predefined_int{
-              .label = L"Yes",
-              .value = 1 });
-
-            results.emplace_back(siege::platform::predefined_int{
-              .label = L"No",
-              .value = 0 });
+            return std::span<const predefined_int>{};
           }
-          return std::span<siege::platform::predefined_int>{};
+          return results;
         },
         .persist = [&self]() {
           if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {

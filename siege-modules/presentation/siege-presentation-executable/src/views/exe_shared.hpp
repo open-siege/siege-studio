@@ -170,8 +170,8 @@ namespace siege::views
     bool visible = true;
     bool enabled = true;
     int group_id = 0;
-    std::function<std::span<siege::platform::predefined_string>(std::wstring_view name)> get_predefined_string;
-    std::function<std::span<siege::platform::predefined_int>(std::wstring_view name)> get_predefined_int;
+    std::function<std::span<const siege::platform::predefined_string>(std::wstring_view name)> get_predefined_string;
+    std::function<std::span<const siege::platform::predefined_int>(std::wstring_view name)> get_predefined_int;
     std::function<void()> persist;
 
     void update_value(int new_value, std::wstring_view new_display_value = L"");
