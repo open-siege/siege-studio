@@ -14,9 +14,6 @@
 #include <execution>
 #include <unordered_set>
 
-// TODO show GOG icon for game or game exe icon
-// TODO add filters for game name and game file format support
-// TODO add support for more than one copy of the game being shown in the list
 namespace siege::views
 {
   using namespace std::literals;
@@ -413,10 +410,6 @@ namespace siege::views
 
         auto engine_group_id = std::distance(engines.begin(), engine_iter) + 2;
 
-        if (engine_group_id == 1)
-        {
-          OutputDebugStringW(L"Found wrong ID\n");
-        }
         game_item.iGroupId = engine_group_id;
 
         if (game.preferered_extension)
@@ -676,7 +669,19 @@ namespace siege::views
               continue;
             }
 
-            if (item.first.parent_path() == app_path.parent_path())
+            auto parent_path = item.first.parent_path();
+
+            if (app_path.parent_path().native().starts_with(parent_path.native()))
+            {
+              auto relative_app_path = fs::relative(app_path.parent_path(), parent_path);
+
+              if (!relative_app_path.native().starts_with(L"..\\"))
+              {
+                return true;
+              }
+            }
+
+            if (parent_path.native().starts_with(app_path.parent_path().native()))
             {
               return true;
             }
@@ -710,13 +715,14 @@ namespace siege::views
         };
 
         auto process_fallback = [&](const auto& app_path) {
-          constexpr static auto unwanted_exe_names = std::array<const wchar_t*, 39>{ {
+          constexpr static auto unwanted_exe_names = std::array<const wchar_t*, 53>{ {
             L"uninstall",
             L"uninstal",
             L"unins000",
             L"unwise",
             L"_isdel",
             L"setup",
+            L"install",
             L"nglide_config",
             L"configuration",
             L"config",
@@ -737,7 +743,17 @@ namespace siege::views
             L"vc_redist_x64",
             L"vcredist_x86",
             L"vcredist_x64",
+            L"vcredist_x86[2005]",
+            L"vcredist_x86[2008]",
+            L"dotnetfx40_full_x86_x64",
+            L"eregold",
+            L"reg32a",
             L"dxsetup",
+            L"ue3redist",
+            L"unsetupnativeredistwrapper",
+            L"unsetupnativewrapper",
+            L"unreallightmass",
+            L"python",
             L"intro",
             L"radiant",
             L"udebugger",
@@ -748,8 +764,11 @@ namespace siege::views
             L"gotoheat",
             L"url",
             L"glsetup",
+            L"glsetup.114",
             L"dgvoodoocpl",
             L"cfgedit",
+            L"physx_9.09.1112",
+            L"quicktimeplayer",
           } };
 
           auto app_stem = siege::platform::to_lower(app_path.stem().wstring());
@@ -777,7 +796,7 @@ namespace siege::views
             return;
           }
 
-          if (parent_stem.contains(L"installer"))
+          if (parent_stem.contains(L"installer") || parent_stem.contains(L"support") || parent_stem.contains(L"sdk") || parent_stem.contains(L"setup"))
           {
             return;
           }
@@ -819,8 +838,12 @@ namespace siege::views
             auto parent_stem = app_path.parent_path().filename().wstring();
             auto app_name = app_path.filename().wstring();
 
-            constexpr static auto common_exe_paths = std::array<const wchar_t*, 3>{ { L"bin",
+            constexpr static auto common_exe_paths = std::array<const wchar_t*, 7>{ { L"bin",
               L"bin32",
+              L"bin64",
+              L"win32",
+              L"win64",
+              L"binaries",
               L"system" } };
 
             if (std::any_of(common_exe_paths.begin(), common_exe_paths.end(), [&](auto* value) {
@@ -922,7 +945,7 @@ namespace siege::views
           std::for_each(root_path.second.begin(), root_path.second.end(), [&](const auto& real_search_path) {
             std::set<fs::path> fallback_paths;
 
-            constexpr static auto skip_count = 10;
+            constexpr static auto skip_count = 25;
 
             if (drive_roots.contains(real_search_path.wstring()) || real_search_path.wstring() == program_files_path + L"\\" || real_search_path.wstring() == program_files_x86_path + L"\\")
             {
