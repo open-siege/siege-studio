@@ -4,7 +4,7 @@
 #include <siege/platform/extension_module.hpp>
 
 namespace siege::platform
-{   
+{
   using executable_is_supported = std::errc(const siege::fs_char* filename) noexcept;
   using get_function_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using get_variable_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
@@ -413,7 +413,7 @@ namespace siege::platform
     }
 
   private:
-    inline std::span<const wchar_t*> create_span(const char* key)
+    inline std::span<const wchar_t*> create_span(const char* key) const
     {
       auto* storage = this->GetProcAddress<const wchar_t**>(key);
 

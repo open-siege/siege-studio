@@ -367,6 +367,19 @@ namespace siege::views
     bool has_dedicated = (caps.dedicated_setting == nullptr || !std::wstring_view(caps.dedicated_setting).empty());
 
 
+#ifdef _DEBUG
+    if (self.matching_extension)
+    {
+      self.launch_settings.emplace_back(game_setting{
+        .setting_name = L"EXTENSION_NAME",
+        .type = extension_setting_type::computed_setting,
+        .value = fs::path(self.matching_extension->GetModuleFileName()).stem().wstring(),
+        .display_name = L"Extension Name",
+        .group_id = 2,
+      });
+    }
+#endif
+
     std::vector<std::wstring_view> real_options;
     real_options.reserve(4);
     for (auto i = 0; i < pref_options.size(); ++i)
@@ -1137,14 +1150,12 @@ namespace siege::views
           return false;
         }
 
-        size->QuadPart -= 1024;
-
         if (size->QuadPart >= 64 * 1024 * 1024)
         {
           return false;
         }
 
-        auto view = mapping->MapViewOfFile(FILE_MAP_READ, LARGE_INTEGER{ .QuadPart = 1024 }, (std::size_t)size->QuadPart);
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, (std::size_t)size->QuadPart);
 
         return (bool)get_supported_networking_libraries(view);
       }
@@ -2315,7 +2326,11 @@ namespace siege::views
     auto& self = get(state);
     if (self.matching_extension)
     {
-      return get_extension(state).caps->ip_connect_setting || get_extension(state).caps->dedicated_setting || get_extension(state).caps->listen_setting;
+      bool has_ip = get_extension(state).caps->ip_connect_setting && get_extension(state).caps->ip_connect_setting[0];
+      bool has_dedicated = get_extension(state).caps->dedicated_setting && get_extension(state).caps->dedicated_setting[0];
+      bool has_listen = get_extension(state).caps->listen_setting && get_extension(state).caps->listen_setting[0];
+
+      return has_ip || has_dedicated || has_listen;
     }
 
     if (!self.loaded_module)

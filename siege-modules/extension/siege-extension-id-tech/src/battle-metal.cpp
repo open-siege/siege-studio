@@ -59,9 +59,12 @@ extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm
 
 using namespace std::literals;
 
-constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x20120494) },
+constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 4>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 4>{ { 
+  { "exec"sv, std::size_t(0x20120494) },
   { "cmdlist"sv, std::size_t(0x45189c) },
-  { "cl_pitchspeed"sv, std::size_t(0x44f724) } } } } };
+  { "cl_pitchspeed"sv, std::size_t(0x44f724) }, 
+  { "battlemech"sv, std::size_t(0x1402e106d) }, 
+    } } } };
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 6> function_name_ranges{ {
   { "+moveup"sv, "-use"sv },
