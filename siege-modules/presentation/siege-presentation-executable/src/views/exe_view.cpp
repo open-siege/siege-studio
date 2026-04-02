@@ -107,6 +107,12 @@ namespace siege::views
 
     resource.string_table.EnableGroupView(true);
 
+    resource.string_table.bind_notification<win32::list_view, NMLVEMPTYMARKUP, bool>(LVN_GETEMPTYMARKUP, [](auto, const NMLVEMPTYMARKUP& markup) {
+      auto& non_const = const_cast<NMLVEMPTYMARKUP&>(markup);
+      std::memcpy(non_const.szMarkup, L"No strings found", 16);
+      return true;
+    });
+
     launch = create_launch_controls();
     input = create_input_controls();
 

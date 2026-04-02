@@ -36,7 +36,11 @@ namespace siege::views
 
     input.keyboard_table.SetExtendedListViewStyle(0, LVS_EX_FULLROWSELECT);
     input.keyboard_table.EnableGroupView(true);
-
+    input.keyboard_table.bind_notification<win32::list_view, NMLVEMPTYMARKUP, bool>(LVN_GETEMPTYMARKUP, [](auto, const NMLVEMPTYMARKUP& markup) {
+      auto& non_const = const_cast<NMLVEMPTYMARKUP&>(markup);
+      std::memcpy(non_const.szMarkup, L"No actions to configure", 23);
+      return true;
+    });
 
     input.controller_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this, .style = WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS });
     input.controller_table.InsertColumn(-1, LVCOLUMNW{
