@@ -170,6 +170,21 @@ std::errc is_input_mapping_valid(const siege::platform::hardware_context_caps* c
     return std::errc::bad_message;
   }
 
+  if (mapping->vkey == VK_LSHIFT || mapping->vkey == VK_RSHIFT)
+  {
+    return std::errc::not_supported;
+  }
+
+  if (mapping->vkey == VK_LCONTROL || mapping->vkey == VK_RCONTROL)
+  {
+    return std::errc::not_supported;
+  }
+
+  if (mapping->vkey == VK_LMENU || mapping->vkey == VK_RMENU)
+  {
+    return std::errc::not_supported;
+  }
+
   if (mapping->context == hardware_context::mouse)
   {
     if (mapping->hardware_input_type == controller_input_type::axis && mapping->hardware_index == 0
