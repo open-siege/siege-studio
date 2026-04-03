@@ -6,13 +6,18 @@ namespace siege::configuration
 {
   namespace endian = siege::platform;
 
-  text_game_config::text_game_config(text_game_config::persist& save_config)
+  text_game_config::text_game_config(std::any&& context, text_game_config::persist& save_config)
     : save_config(save_config)
   {
   }
 
-  text_game_config::text_game_config(std::unique_ptr<char[]>&& raw, std::vector<config_line>&& entries, persist& save_config)
-    : raw_data(std::move(raw)), line_entries(std::move(entries)), save_config(save_config)
+  text_game_config::text_game_config(text_game_config::persist& save_config)
+    : text_game_config(std::any{}, save_config)
+  {
+  }
+
+  text_game_config::text_game_config(std::any&& context, std::unique_ptr<char[]>&& raw, std::vector<config_line>&& entries, persist& save_config)
+    : save_config(save_config), context(std::move(context)), raw_data(std::move(raw)), line_entries(std::move(entries))
   {
   }
 
@@ -84,7 +89,7 @@ namespace siege::configuration
 
   void text_game_config::save(std::ostream& stream) const
   {
-    save_config(line_entries, stream);
+    save_config(context, line_entries, stream);
   }
 
   bool is_ascii_text_config(std::istream& raw_data)

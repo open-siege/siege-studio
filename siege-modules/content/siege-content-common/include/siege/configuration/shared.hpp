@@ -14,38 +14,42 @@
 #include <istream>
 #include <ostream>
 #include <memory>
+#include <any>
 
 namespace siege::configuration
 {
-    class text_game_config
+  class text_game_config
+  {
+  public:
+    struct config_line
     {
-        public:
-            struct config_line
-            {
-                std::string_view raw_line;
-                key_type key_segments;
-                key_type value;
-            };
-
-            using persist = void(const std::vector<config_line>&, std::ostream&);
-
-            text_game_config(persist&);
-            text_game_config(std::unique_ptr<char[]> &&, std::vector<config_line>&&, persist&);
-
-            std::vector<key_type> keys() const;
-            bool contains(key_type key) const;
-            key_type find(key_type key) const;
-            text_game_config&& emplace(key_type key, key_type value);
-            text_game_config&& remove(key_type key);
-
-            void save(std::ostream&) const;
-        private:
-            persist& save_config;
-            std::shared_ptr<const char[]>  raw_data;
-            std::vector<config_line> line_entries;
+      std::string_view raw_line;
+      key_type key_segments;
+      key_type value;
     };
 
-    bool is_ascii_text_config(std::istream&);
-}
+    using persist = void(const std::any&, const std::vector<config_line>&, std::ostream&);
+
+    text_game_config(std::any&& context, persist&);
+    text_game_config(persist&);
+    text_game_config(std::any&& context, std::unique_ptr<char[]>&&, std::vector<config_line>&&, persist&);
+
+    std::vector<key_type> keys() const;
+    bool contains(key_type key) const;
+    key_type find(key_type key) const;
+    text_game_config&& emplace(key_type key, key_type value);
+    text_game_config&& remove(key_type key);
+
+    void save(std::ostream&) const;
+
+  private:
+    persist& save_config;
+    std::any context;
+    std::shared_ptr<const char[]> raw_data;
+    std::vector<config_line> line_entries;
+  };
+
+  bool is_ascii_text_config(std::istream&);
+}// namespace siege::configuration
 
 #endif

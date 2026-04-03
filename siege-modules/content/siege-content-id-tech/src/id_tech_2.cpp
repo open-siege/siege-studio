@@ -1,14 +1,14 @@
 #include <limits>
 #include <memory>
 #include <siege/configuration/id_tech.hpp>
+#include <any>
 
 namespace siege::configuration::id_tech
 {
   namespace id_tech_2
   {
     using config_line = text_game_config::config_line;
-    constexpr static auto end_line = std::string_view("\r\n");
-
+    
     constexpr static auto average_line_size = 20;
 
     std::vector<std::string_view> split_into_lines(std::string_view line, std::string_view separator, std::size_t size_hint = 4)
@@ -89,7 +89,6 @@ namespace siege::configuration::id_tech
       return segments;
     }
 
-
     std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
     {
       if (stream_size == 0)
@@ -111,7 +110,19 @@ namespace siege::configuration::id_tech
       raw_data.read(buffer.get(), stream_size);
       raw_data.seekg(current_pos, std::ios::beg);
 
-      auto lines = split_into_lines(buffer_str, end_line, stream_size / average_line_size);
+      id_tech_context context{};
+
+      auto lines = split_into_lines(buffer_str, context.default_end_line, stream_size / average_line_size);
+
+      if (lines.size() == 1)
+      {
+        lines = split_into_lines(buffer_str, "\n", stream_size / average_line_size);
+
+        if (lines.size() > 1)
+        {
+          context.default_end_line = "\n";
+        }
+      }
 
       std::vector<config_line> config_data;
       config_data.reserve(lines.size());
@@ -141,7 +152,7 @@ namespace siege::configuration::id_tech
         return std::nullopt;
       }
 
-      return std::make_optional<text_game_config>(std::move(buffer), std::move(config_data), save_config);
+      return std::make_optional<text_game_config>(std::move(std::make_any<id_tech_context>(context)), std::move(buffer), std::move(config_data), save_config);
     }
 
     std::string join_line(const config_line& line)
@@ -197,14 +208,21 @@ namespace siege::configuration::id_tech
       return result;
     }
 
-    void save_config(const std::vector<config_line>& entries, std::ostream& raw_data)
+    void save_config(const std::any& context, const std::vector<config_line>& entries, std::ostream& raw_data)
     {
+      id_tech_context real_context{};
+
+      if (context.has_value() && context.type() == typeid(id_tech_context))
+      {
+        real_context = std::any_cast<id_tech_context>(context);
+      }
+
       for (auto& entry : entries)
       {
         auto line = join_line(entry);
 
         raw_data.write(line.data(), line.size());
-        raw_data.write(end_line.data(), end_line.size());
+        raw_data.write(real_context.default_end_line.data(), real_context.default_end_line.size());
       }
     }
   }// namespace id_tech_2

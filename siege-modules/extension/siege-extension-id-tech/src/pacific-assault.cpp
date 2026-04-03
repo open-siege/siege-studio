@@ -104,7 +104,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   std::ofstream custom_bindings("main/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  namespace id_tech = siege::configuration::id_tech::id_tech_2;
+
+  siege::configuration::text_game_config config(id_tech::id_tech_context{ .default_end_line = "\n" }, id_tech::save_config);
   unbind_joystick_for_quake_3_config(config);
 
   save_bindings_to_config(*args, config, q3_mapping_context{});
