@@ -109,9 +109,26 @@ namespace siege::views
       auto& context = get_action_bindings(state)[item->lParam];
 
       context.vkey = LOWORD(result);
+
+      if (!can_support_independent_shift_keys(state) && (context.vkey == VK_LSHIFT || context.vkey == VK_RSHIFT))
+      {
+        context.vkey = VK_SHIFT;
+      }
+
+      if (!can_support_independent_shift_keys(state) && (context.vkey == VK_LCONTROL || context.vkey == VK_RCONTROL))
+      {
+        context.vkey = VK_CONTROL;
+      }
+
+      if (!can_support_independent_shift_keys(state) && (context.vkey == VK_LMENU || context.vkey == VK_RMENU))
+      {
+        context.vkey = VK_MENU;
+      }
+
+
       context.context = static_cast<decltype(context.context)>(HIWORD(result));
 
-      auto temp = label_for_vkey(result, context.context);
+      auto temp = label_for_vkey(context.vkey, context.context);
       ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
     });
 
@@ -170,6 +187,22 @@ namespace siege::views
 
       auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
       auto vkey = LOWORD(result);
+
+      if (!can_support_independent_shift_keys(state) && (vkey == VK_LSHIFT || vkey == VK_RSHIFT))
+      {
+        vkey = VK_SHIFT;
+      }
+
+      if (!can_support_independent_shift_keys(state) && (vkey == VK_LCONTROL || vkey == VK_RCONTROL))
+      {
+        vkey = VK_CONTROL;
+      }
+
+      if (!can_support_independent_shift_keys(state) && (vkey == VK_LMENU || vkey == VK_RMENU))
+      {
+        vkey = VK_MENU;
+      }
+
       std::wstring temp = category_for_vkey(vkey, context);
       ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
 
@@ -394,8 +427,7 @@ namespace siege::views
       return;
     }
 
-    auto kb_bindings = get_extension(state).init_keyboard_inputs();
-    auto ms_bindings = get_extension(state).init_mouse_inputs();
+    auto action_settings = load_keyboard_mouse_configs(state);
 
     std::set<std::u16string_view> grouping = {};
     std::map<std::u16string_view, int> ids_for_grouping = {};
@@ -415,66 +447,6 @@ namespace siege::views
                                                .state = LVGS_COLLAPSIBLE,
                                              });
       }
-    }
-
-    struct ui_context
-    {
-      WORD vkey;
-      siege::platform::hardware_context context;
-      siege::platform::game_action action;
-      WORD action_index;
-    };
-
-    std::vector<ui_context> action_settings;
-
-    if (kb_bindings)
-    {
-      action_settings.reserve((*kb_bindings)->inputs.size());
-
-      for (auto& binding : (*kb_bindings)->inputs)
-      {
-        if (binding.input_type == siege::platform::controller_input_type::unknown)
-        {
-          break;
-        }
-        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
-
-        if (action_iter != actions.end())
-        {
-          action_settings.emplace_back(ui_context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
-        }
-      }
-    }
-
-    if (ms_bindings)
-    {
-      action_settings.reserve((*ms_bindings)->inputs.size());
-      for (auto& binding : (*ms_bindings)->inputs)
-      {
-        if (binding.input_type == siege::platform::controller_input_type::unknown)
-        {
-          break;
-        }
-        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
-
-        if (action_iter != actions.end())
-        {
-          action_settings.emplace_back(ui_context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
-        }
-      }
-    }
-
-    WORD action_index = 0;
-    for (auto& action : actions)
-    {
-      auto action_iter = std::find_if(action_settings.begin(), action_settings.end(), [&](auto& context) { return context.action.action_name == action.action_name; });
-
-      if (action_iter == action_settings.end())
-      {
-        action_settings.emplace_back(ui_context{ 0, siege::platform::hardware_context::global, action, action_index });
-      }
-
-      action_index++;
     }
 
     for (auto& context : action_settings)

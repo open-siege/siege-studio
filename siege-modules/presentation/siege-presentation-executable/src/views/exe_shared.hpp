@@ -79,6 +79,16 @@ namespace siege::views
     std::array<input_state_change, 64> buffer;
   };
 
+  struct ui_action_context
+  {
+    WORD vkey;
+    siege::platform::hardware_context context;
+    siege::platform::game_action action;
+    WORD action_index;
+  };
+
+  std::vector<ui_action_context> load_keyboard_mouse_configs(std::any& state);
+
   using input_type = decltype(siege::views::hardware_index::type);
 
   std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer);
@@ -182,6 +192,8 @@ namespace siege::views
 
   bool has_extension_module(const std::any& state);
   bool can_support_zero_tier(std::any& state);
+
+  bool can_support_independent_shift_keys(const std::any& state);
 
   siege::platform::game_extension_module& get_extension(std::any& state);
   const siege::platform::game_extension_module& get_extension(const std::any& state);

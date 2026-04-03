@@ -58,6 +58,10 @@ namespace siege::views
 
     std::vector<input_action_binding> bound_actions = { {} };
 
+    bool supports_independent_shift = false;
+    bool supports_independent_control = false;
+    bool supports_independent_alt = false;
+
     std::vector<const siege::fs_char*> flags;
     std::vector<siege::platform::game_command_line_args::int_setting> int_settings;
     std::vector<siege::platform::game_command_line_args::float_setting> float_settings;
@@ -1843,6 +1847,114 @@ namespace siege::views
     }
 
     return std::nullopt;
+  }
+
+
+  bool can_support_independent_shift_keys(const std::any& state)
+  {
+    if (!has_extension_module(state))
+    {
+      return true;// via input simulation
+    }
+
+    if (get_extension(state).game_actions.empty())
+    {
+      return true;// via input simulation
+    }
+
+    auto& self = get(state);
+
+    // Usually most games can do all but it may have to be made per control if we ever find it not to be the case.
+    return self.supports_independent_alt || self.supports_independent_control || self.supports_independent_shift;
+  }
+
+  std::vector<ui_action_context> load_keyboard_mouse_configs(std::any& state)
+  {
+    if (!has_extension_module(state))
+    {
+      return {};
+    }
+
+    auto actions = get_extension(state).game_actions;
+
+    if (actions.empty())
+    {
+      return {};
+    }
+
+    auto kb_bindings = get_extension(state).init_keyboard_inputs();
+    auto ms_bindings = get_extension(state).init_mouse_inputs();
+    std::vector<ui_action_context> action_settings;
+
+    if (kb_bindings)
+    {
+      action_settings.reserve((*kb_bindings)->inputs.size());
+
+      for (auto& binding : (*kb_bindings)->inputs)
+      {
+        if (binding.input_type == siege::platform::controller_input_type::unknown)
+        {
+          break;
+        }
+
+        if (binding.virtual_key == VK_LSHIFT || binding.virtual_key == VK_RSHIFT)
+        {
+          get(state).supports_independent_shift = true;
+        }
+
+        if (binding.virtual_key == VK_LCONTROL || binding.virtual_key == VK_RCONTROL)
+        {
+          get(state).supports_independent_control = true;
+        }
+
+        if (binding.virtual_key == VK_LMENU || binding.virtual_key == VK_RMENU)
+        {
+          get(state).supports_independent_alt = true;
+        }
+
+        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
+
+        if (action_iter != actions.end())
+        {
+          action_settings.emplace_back(ui_action_context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
+        }
+      }
+    }
+
+    if (ms_bindings)
+    {
+      action_settings.reserve((*ms_bindings)->inputs.size());
+      for (auto& binding : (*ms_bindings)->inputs)
+      {
+        if (binding.input_type == siege::platform::controller_input_type::unknown)
+        {
+          break;
+        }
+        auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });
+
+        if (action_iter != actions.end())
+        {
+          action_settings.emplace_back(ui_action_context{ binding.virtual_key, (siege::platform::hardware_context)binding.context, *action_iter, (WORD)(std::distance(actions.begin(), action_iter)) });
+        }
+      }
+    }
+
+
+    WORD action_index = 0;
+    for (auto& action : actions)
+    {
+      auto action_iter = std::find_if(action_settings.begin(), action_settings.end(), [&](auto& context) { return context.action.action_name == action.action_name; });
+
+      if (action_iter == action_settings.end())
+      {
+        action_settings.emplace_back(ui_action_context{ 0, siege::platform::hardware_context::global, action, action_index });
+      }
+
+      action_index++;
+    }
+
+
+    return action_settings;
   }
 
   std::array<char, 384> generate_zero_tier_node_id(fs::path zt_path)

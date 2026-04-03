@@ -1366,14 +1366,20 @@ namespace siege::views
       return L"Extra Button 2";
     case VK_TAB:
       return L"Tab";
+    case VK_CONTROL:
+      return L"Left/Right Control";
     case VK_LCONTROL:
       return L"Left Control";
     case VK_RCONTROL:
       return L"Right Control";
+    case VK_MENU:
+      return L"Left/Right Alt";
     case VK_LMENU:
       return L"Left Alt";
     case VK_RMENU:
       return L"Right Alt";
+    case VK_SHIFT:
+      return L"Left/Right Shift";
     case VK_LSHIFT:
       return L"Left Shift";
     case VK_RSHIFT:
