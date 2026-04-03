@@ -47,15 +47,12 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+attack", u"Attack", u"Combat" },
   game_action{ game_action::digital, "weapalt", u"Change Fire Mode", u"Combat" },
   game_action{ game_action::digital, "+melee", u"Melee Attack", u"Combat" },
+  game_action{ game_action::digital, "+reload", u"Reload", u"Combat" },
   game_action{ game_action::digital, "weapnext", u"Next Weapon", u"Combat" },
-  game_action{ game_action::digital, "weaponslot grenade", u"Swap to Grenade`", u"Combat" },
+  game_action{ game_action::digital, "weaponslot grenade", u"Swap to Grenade", u"Combat" },
   game_action{ game_action::digital, "weaprev", u"Previous Weapon", u"Combat" },
-  game_action{ game_action::digital, "itemnext", u"Next Item", u"Combat" },
-  game_action{ game_action::digital, "itemuse", u"Use Item", u"Combat" },
-  game_action{ game_action::digital, "score", u"Score", u"Interface" },
-  game_action{ game_action::digital, "menu-objectives", u"Objectives", u"Interface" },
-  game_action{ game_action::digital, "+klook", u"Keyboard Look", u"Misc" },
-  game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
+  game_action{ game_action::digital, "+activate", u"Activate", u"Combat" },
+  game_action{ game_action::digital, "+scores", u"Score", u"Interface" },
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
@@ -209,13 +206,10 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+melee"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "invnext"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "weaponslot grenade"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "weapondrop"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weaprev"),
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "score"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "cmd help"),
+      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+scores"),
     }
   };
 
