@@ -8,7 +8,7 @@
 #include <string_view>
 #include <fstream>
 #include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/win/process.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
@@ -131,9 +131,9 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     upsert_mouse_bindings(*config, *binding);
   }
 
-  if (auto* value = std::getenv("KNOWN_FOLDER_DOCUMENTS"); value)
+  if (auto value = win32::GetEnvironmentVariable(L"KNOWN_FOLDER_DOCUMENTS"); value)
   {
-    std::filesystem::path final_path(value);
+    std::filesystem::path final_path(*value);
     final_path = final_path / "EA Games" / "Medal of Honor Pacific Assault(tm)" / "configs" / "unnamedsoldier.cfg";
     if (auto config = load_config_from_file(std::move(final_path)))
     {
@@ -167,9 +167,9 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     upsert_keyboard_bindings(*config, *binding);
   }
 
-  if (auto* value = std::getenv("KNOWN_FOLDER_DOCUMENTS"); value)
+  if (auto value = win32::GetEnvironmentVariable(L"KNOWN_FOLDER_DOCUMENTS"); value)
   {
-    std::filesystem::path final_path(value);
+    std::filesystem::path final_path(*value);
     final_path = final_path / "EA Games" / "Medal of Honor Pacific Assault(tm)" / "configs" / "unnamedsoldier.cfg";
     if (auto config = load_config_from_file(std::move(final_path)))
     {

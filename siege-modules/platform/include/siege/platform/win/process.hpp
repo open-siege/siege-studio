@@ -11,7 +11,9 @@
 #include <wtypes.h>
 #include <WinDef.h>
 #include <processthreadsapi.h>
+#include <cassert>
 #undef GetModuleFileName
+#undef GetEnvironmentVariable
 
 namespace win32
 {
@@ -51,6 +53,27 @@ namespace win32
 
     return process_data;
   }
+
+  inline std::optional<std::wstring> GetEnvironmentVariable(std::wstring name)
+  {
+    std::wstring result;
+
+    auto size = ::GetEnvironmentVariableW(name.c_str(), nullptr, 0);
+
+    if (size == 0)
+    {
+      return result;
+    }
+
+    result.resize(size - 1);
+
+    size = ::GetEnvironmentVariableW(name.c_str(), result.data(), result.size() + 1);
+
+    assert(size == result.size());
+
+    return result;
+  }
+
 }// namespace win32
 
 #endif// !WIN_CORE_MODULE_HPP

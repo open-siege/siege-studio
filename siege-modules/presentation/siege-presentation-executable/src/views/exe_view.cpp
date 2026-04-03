@@ -9,6 +9,7 @@
 #include <siege/extension/input_filter.hpp>
 #include <siege/extension/input_filter.hpp>
 #include "views/exe_view.hpp"
+#include <Knownfolders.h>
 
 namespace siege::views
 {
@@ -452,6 +453,12 @@ namespace siege::views
 
     if (count > 0)
     {
+      win32::com::com_string documents_folder;
+      if (::SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, documents_folder.put()) == S_OK)
+      {
+        ::SetEnvironmentVariableW(L"KNOWN_FOLDER_DOCUMENTS", documents_folder.get());
+      }
+
       auto values = get_resource_names(state);
 
       auto populate_launch_table = [this]() {
