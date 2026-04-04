@@ -193,7 +193,9 @@ namespace siege::views
   bool has_extension_module(const std::any& state);
   bool can_support_zero_tier(std::any& state);
 
-  bool can_support_independent_shift_keys(const std::any& state);
+  std::pair<siege::platform::hardware_context_caps, siege::platform::input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context, WORD vkey, std::uint16_t action_index);
+
+  std::optional<WORD> get_expected_vkey_for_keyboard_mouse(const std::any& state, siege::platform::hardware_context, WORD vkey, std::uint16_t action_index);
 
   siege::platform::game_extension_module& get_extension(std::any& state);
   const siege::platform::game_extension_module& get_extension(const std::any& state);

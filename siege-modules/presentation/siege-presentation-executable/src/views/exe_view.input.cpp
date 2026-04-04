@@ -106,30 +106,23 @@ namespace siege::views
         return;
       }
 
-      auto& context = get_action_bindings(state)[item->lParam];
+      auto& binding = get_action_bindings(state)[item->lParam];
 
-      context.vkey = LOWORD(result);
+      auto vkey = LOWORD(result);
+      auto context = static_cast<decltype(binding.context)>(HIWORD(result));
 
-      if (!can_support_independent_shift_keys(state) && (context.vkey == VK_LSHIFT || context.vkey == VK_RSHIFT))
+      if (auto real_vkey = get_expected_vkey_for_keyboard_mouse(state, context, vkey, binding.action_index); real_vkey)
       {
-        context.vkey = VK_SHIFT;
-      }
+        binding.vkey = *real_vkey;
+        binding.context = context;
 
-      if (!can_support_independent_shift_keys(state) && (context.vkey == VK_LCONTROL || context.vkey == VK_RCONTROL))
+        auto temp = label_for_vkey(binding.vkey, binding.context);
+        ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
+      }
+      else
       {
-        context.vkey = VK_CONTROL;
+        ::MessageBoxW(this->get(), L"The key pressed is not able to be assigned to this action. Try again and press a different key", L"Key Not Assignable to Action", 0);
       }
-
-      if (!can_support_independent_shift_keys(state) && (context.vkey == VK_LMENU || context.vkey == VK_RMENU))
-      {
-        context.vkey = VK_MENU;
-      }
-
-
-      context.context = static_cast<decltype(context.context)>(HIWORD(result));
-
-      auto temp = label_for_vkey(context.vkey, context.context);
-      ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
     });
 
     input.controller_table.bind_nm_click([this](win32::list_view controller_table, const NMITEMACTIVATE& message) {
@@ -187,21 +180,6 @@ namespace siege::views
 
       auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
       auto vkey = LOWORD(result);
-
-      if (!can_support_independent_shift_keys(state) && (vkey == VK_LSHIFT || vkey == VK_RSHIFT))
-      {
-        vkey = VK_SHIFT;
-      }
-
-      if (!can_support_independent_shift_keys(state) && (vkey == VK_LCONTROL || vkey == VK_RCONTROL))
-      {
-        vkey = VK_CONTROL;
-      }
-
-      if (!can_support_independent_shift_keys(state) && (vkey == VK_LMENU || vkey == VK_RMENU))
-      {
-        vkey = VK_MENU;
-      }
 
       std::wstring temp = category_for_vkey(vkey, context);
       ListView_SetItemText(controller_table, message.iItem, 1, temp.data());

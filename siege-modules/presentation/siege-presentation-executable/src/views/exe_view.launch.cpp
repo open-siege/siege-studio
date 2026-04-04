@@ -270,60 +270,14 @@ namespace siege::views
             auto context = bound_actions[item->lParam].context;
             auto action_index = bound_actions[item->lParam].action_index;
 
-            auto& action = actions[action_index];
-
-            auto& binding = action_bindings.emplace_back();
+           
+            auto [caps, binding] = get_full_info_for_binding(state, context, virtual_key, action_index);
             
-            if (context == hardware_context::keyboard || context == hardware_context::keyboard_shifted || context == hardware_context::keypad)
+            if (extension.is_input_mapping_valid({ .context = context,
+                                                    .button_count = context == hardware_context::keypad ? 64u : 256u },
+                  binding))
             {
-              binding.vkey = virtual_key;
-              binding.action_name = action.action_name;
-              binding.hardware_index = ::MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC_EX);
-              binding.hardware_input_type = input_type::button;
-              binding.context = context;
-
-              if (!extension.is_input_mapping_valid({ .context = context,
-                                                      .button_count = context == hardware_context::keypad ? 64u : 256u },
-                    binding))
-              {
-                action_bindings.pop_back();
-              }
-            }
-            else
-            {
-              binding.vkey = virtual_key;
-              binding.action_name = action.action_name;
-              binding.context = context;
-
-              auto is_mouse_button = [&] {
-                return binding.vkey == VK_LBUTTON || binding.vkey == VK_RBUTTON || binding.vkey == VK_MBUTTON || binding.vkey == VK_XBUTTON1 || binding.vkey == VK_XBUTTON2;
-              };
-
-              if ((binding.context == hardware_context::mouse || binding.context == hardware_context::mouse_wheel) && !is_mouse_button())
-              {
-                binding.hardware_input_type = input_type::axis;
-
-                if (binding.vkey == VK_LEFT || binding.vkey == VK_RIGHT)
-                {
-                  binding.hardware_index = 1;
-                }
-              }
-              else if (is_mouse_button())
-              {
-                binding.hardware_input_type = input_type::button;
-                binding.hardware_index = binding.vkey - VK_LBUTTON;
-              }
-
-              if (!extension.is_input_mapping_valid({
-                                                      .context = context,
-                                                      .button_count = binding.context == hardware_context::mouse ? 5u : 0u,
-                                                      .axis_count = binding.context == hardware_context::mouse_wheel ? 1u : 2u,
-
-                                                    },
-                    binding))
-              {
-                action_bindings.pop_back();
-              }
+              action_bindings.emplace_back(binding);
             }
           }
         }

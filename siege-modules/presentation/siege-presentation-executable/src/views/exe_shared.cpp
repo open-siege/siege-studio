@@ -58,10 +58,6 @@ namespace siege::views
 
     std::vector<input_action_binding> bound_actions = { {} };
 
-    bool supports_independent_shift = false;
-    bool supports_independent_control = false;
-    bool supports_independent_alt = false;
-
     std::vector<const siege::fs_char*> flags;
     std::vector<siege::platform::game_command_line_args::int_setting> int_settings;
     std::vector<siege::platform::game_command_line_args::float_setting> float_settings;
@@ -1849,23 +1845,106 @@ namespace siege::views
     return std::nullopt;
   }
 
+  using siege::platform::hardware_context;
+  using siege::platform::hardware_context_caps;
+  using siege::platform::input_mapping_ex;
 
-  bool can_support_independent_shift_keys(const std::any& state)
+  std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context context, WORD virtual_key, std::uint16_t action_index)
   {
-    if (!has_extension_module(state))
+    assert(has_extension_module(state));
+
+    auto actions = get_extension(state).game_actions;
+
+    assert(!actions.empty());
+
+    auto& action = actions[action_index];
+
+    input_mapping_ex binding{};
+
+    if (context == hardware_context::keyboard || context == hardware_context::keyboard_shifted || context == hardware_context::keypad)
     {
-      return true;// via input simulation
+      binding.vkey = virtual_key;
+      binding.action_name = action.action_name;
+      binding.hardware_index = ::MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC_EX);
+      binding.hardware_input_type = input_type::button;
+      binding.context = context;
+
+      return std::make_pair(hardware_context_caps{ .context = context,
+                              .button_count = context == hardware_context::keypad ? 64u : 256u },
+        binding);
+    }
+    else
+    {
+      binding.vkey = virtual_key;
+      binding.action_name = action.action_name;
+      binding.context = context;
+
+      auto is_mouse_button = [&] {
+        return binding.vkey == VK_LBUTTON || binding.vkey == VK_RBUTTON || binding.vkey == VK_MBUTTON || binding.vkey == VK_XBUTTON1 || binding.vkey == VK_XBUTTON2;
+      };
+
+      if ((binding.context == hardware_context::mouse || binding.context == hardware_context::mouse_wheel) && !is_mouse_button())
+      {
+        binding.hardware_input_type = input_type::axis;
+
+        if (binding.vkey == VK_LEFT || binding.vkey == VK_RIGHT)
+        {
+          binding.hardware_index = 1;
+        }
+      }
+      else if (is_mouse_button())
+      {
+        binding.hardware_input_type = input_type::button;
+        binding.hardware_index = binding.vkey - VK_LBUTTON;
+      }
+
+      return std::make_pair(hardware_context_caps{
+                              .context = context,
+                              .button_count = binding.context == hardware_context::mouse ? 5u : 0u,
+                              .axis_count = binding.context == hardware_context::mouse_wheel ? 1u : 2u,
+
+                            },
+        binding);
+    }
+  }
+
+
+  std::optional<WORD> get_expected_vkey_for_keyboard_mouse(const std::any& state, hardware_context context, WORD vkey, std::uint16_t action_index)
+  {
+    assert(has_extension_module(state));
+
+    auto actions = get_extension(state).game_actions;
+
+    assert(!actions.empty());
+
+    auto [caps, mapping] = get_full_info_for_binding(state, context, vkey, action_index);
+
+    if (get_extension(state)
+          .is_input_mapping_valid(caps, mapping))
+    {
+      return mapping.vkey;
     }
 
-    if (get_extension(state).game_actions.empty())
+    if (vkey == VK_LSHIFT || vkey == VK_RSHIFT)
     {
-      return true;// via input simulation
+      mapping.vkey = VK_SHIFT;
+    }
+    else if (vkey == VK_LCONTROL || vkey == VK_RCONTROL)
+    {
+      mapping.vkey = VK_CONTROL;
+    }
+    else if (vkey == VK_LMENU || vkey == VK_RMENU)
+    {
+      mapping.vkey = VK_MENU;
     }
 
-    auto& self = get(state);
+    if (get_extension(state)
+          .is_input_mapping_valid(caps, mapping))
+    {
+      return mapping.vkey;
+    }
 
-    // Usually most games can do all but it may have to be made per control if we ever find it not to be the case.
-    return self.supports_independent_alt || self.supports_independent_control || self.supports_independent_shift;
+    return std::nullopt;
   }
 
   std::vector<ui_action_context> load_keyboard_mouse_configs(std::any& state)
@@ -1895,21 +1974,6 @@ namespace siege::views
         if (binding.input_type == siege::platform::controller_input_type::unknown)
         {
           break;
-        }
-
-        if (binding.virtual_key == VK_LSHIFT || binding.virtual_key == VK_RSHIFT)
-        {
-          get(state).supports_independent_shift = true;
-        }
-
-        if (binding.virtual_key == VK_LCONTROL || binding.virtual_key == VK_RCONTROL)
-        {
-          get(state).supports_independent_control = true;
-        }
-
-        if (binding.virtual_key == VK_LMENU || binding.virtual_key == VK_RMENU)
-        {
-          get(state).supports_independent_alt = true;
         }
 
         auto action_iter = std::find_if(actions.begin(), actions.end(), [&](auto& action) { return action.action_name == binding.action_name; });

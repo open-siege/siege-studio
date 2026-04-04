@@ -12,4 +12,4 @@ EXPORTS
 	init_mouse_inputs PRIVATE
 	default_controller_inputs PRIVATE
 	apply_prelaunch_settings PRIVATE
-	is_input_mapping_valid=is_id_tech_2_5_input_mapping_valid PRIVATE
+	is_input_mapping_valid=is_sof_input_mapping_valid PRIVATE
