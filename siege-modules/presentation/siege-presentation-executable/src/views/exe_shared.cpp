@@ -2426,6 +2426,18 @@ namespace siege::views
       return true;
     }
 
+    if (self.matching_extension && !self.matching_extension->network_backends.empty())
+    {
+      networking_support result{
+        .wsock_32 = stl::any_of(self.matching_extension->network_backends, [](auto* name) { return name == std::wstring_view{ L"wsock32" }; }),
+        .ws2_32 = stl::any_of(self.matching_extension->network_backends, [](auto* name) { return name == std::wstring_view{ L"ws2_32" }; }),
+        .dplayx = stl::any_of(self.matching_extension->network_backends, [](auto* name) { return name == std::wstring_view{ L"dplayx" }; }),
+      };
+      self.detected_networking_support.emplace(self.loaded_path, result);
+      return true;
+    }
+
+
     win32::file file(self.loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
     auto file_size = file.GetFileSizeEx();
