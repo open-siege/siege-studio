@@ -61,6 +61,8 @@ constexpr std::array<char, 32> arr(std::string_view data) noexcept
 extern "C" {
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"dinput" } };
 
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"dplayx" } };
+
 extern auto command_line_caps = game_command_line_caps{
   .flags = { { L"listen", L"serve", L"join" } },
   .int_settings = { { L"Joystick", L"Mouse" } },

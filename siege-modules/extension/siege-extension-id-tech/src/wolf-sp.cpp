@@ -67,6 +67,8 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"none" } };
+
 constexpr static auto wolf_aliases = std::array<std::array<std::string_view, 3>, 9>{
   { { "grenade-toggle", "vstr grenade-toggle-start" },
     { "grenade-toggle-start", "weaponbank 6;set grenade-toggle vstr grenade-toggle-stop" },

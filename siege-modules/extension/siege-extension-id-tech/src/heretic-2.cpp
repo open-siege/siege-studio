@@ -65,6 +65,9 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
+
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
+
 using namespace std::literals;
 
 constexpr std::array<std::string_view, 2> verification_strings = std::array<std::string_view, 2>{ { "Quake2Main"sv,

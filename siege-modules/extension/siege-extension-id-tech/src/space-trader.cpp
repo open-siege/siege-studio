@@ -31,6 +31,8 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
 };
 
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
+
 extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
   game_action{ game_action::analog, "+back", u"Move Backward", u"Movement" },

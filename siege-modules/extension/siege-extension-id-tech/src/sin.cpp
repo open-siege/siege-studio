@@ -79,7 +79,8 @@ extern auto game_actions = std::array<game_action, 32>{ {
 } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
-extern void(__fastcall* ConsoleEvalFastcall)(const char*);
+
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"ws2_32" } };
 
 using namespace std::literals;
 

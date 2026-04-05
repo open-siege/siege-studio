@@ -63,6 +63,9 @@ constexpr static auto quake2_aliases = std::array<std::array<std::string_view, 2
   { "-throw-grenade", "-attack;weaplast" } } };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
+
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
+
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 3>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 3>{ { { "exec"sv, std::size_t(0x44ec2c) },

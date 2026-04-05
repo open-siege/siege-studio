@@ -57,6 +57,8 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
+
 using namespace std::literals;
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 0> function_name_ranges{};

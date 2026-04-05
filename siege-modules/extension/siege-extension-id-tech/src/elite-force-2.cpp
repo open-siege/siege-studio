@@ -65,7 +65,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
 
 using namespace std::literals;
 
@@ -88,15 +88,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 5> va
   { "temp_password"sv, "temp_dedicated"sv },
   { "temp_sv_pure"sv, "temp_mp_modifier_Specialties"sv },
   { "botenable"sv, "sv_strafeJumpingAllowed"sv },
-} };
-
-inline void set_gog_exports()
-{
-  ConsoleEvalCdecl = (decltype(ConsoleEvalCdecl))0x4bd548;
-}
-
-constexpr std::array<void (*)(), 5> export_functions = { {
-  set_gog_exports,
 } };
 
 std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept

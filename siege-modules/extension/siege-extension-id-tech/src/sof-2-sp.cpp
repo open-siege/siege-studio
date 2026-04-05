@@ -60,7 +60,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
-extern void(__cdecl* ConsoleEvalCdecl)(const char*);
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"none" } };
 
 using namespace std::literals;
 

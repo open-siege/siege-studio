@@ -60,7 +60,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
   game_action{ game_action::digital, "+mlook", u"Mouse Look", u"Misc" },
 } };
 
-extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-anachronox" } };
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"none" } };
 
 using namespace std::literals;
 

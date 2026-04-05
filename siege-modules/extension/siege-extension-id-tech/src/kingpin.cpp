@@ -69,7 +69,9 @@ constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 
   { "-melee-attack", "weaplast;-attack" } } };
 
 
-extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"siege-extension-kingpin" } };
+extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
+
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
 
 using namespace std::literals;
 
