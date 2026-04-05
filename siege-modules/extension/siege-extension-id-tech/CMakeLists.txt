@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 project(siege-extension-id-tech)
 
 if (WIN32)
-    add_library(siege-extension-id-tech-2-0 STATIC src/id-tech-shared.cpp src/id-tech-2-0-shared.cpp src/cmd-id-tech-2-0.cpp)
+    add_library(siege-extension-id-tech-2-0 STATIC src/id-tech-shared.cpp src/id-tech-2-0-shared.cpp)
     target_include_directories(siege-extension-id-tech-2-0 PUBLIC src)
     
     add_library(siege-extension-take-no-prisoners SHARED src/vampire-shared.cpp src/take-no-prisoners.cpp src/vampire.def)
@@ -34,7 +34,7 @@ if (WIN32)
         target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-0)
     endforeach()
 
-    add_library(siege-extension-id-tech-2-5 STATIC src/id-tech-shared.cpp src/id-tech-2-5-shared.cpp src/cmd-id-tech-2-5.cpp)
+    add_library(siege-extension-id-tech-2-5 STATIC src/id-tech-shared.cpp src/id-tech-2-5-shared.cpp)
     target_include_directories(siege-extension-id-tech-2-5 PUBLIC src)
 
     add_library(siege-extension-anachronox SHARED src/anox.cpp src/anox.def)
@@ -59,7 +59,7 @@ if (WIN32)
         target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-5)
     endforeach()
 
-    add_library(siege-extension-id-tech-3-0 STATIC src/id-tech-shared.cpp src/id-tech-3-0-shared.cpp src/cmd-id-tech-3-0.cpp)
+    add_library(siege-extension-id-tech-3-0 STATIC src/id-tech-shared.cpp src/id-tech-3-0-shared.cpp)
     target_include_directories(siege-extension-id-tech-3-0 PUBLIC src)
 
     add_library(siege-extension-return-to-castle-wolf-sp SHARED src/wolf-sp.cpp src/id-tech-3.def)
