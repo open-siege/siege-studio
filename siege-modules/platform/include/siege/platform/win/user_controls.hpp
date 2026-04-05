@@ -93,6 +93,12 @@ namespace win32
             remove_window_subclass(hWnd, dispatcher::handle_message, uIdSubclass);
           }
         }
+        catch (const std::exception& ex)
+        {
+          ::OutputDebugStringA(ex.what());
+          ::OutputDebugStringW(L"\n");
+          assert(false);
+        }
         catch (...)
         {
           assert(false);

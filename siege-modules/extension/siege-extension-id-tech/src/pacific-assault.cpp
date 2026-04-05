@@ -59,6 +59,8 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
+
 using namespace std::literals;
 
 constexpr std::array<std::array<std::pair<std::string_view, std::size_t>, 1>, 1> verification_strings = { { std::array<std::pair<std::string_view, std::size_t>, 1>{ {
@@ -265,11 +267,6 @@ predefined_string*
 predefined_string*
   get_predefined_string_command_line_settings(const wchar_t* name) noexcept
 {
-  if (name && std::wstring_view(name) == L"map")
-  {
-    return get_predefined_id_tech_3_map_command_line_settings(L"main");
-  }
-
   return nullptr;
 }
 }

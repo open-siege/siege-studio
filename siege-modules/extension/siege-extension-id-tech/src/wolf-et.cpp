@@ -273,7 +273,7 @@ predefined_string*
 {
   if (name && std::wstring_view(name) == L"map")
   {
-    return get_predefined_id_tech_3_map_command_line_settings(L"Main");
+    return get_predefined_id_tech_3_map_command_line_settings(L"etmain");
   }
 
   return nullptr;

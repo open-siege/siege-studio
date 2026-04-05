@@ -272,36 +272,43 @@ namespace siege::views
   {
     display_value = new_display_value;
 
-    switch (type)
+    try
     {
-    case extension_setting_type::env_setting: {
-      value = std::wstring(new_value);
-      break;
+      switch (type)
+      {
+      case extension_setting_type::env_setting: {
+        value = std::wstring(new_value);
+        break;
+      }
+      case extension_setting_type::string_setting: {
+        value = std::wstring(new_value);
+        break;
+      }
+      case extension_setting_type::int_setting: {
+        value = std::stoi(std::wstring(new_value));
+        break;
+      }
+      case extension_setting_type::float_setting: {
+        value = std::stof(std::wstring(new_value));
+        break;
+      }
+      case extension_setting_type::flag_setting: {
+        value = new_value == L"Enabled";
+        break;
+      }
+      case extension_setting_type::computed_setting: {
+        value = std::wstring(new_value);
+        break;
+      }
+      case extension_setting_type::unknown: {
+        break;
+      }
+      }
     }
-    case extension_setting_type::string_setting: {
-      value = std::wstring(new_value);
-      break;
+    catch (const std::invalid_argument&)
+    {
     }
-    case extension_setting_type::int_setting: {
-      value = std::stoi(std::wstring(new_value));
-      break;
-    }
-    case extension_setting_type::float_setting: {
-      value = std::stof(std::wstring(new_value));
-      break;
-    }
-    case extension_setting_type::flag_setting: {
-      value = new_value == L"Enabled";
-      break;
-    }
-    case extension_setting_type::computed_setting: {
-      value = std::wstring(new_value);
-      break;
-    }
-    case extension_setting_type::unknown: {
-      break;
-    }
-    }
+
     if (persist)
     {
       persist();
@@ -2434,7 +2441,7 @@ namespace siege::views
         .dplayx = stl::any_of(self.matching_extension->network_backends, [](auto* name) { return name == std::wstring_view{ L"dplayx" }; }),
       };
       self.detected_networking_support.emplace(self.loaded_path, result);
-      return true;
+      return result;
     }
 
 
