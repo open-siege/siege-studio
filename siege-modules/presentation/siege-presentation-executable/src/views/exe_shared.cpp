@@ -407,6 +407,31 @@ namespace siege::views
       real_options.emplace_back(pref_options[i]);
     }
 
+    auto persist_ip_address = [&self]() {
+      if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+            siege::platform::game_command_line_caps empty_caps{};
+            auto& caps = self.matching_extension && self.matching_extension->caps ? *self.matching_extension->caps : empty_caps;
+
+            std::wstring_view ip_setting = caps.ip_connect_setting ? caps.ip_connect_setting : L"";
+
+            if (ip_setting.empty())
+            {
+              return setting.setting_name == zt_fallback_ip;
+            }
+
+            return !ip_setting.empty() && setting.setting_name == ip_setting;
+          });
+        setting_iter != self.launch_settings.end())
+      {
+        auto value = std::visit(convert_to_string, setting_iter->value);
+        if (value.empty() || value == L"0.0.0.0" || value == L"127.0.0.1")
+        {
+          return;
+        }
+        copy_to_array(setting_iter->value, self.registry_data.last_ip_address);
+      }
+    };
+
     auto has_networking = has_ip || has_listen || has_dedicated;
 
     if (has_networking)
@@ -656,30 +681,7 @@ namespace siege::views
           .value = settings.last_ip_address.data(),
           .display_name = L"Fallback Broadcast IP",
           .group_id = 1,
-          .persist = [&self]() {
-            if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                  siege::platform::game_command_line_caps empty_caps{};
-                  auto& caps = self.matching_extension && self.matching_extension->caps ? *self.matching_extension->caps : empty_caps;
-
-                  std::wstring_view ip_setting = caps.ip_connect_setting ? caps.ip_connect_setting : L"";
-
-                  if (ip_setting.empty())
-                  {
-                    return setting.setting_name == zt_fallback_ip;
-                  }
-
-                  return !ip_setting.empty() && setting.setting_name == ip_setting;
-                });
-              setting_iter != self.launch_settings.end())
-            {
-              auto value = std::visit(convert_to_string, setting_iter->value);
-              if (value.empty() || value == L"0.0.0.0" || value == L"127.0.0.1")
-              {
-                return;
-              }
-              copy_to_array(setting_iter->value, self.registry_data.last_ip_address);
-            }
-          } });
+          .persist = persist_ip_address });
       }
     }
 
@@ -730,7 +732,8 @@ namespace siege::views
           .type = extension_setting_type::string_setting,
           .value = settings.last_ip_address.data(),
           .display_name = L"Server IP Address",
-          .group_id = 1 });
+          .group_id = 1,
+          .persist = persist_ip_address});
 
         if (!listen_setting.empty() && setting == listen_setting)
         {
