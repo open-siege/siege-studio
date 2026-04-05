@@ -8,7 +8,7 @@ EXPORTS
 	get_variable_name_ranges PRIVATE
 	get_predefined_string_command_line_settings PRIVATE
 	get_predefined_int_command_line_settings PRIVATE
-	format_command_line PRIVATE
+	format_command_line=format_command_line_sof PRIVATE
 	init_keyboard_inputs PRIVATE
 	init_mouse_inputs PRIVATE
 	default_controller_inputs PRIVATE
