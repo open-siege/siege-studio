@@ -830,7 +830,7 @@ namespace siege::views
           COLORREF bk_color = RGB(0x20, 0x20, 0x20);
           COLORREF text_color = 0x00FFFFFF;
           COLORREF text_bk_color = RGB(0x2b, 0x2b, 0x2b);
-          COLORREF text_highlight_color = RGB(0x2d, 0x2d, 0x2d);
+          COLORREF text_highlight_color = RGB(0x2f, 0x2f, 0x2f);
           COLORREF btn_shadow_color = 0x00AAAAAA;
 
           COLORREF button_bk_color = RGB(0x2d, 0x2d, 0x2d);

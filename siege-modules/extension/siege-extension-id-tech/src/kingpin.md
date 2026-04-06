@@ -1,4 +1,4 @@
-# Siege Extension for Heretic 2
+# Siege Extension for Kingpin
 
 ## Features
 * Online multiplayer support through a WinSock wrapper over Zero Tier Sockets (wsock32-on-zero-tier).

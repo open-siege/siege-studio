@@ -1,8 +1,21 @@
+# Siege Studio + Siege Launcher 26.15 Development Release
+* Added initial interface to configure controller types if the controller is not detected correctly.
+* Improved controller mouse emulation
+* Controller configuration for games updated with the following logic:
+    * Each game is checked for a valid combination of inputs. 
+        * If the controller inputs are supported by the game, then matching configuration is created.
+        * If the controller inputs are partially supported, then matching configuration is created for the valid inputs, and the reset is mapped to keyboard and mouse simulations.
+        * If no controller inputs are supported or the game has no controller support, the keyboard and mouse inputs are fully simulated by the connected controllers.
+* Fixed Zero Tier enabled flag not showing its combo box on first selection.
+* Individual shift/control/alt keys are assignable independently based on the game and its support.
+* More game support added though not tested fully. 
+  * Once tested, the games will be added to Siege Launcher and the supported game list.
+
 # Siege Studio + Siege Launcher 25.35 Development Release
 * When a game is running, keyboard and mouse events were disabled for Siege Studio/Launcher. Now, only keyboard events are disabled.
 * When using the Open menu command, EXE files are set as the default file type.
 * EXE files won't open unless they have resource data or supported network libraries.
-* For partially supported games, Zero Tier is enabled if usage of networking is also detected inside of exectable adjacent DLLs.
+* For partially supported games, Zero Tier is enabled if usage of networking is also detected inside of executable adjacent DLLs.
 * Opening a folder of an extracted file now works when using unvol, either standalone or in self-extraction mode.
 * Fixed issue with game controller configurations not loading correctly.
 * Siege Studio update download progress is shown more accurately.
