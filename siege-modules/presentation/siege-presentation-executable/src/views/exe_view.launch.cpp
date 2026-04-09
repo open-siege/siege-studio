@@ -359,6 +359,20 @@ namespace siege::views
           });
 
           std::uint32_t controller_index = 0;
+
+          struct bound_mapping
+          {
+            siege::views::input_action_binding bound_action;
+            siege::platform::input_mapping_ex binding;
+            bool is_unbindable = false;
+            bool is_bindable = false;
+
+            std::uint32_t controller_index;
+            siege::views::controller_info* controller_info;
+          };
+
+          std::vector<bound_mapping> bindings{};
+
           for (auto& controller : controllers)
           {
             auto _ = std::shared_ptr<void>{
@@ -374,26 +388,7 @@ namespace siege::views
             {
               continue;
             }
-
-            auto buttons = mapped_buttons(controller);
-            auto axes = mapped_axes(controller);
-            siege::platform::hardware_context_caps controller_caps{
-              .context = controller.detected_context,
-              .hardware_index = controller_index,
-              .button_count = buttons.empty() ? 0 : *buttons.rbegin() + 1,
-              .axis_count = axes.empty() ? 0 : *axes.rbegin() + 1,
-              .hat_count = mapped_hat_count(controller),
-            };
-
-            struct bound_mapping
-            {
-              siege::views::input_action_binding bound_action;
-              siege::platform::input_mapping_ex binding;
-              bool is_unbindable = false;
-              bool is_bindable = false;
-            };
-            std::vector<bound_mapping> bindings{};
-
+            
             for (auto& bound_action : controller_actions)
             {
               auto preference = actions[bound_action.action_index].type == actions[bound_action.action_index].analog ? controller_info::prefer_axis : controller_info::prefer_button;
@@ -412,7 +407,7 @@ namespace siege::views
 
               if (uses_winmm)
               {
-                auto mapped = map_hid_to_winmm(*hardware_index, axes);
+                auto mapped = map_hid_to_winmm(*hardware_index, mapped_axes(controller));
                 binding.binding.hardware_index = mapped.index;
                 binding.binding.hardware_input_type = mapped.type;
               }
@@ -421,43 +416,57 @@ namespace siege::views
                 binding.binding.hardware_index = hardware_index->index;
                 binding.binding.hardware_input_type = hardware_index->type;
               }
+              binding.controller_index = controller_index;
+              binding.controller_info = &controller;
             }
+          }
 
+          for (auto& binding : bindings)
+          {
+            assert(binding.controller_info != nullptr);
+
+            auto empty_binding = binding.binding;
+            empty_binding.action_name.fill('\0');
+
+            auto buttons = mapped_buttons(*binding.controller_info);
+            auto axes = mapped_axes(*binding.controller_info);
+            siege::platform::hardware_context_caps controller_caps{
+              .context = binding.controller_info->detected_context,
+              .hardware_index = binding.controller_index,
+              .button_count = buttons.empty() ? 0 : *buttons.rbegin() + 1,
+              .axis_count = axes.empty() ? 0 : *axes.rbegin() + 1,
+              .hat_count = mapped_hat_count(*binding.controller_info),
+            };
+
+            binding.is_unbindable = extension.is_input_mapping_valid(controller_caps, empty_binding);
+            binding.is_bindable = extension.is_input_mapping_valid(controller_caps, binding.binding);
+          }
+
+          const auto can_bind_game_backend = stl::all_of(bindings, [](auto& binding) {
+            return binding.is_bindable || binding.is_unbindable;
+          });
+
+          if (can_bind_game_backend)
+          {
+            enable_controller_for_extension(state);
             for (auto& binding : bindings)
             {
-              auto empty_binding = binding.binding;
-              empty_binding.action_name.fill('\0');
-              binding.is_unbindable = extension.is_input_mapping_valid(controller_caps, empty_binding);
-              binding.is_bindable = extension.is_input_mapping_valid(controller_caps, binding.binding);
-            }
-
-            const auto can_bind_game_backend = stl::all_of(bindings, [](auto& binding) {
-              return binding.is_bindable || binding.is_unbindable;
-            });
-
-
-            if (can_bind_game_backend)
-            {
-              enable_controller_for_extension(state);
-              for (auto& binding : bindings)
+              if (binding.is_bindable)
               {
-                if (binding.is_bindable)
-                {
-                  action_bindings.emplace_back(binding.binding);
-                }
-                else
-                {
-                  add_fallback(binding.bound_action, controller.detected_context);
-                }
+                action_bindings.emplace_back(binding.binding);
+              }
+              else
+              {
+                add_fallback(binding.bound_action, binding.controller_info->detected_context);
               }
             }
-            else
-            {
-              disable_controller_for_extension(state);
-              stl::for_each(bindings, [&](auto& binding) {
-                add_fallback(binding.bound_action);
-              });
-            }
+          }
+          else
+          {
+            disable_controller_for_extension(state);
+            stl::for_each(bindings, [&](auto& binding) {
+              add_fallback(binding.bound_action);
+            });
           }
         }
       }
