@@ -433,6 +433,11 @@ namespace siege::views
                          })
                          .value();
 
+      if (icon_size.cx < 8 || icon_size.cy < 8)
+      {
+        return;
+      }
+
       if (bitmap_actions_icons)
       {
         bitmap_actions_icons.reset();

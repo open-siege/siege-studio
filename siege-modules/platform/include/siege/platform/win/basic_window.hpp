@@ -1,6 +1,7 @@
 #ifndef BASIC_WINDOW_HPP
 #define BASIC_WINDOW_HPP
 #include <siege/platform/win/window.hpp>
+#include <cassert>
 
 namespace win32
 {
@@ -57,12 +58,25 @@ namespace win32
 
       if (*window == self)
       {
-        auto result = window->window_proc(message, wparam, lparam);
+          try
+          {
+            auto result = window->window_proc(message, wparam, lparam);
 
-        if (result)
-        {
-          return *result;
-        }
+            if (result)
+            {
+              return *result;
+            }
+          }
+          catch (const std::exception& ex)
+          {
+            ::OutputDebugStringA(ex.what());
+            ::OutputDebugStringA("\n");
+            assert(true);
+          }
+          catch (...)
+          {
+            assert(true);
+          }
       }
 
       return ::DefWindowProcW(self, message, wparam, lparam);

@@ -684,7 +684,8 @@ namespace siege::views
         total_width = total_width - child_width;
       }
 
-      auto width = std::clamp<int>(total_width / count, fallback, right_size.cx > 25 ? right_size.cx - 25 : 0);// TODO figure out the correct sizing for the tab control
+      auto max = right_size.cx > 25 ? right_size.cx - 25 : fallback;
+      auto width = std::clamp<int>(total_width / count, fallback > max ? max : fallback, max);// TODO figure out the correct sizing for the tab control
 
       TabCtrl_SetPadding(tab_control, 10, 0);
       auto old_height = HIWORD(TabCtrl_SetItemSize(tab_control, width, 40));

@@ -237,6 +237,11 @@ namespace siege::views
                          })
                          .value();
 
+      if (icon_size.cx < 8 || icon_size.cy < 8)
+      {
+        return;
+      }
+
       if (image_list)
       {
         image_list.reset();
