@@ -20,7 +20,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
     darkstar::create_vol_file(mem_buffer, files);
 
-    REQUIRE(siege::resource::vol::darkstar::vol_resource_reader::is_stream_supported(mem_buffer) == true);
+    REQUIRE(siege::resource::vol::darkstar::is_stream_supported(mem_buffer) == true);
 
     mem_buffer.seekg(4, std::ios::beg);
 
@@ -90,7 +90,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
     darkstar::create_vol_file(mem_buffer, files);
 
-    REQUIRE(siege::resource::vol::darkstar::vol_resource_reader::is_stream_supported(mem_buffer) == true);
+    REQUIRE(siege::resource::vol::darkstar::is_stream_supported(mem_buffer) == true);
 
     mem_buffer.seekg(4, std::ios::beg);
 
@@ -176,7 +176,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     darkstar::create_vol_file(mem_buffer, files);
 
     std::any cache;
-    darkstar::vol_resource_reader archive;
+    auto archive = darkstar::make_resource_reader();
 
     auto parsed_files = archive.get_content_listing(cache, mem_buffer, { std::filesystem::path(), std::filesystem::path() });
     REQUIRE(parsed_files.size() == 3);

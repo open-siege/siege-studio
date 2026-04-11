@@ -222,10 +222,10 @@ namespace siege::configuration::three_space
       }
 
 
-      return std::make_optional<text_game_config>(std::move(buffer), std::move(config_data), save_config);
+      return std::make_optional<text_game_config>(std::any{}, std::move(buffer), std::move(config_data), save_config);
     }
 
-    void save_config(const std::vector<config_line>& entries, std::ostream& raw_data)
+    void save_config(const std::any& context, const std::vector<config_line>& entries, std::ostream& raw_data)
     {
     }
 
