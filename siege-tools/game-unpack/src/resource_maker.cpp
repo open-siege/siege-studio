@@ -11,6 +11,10 @@ namespace siege::resource
   {
     if (zip::is_stream_zip(stream))
     {
+      return zip::make_zip_resource_reader();
+    }
+    else if (zip::is_stream_7zip(stream))
+    {
       return zip::make_7zip_resource_reader();
     }
     else if (cab::is_stream_supported(stream))
