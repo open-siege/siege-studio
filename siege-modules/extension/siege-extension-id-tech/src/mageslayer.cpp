@@ -147,10 +147,6 @@ std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2
 
 std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
-  if (filename && std::filesystem::path(filename).stem() == "MAGESLAY")
-  {
-    OutputDebugStringW(L"Found mage slayer");
-  }
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
