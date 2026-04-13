@@ -1,3 +1,6 @@
+# Siege Studio + Siege Launcher 26.16 Development Release
+* Fixed issue in preferences dialog where the query console should appear even though it wasn't selected.
+
 # Siege Studio + Siege Launcher 26.15 Development Release
 * Added initial interface to configure controller types if the controller is not detected correctly.
 * Improved controller mouse emulation

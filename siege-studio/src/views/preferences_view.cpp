@@ -402,7 +402,9 @@ namespace siege::views
         auto* auto_extension = (decltype(sqlite3_auto_extension)*)::GetProcAddress(module, "sqlite3_auto_extension");
         auto* open = (decltype(sqlite3_open)*)::GetProcAddress(module, "sqlite3_open");
         auto* exec = (decltype(sqlite3_exec)*)::GetProcAddress(module, "sqlite3_exec");
-
+        auto* malloc = (decltype(sqlite3_malloc)*)::GetProcAddress(module, "sqlite3_malloc");
+        auto* free = (decltype(sqlite3_free)*)::GetProcAddress(module, "sqlite3_free");
+          
         sqlite3* db = nullptr;
         if (auto_extension && open && exec && malloc && free)
         {
@@ -435,9 +437,11 @@ namespace siege::views
         sql_query_confirm.bind_bn_clicked([this](auto, const auto&) {
           auto module = this->GetPropW<HMODULE>(L"module");
           auto db = this->GetPropW<sqlite3*>(L"database");
+          auto* exec = (decltype(sqlite3_exec)*)::GetProcAddress(module, "sqlite3_exec");
           auto* malloc = (decltype(sqlite3_malloc)*)::GetProcAddress(module, "sqlite3_malloc");
           auto* free = (decltype(sqlite3_free)*)::GetProcAddress(module, "sqlite3_free");
-          auto* exec = (decltype(sqlite3_exec)*)::GetProcAddress(module, "sqlite3_exec");
+          assert(malloc != nullptr);
+          assert(free != nullptr);
 
           auto message = std::shared_ptr<char>((char*)malloc(255), free);
           auto raw = message.get();
@@ -553,10 +557,6 @@ namespace siege::views
         sql_results = *win32::CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
           .hwndParent = *this,
           .style = WS_CHILD | LVS_REPORT });
-
-        ShowWindow(sql_query, SW_HIDE);
-        ShowWindow(sql_query_confirm, SW_HIDE);
-        ShowWindow(sql_results, SW_HIDE);
 
 
         ::SetPropW(*this, L"module", module);
@@ -831,10 +831,6 @@ namespace siege::views
 
       sql_results.SetWindowPos(POINT{ .x = left_size.cx, .y = top_height });
       sql_results.SetWindowPos(SIZE{ .cx = middle_size.cx + right_size.cx, .cy = middle_size.cy + right_size.cy });
-
-      ShowWindow(sql_query, SW_SHOW);
-      ShowWindow(sql_query_confirm, SW_SHOW);
-      ShowWindow(sql_results, SW_SHOW);
 
       return 0;
     }
