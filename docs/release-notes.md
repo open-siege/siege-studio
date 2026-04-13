@@ -10,7 +10,9 @@
 * Individual shift/control/alt keys are assignable independently based on the game and its support.
 * More game support added though not tested fully. 
   * Once tested, the games will be added to Siege Launcher and the supported game list.
-
+* Games and applications which are partially supported appear in Siege Studio.
+    * Partially supported means the executable has embedded resources or has networking support. 
+  
 # Siege Studio + Siege Launcher 25.35 Development Release
 * When a game is running, keyboard and mouse events were disabled for Siege Studio/Launcher. Now, only keyboard events are disabled.
 * When using the Open menu command, EXE files are set as the default file type.
