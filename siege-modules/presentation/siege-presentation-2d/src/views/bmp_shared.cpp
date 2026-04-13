@@ -99,6 +99,11 @@ namespace siege::views
 
         auto size = siege::platform::get_stream_size(image_stream);
 
+        if (size > 2 * 1024 * 1024)
+        {
+          return false;
+        }
+
         std::vector<std::byte> data(size, std::byte{});
 
         image_stream.read((char*)data.data(), size);

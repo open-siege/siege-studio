@@ -95,28 +95,16 @@ namespace siege::views
     return *std::any_cast<std::shared_ptr<controller_state>>(self).get();
   }
 
-  // TODO this was meant to be cross platform code.
-  // Oops. I'll have to move this to the win32 section later.
-  std::pair<win32::file_view, std::size_t> get_raw_resource_data(std::any& self)
+  std::unique_ptr<std::istream> get_raw_resource_data_stream(std::any& self)
   {
     if (auto* path = std::get_if<fs::path>(&ref(self).storage); path)
     {
-      auto file = win32::file(*path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
-
-      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, {}, L"");
-
-      if (!mapping)
-      {
-        return {};
-      }
-
-      return std::make_pair(mapping->MapViewOfFile(FILE_MAP_READ, 0), fs::file_size(*path));
+      return std::unique_ptr<std::istream>(new std::ifstream{ *path, std::ios::binary });
     }
 
     // For now, not supporting in memory files
     return {};
   }
-
   void stop_loading(std::any& self) { ref(self).should_continue = false; }
 
   std::optional<std::filesystem::path> get_original_path(std::any& self)

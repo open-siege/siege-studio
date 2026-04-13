@@ -101,7 +101,7 @@ namespace siege::configuration
       return count++ != 8192 && std::isalpha(value) || std::isdigit(value) || std::isspace(value) || std::ispunct(value);
     });
     raw_data.seekg(current_pos, std::ios::beg);
-    return result;
+    return count > 0 && result;
   }
 
 }// namespace siege::configuration

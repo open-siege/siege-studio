@@ -1156,23 +1156,11 @@ namespace siege::views
         auto path_ref = file_path.c_str();
         win32::file file_to_read(file_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
-        auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, {}, L"");
-
-        if (!mapping)
-        {
-          return false;
-        }
-
-        std::size_t size = (std::size_t)file_to_read.GetFileSizeEx().value_or(LARGE_INTEGER{}).QuadPart;
-
-        auto view = mapping->MapViewOfFile(FILE_MAP_READ, size);
-
         siege::platform::storage_info storage{
-          .type = siege::platform::storage_info::buffer
+          .type = siege::platform::storage_info::file
         };
-        storage.info.data.data = (std::byte*)view.get();
-        storage.info.data.size = size;
-
+        storage.info.path = file_path.c_str();
+        
         auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
           return module.is_stream_supported(storage);
         });
@@ -1211,6 +1199,31 @@ namespace siege::views
 
           auto ref = child->ref();
           win32::apply_window_theme(ref);
+
+          auto mapping = file_to_read.CreateFileMapping(std::nullopt, PAGE_READONLY, {}, L"");
+
+          if (!mapping)
+          {
+            return false;
+          }
+
+          std::size_t size = (std::size_t)file_to_read.GetFileSizeEx().value_or(LARGE_INTEGER{}).QuadPart;
+
+          auto view = mapping->MapViewOfFile(FILE_MAP_READ, size);
+
+          if (!view.get())
+          {
+            while (size != 0)
+            {
+              size = size / 2;
+              view = mapping->MapViewOfFile(FILE_MAP_READ, size);
+
+              if (view.get())
+              {
+                break;
+              }
+            }
+          }
 
           COPYDATASTRUCT data{
             .dwData = (ULONG_PTR)mapping->get(),

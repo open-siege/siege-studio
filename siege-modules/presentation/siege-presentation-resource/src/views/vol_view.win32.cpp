@@ -307,8 +307,8 @@ namespace siege::views
       if (is_vol(stream))
       {
         std::optional<std::filesystem::path> path = win32::get_path_from_handle((HANDLE)message.data_type);
-
-        auto count = load_volume(shared_state, stream, path, [&, table = table.get()](siege::platform::resource_reader::content_info& content) mutable {
+        
+        auto on_new_item = [&, table = table.get()](siege::platform::resource_reader::content_info& content) mutable {
           if (!::IsWindow(table))
           {
             stop_loading(shared_state);
@@ -349,8 +349,19 @@ namespace siege::views
               ListView_SetTileInfo(table, &item_info);
             }
           }
-        });
-
+        };
+        std::size_t count = 0;
+        
+        if (path)
+        {
+          std::ifstream file_stream{ *path, std::ios::binary };
+          count = load_volume(shared_state, file_stream, path, on_new_item);
+        }
+        else
+        {
+          count = load_volume(shared_state, stream, path, on_new_item);
+        }
+        
         if (count > 0)
         {
           auto client_size = this->GetClientSize();
@@ -560,7 +571,14 @@ namespace siege::views
         return;
       }
 
-      fs::copy_file(*unvol_path, *new_unvol_path);
+      std::error_code last_error{};
+      bool did_copy = fs::copy_file(*unvol_path, *new_unvol_path, fs::copy_options::overwrite_existing, last_error);
+
+      if (!did_copy || last_error)
+      {
+        ::MessageBoxW(*this, L"An error occurred creating the self-extracting archive", L"Could Not Create Self-Extracting Archive", MB_ICONERROR);
+        return;
+      }
 
       auto final_path = create_self_extracting_resource(shared_state, *new_unvol_path, output_path, std::move(commands));
 

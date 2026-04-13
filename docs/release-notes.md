@@ -1,5 +1,8 @@
 # Siege Studio + Siege Launcher 26.16 Development Release
 * Fixed issue in preferences dialog where the query console should appear even though it wasn't selected.
+* Fixed issue with empty files opening the configuration view.
+* Fixed issues with opening large resource/archive files.
+* Fixed failures with creating self-extracting archives from large archive files.
 
 # Siege Studio + Siege Launcher 26.15 Development Release
 * Added initial interface to configure controller types if the controller is not detected correctly.
