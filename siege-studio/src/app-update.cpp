@@ -76,6 +76,11 @@ std::wstring resolve_domain()
   return L"updates.thesiegehub.com";
 }
 
+int get_week_total(const SIZE& size)
+{
+  return size.cx * 52 + size.cy;
+}
+
 std::optional<SIZE> get_core_version()
 {
   auto parent_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
@@ -142,9 +147,9 @@ __declspec(dllexport) void detect_update(std::uint32_t update_type)
       auto major = std::stoi(value.substr(0, value.find(".")));
       auto minor = std::stoi(value.substr(value.find(".") + 1));
 
-      auto version_to_check = get_core_version().value_or(SIZE{ SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION });
+      auto current_week_total = get_week_total(get_core_version().value_or(SIZE{ SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION }));
 
-      if (major >= version_to_check.cx && minor > version_to_check.cy)
+      if (get_week_total(SIZE{major, minor}) > current_week_total)
       {
         info.new_version_is_available = true;
         info.available_version.cx = major;
