@@ -733,7 +733,7 @@ namespace siege::views
           .value = settings.last_ip_address.data(),
           .display_name = L"Server IP Address",
           .group_id = 1,
-          .persist = persist_ip_address});
+          .persist = persist_ip_address });
 
         if (!listen_setting.empty() && setting == listen_setting)
         {
@@ -757,6 +757,7 @@ namespace siege::views
 
       auto proc = get_extension(state).get_predefined_string_command_line_settings_proc;
 
+
       self.launch_settings.emplace_back(game_setting{
         .setting_name = setting,
         .type = extension_setting_type::string_setting,
@@ -766,7 +767,15 @@ namespace siege::views
 
       if (proc)
       {
-        self.launch_settings.back().get_predefined_string = [proc](std::wstring_view name) {
+        self.launch_settings.back().get_predefined_string = [proc, &state](std::wstring_view name) {
+          std::shared_ptr<void> deferred{
+            nullptr, [path = fs::current_path()](...) {
+              fs::current_path(path);
+            }
+          };
+
+          get_extension(state).change_working_directory(get_exe_path(state));
+
           auto result = proc(name.data());
 
           auto size = 0;
@@ -2860,7 +2869,9 @@ namespace siege::views
 
       ::SetEnvironmentVariableW(L"Path", current_path.c_str());
 
-      return std::shared_ptr<void>(nullptr, [](...) { ::SetDllDirectoryW(nullptr); });
+      get_extension(state).change_working_directory(get_exe_path(state));
+
+      return std::shared_ptr<void>(nullptr, [path = fs::current_path()](...) { ::SetDllDirectoryW(nullptr); fs::current_path(path); });
     };
 
     if (has_extension_module(state))

@@ -2,6 +2,7 @@
 #define SIEGE_GAME_EXTENSION_MODULE_HPP
 
 #include <siege/platform/extension_module.hpp>
+#include <array>
 
 namespace siege::platform
 {
@@ -16,6 +17,7 @@ namespace siege::platform
   using init_mouse_inputs = std::errc(mouse_binding* binding) noexcept;
   using init_controller_inputs = std::errc(controller_binding* binding) noexcept;
   using default_controller_inputs = std::errc(controller_binding* binding, std::uint32_t layout_index) noexcept;
+  using change_working_directory = std::errc(const wchar_t* filename) noexcept;
 
   using apply_prelaunch_settings = std::errc(const siege::fs_char* exe_path_str, siege::platform::game_command_line_args*);
   using format_command_line = const siege::fs_char**(const siege::platform::game_command_line_args*, std::uint32_t* new_size);
@@ -36,6 +38,7 @@ namespace siege::platform
     init_controller_inputs* init_controller_inputs_proc = nullptr;
     default_controller_inputs* default_controller_inputs_proc = nullptr;
     is_input_mapping_valid* is_input_mapping_valid_proc = nullptr;
+    change_working_directory* change_working_directory_proc = nullptr;
 
     std::variant<std::monostate, apply_prelaunch_settings*, apply_prelaunch_settings_ex*> apply_prelaunch_settings_proc;
     std::variant<std::monostate, format_command_line*, format_command_line_ex*> format_command_line_proc;
@@ -91,6 +94,7 @@ namespace siege::platform
                                                                }())
     {
       executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
+      change_working_directory_proc = GetProcAddress<decltype(executable_is_supported_proc)>("change_working_directory");
       get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
       get_variable_name_ranges_proc = GetProcAddress<decltype(get_variable_name_ranges_proc)>("get_variable_name_ranges");
       get_predefined_string_command_line_settings_proc = GetProcAddress<decltype(get_predefined_string_command_line_settings_proc)>("get_predefined_string_command_line_settings");
@@ -152,6 +156,16 @@ namespace siege::platform
       }
 
       return is_input_mapping_valid_proc(&caps, &mapping) == std::errc{};
+    }
+
+    inline bool change_working_directory(const std::filesystem::path& path)
+    {
+      if (!change_working_directory_proc)
+      {
+        return false;
+      }
+
+      return change_working_directory_proc(path.c_str()) == std::errc{};
     }
 
     inline std::optional<std::unique_ptr<siege::platform::controller_binding>> init_controller_inputs() const
@@ -354,7 +368,23 @@ namespace siege::platform
         return false;
       }
 
-      return export_ptr == executable_is_supported_proc || export_ptr == get_function_name_ranges_proc || export_ptr == get_variable_name_ranges_proc || export_ptr == init_keyboard_inputs_proc || export_ptr == init_mouse_inputs_proc || export_ptr == get_predefined_string_command_line_settings_proc || export_ptr == get_predefined_int_command_line_settings_proc || export_ptr == init_controller_inputs_proc || export_ptr == GetProcAddress<game_command_line_caps*>("command_line_caps") || export_ptr == GetProcAddress<game_command_line_caps*>("controller_input_backends") || export_ptr == GetProcAddress<game_command_line_caps*>("apply_prelaunch_settings") || export_ptr == GetProcAddress<game_command_line_caps*>("game_actions") || export_ptr == GetProcAddress<game_command_line_caps*>("format_command_line") || export_ptr == GetProcAddress<void*>("network_backends");
+      std::array<void*, 15> ptrs = { { executable_is_supported_proc,
+        change_working_directory_proc,
+        get_function_name_ranges_proc,
+        get_variable_name_ranges_proc,
+        init_keyboard_inputs_proc,
+        init_mouse_inputs_proc,
+        get_predefined_string_command_line_settings_proc,
+        get_predefined_int_command_line_settings_proc,
+        init_controller_inputs_proc,
+        GetProcAddress<game_command_line_caps*>("command_line_caps"),
+        GetProcAddress<game_command_line_caps*>("controller_input_backends"),
+        GetProcAddress<game_command_line_caps*>("apply_prelaunch_settings"),
+        GetProcAddress<game_command_line_caps*>("game_actions"),
+        GetProcAddress<game_command_line_caps*>("format_command_line"),
+        GetProcAddress<void*>("network_backends") } };
+
+      return std::any_of(ptrs.begin(), ptrs.end(), [=](auto* ptr) { return ptr == export_ptr; });
     }
 
     inline std::vector<std::pair<std::string, std::string>> get_function_name_ranges() const
