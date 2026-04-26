@@ -50,6 +50,31 @@ namespace siege::configuration
     return iter->value;
   }
 
+
+  std::vector<text_game_config::config_line> text_game_config::entries_for(key_type key) const
+  {
+    auto count = std::count_if(line_entries.rbegin(), line_entries.rend(), [&](auto& entry) { return entry.key_segments == key; });
+
+    if (count == 0)
+    {
+      return {};
+    }
+
+    std::vector<text_game_config::config_line> results;
+    results.reserve(count);
+
+    for (const auto& line : line_entries)
+    {
+      if (line.key_segments == key)
+      {
+        results.emplace_back(line);
+      }
+    }
+
+    return results;
+  }
+
+
   bool text_game_config::contains(key_type key) const
   {
     auto iter = std::find_if(line_entries.rbegin(), line_entries.rend(), [&](auto& entry) { return entry.key_segments == key; });

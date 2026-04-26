@@ -37,6 +37,7 @@ namespace siege::configuration
     std::vector<key_type> keys() const;
     bool contains(key_type key) const;
     key_type find(key_type key) const;
+    std::vector<config_line> entries_for(key_type key) const;
     text_game_config&& emplace(key_type key, key_type value);
     text_game_config&& remove(key_type key);
 
