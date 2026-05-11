@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <system_error>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/shared.hpp>
 #include "views/vol_shared.hpp"
 
 using namespace siege::views;
@@ -113,7 +114,7 @@ std::errc is_stream_supported(storage_info* data) noexcept
   if (data->type == storage_info::file && data->info.path)
   {
     auto formats = get_volume_formats();
-    auto extension = std::filesystem::path(data->info.path).extension().native();
+    auto extension = siege::platform::to_lower(std::filesystem::path(data->info.path).extension().native());
     if (!std::any_of(formats.begin(), formats.end(), [&](const auto value) {
           return value == extension;
         }))

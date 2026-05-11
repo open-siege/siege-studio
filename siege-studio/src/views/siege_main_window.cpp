@@ -6,6 +6,7 @@
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/presentation_module.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/threading.hpp>
@@ -20,6 +21,7 @@ namespace siege::views
 {
   void show_about_dialog(win32::window_ref parent);
   namespace fs = std::filesystem;
+  using siege::platform::to_lower;
   // TODO update tree view to support multiple levels of navigation
   // TODO add filename filter for directory listing
   // TODO add category and extension filter for directory listing
@@ -79,7 +81,7 @@ namespace siege::views
       {
         auto module_exts = module.get_supported_extensions();
         std::transform(module_exts.begin(), module_exts.end(), std::inserter(extensions, extensions.begin()), [&](auto ext) {
-          return std::make_pair(std::move(ext), module.get_default_file_icon());
+          return std::make_pair(to_lower(ext), module.get_default_file_icon());
         });
 
         auto category_exts = module.get_supported_format_categories();
@@ -161,7 +163,7 @@ namespace siege::views
       {
         auto& tree_item = root[0].children.emplace_back(file, file.filename());
 
-        auto ext_icon = extensions.find(file.extension());
+        auto ext_icon = extensions.find(to_lower(file.extension().native()));
 
         if (ext_icon != extensions.end())
         {
@@ -339,7 +341,7 @@ namespace siege::views
 
                 if (entry->is_regular_file())
                 {
-                  auto known_extension = extensions.find(entry->path().extension());
+                  auto known_extension = extensions.find(to_lower(entry->path().extension().native()));
 
                   if (known_extension != extensions.end())
                   {
