@@ -12,7 +12,7 @@ class SiegeLauncherConanFile(ConanFile):
     url = "https://github.com/open-siege/open-siege"
     license = "MIT"
     author = "Matthew Rindel (matthew@thesiegehub.com)"
-    build_requires = "cmake/3.31.6"
+    build_requires = "cmake/4.3.2"
     requires = "glm/cci.20230113", "libzip/1.9.2", "catch2/3.8.1", "nlohmann_json/3.9.1", "zlib/1.3.1"
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain", "CMakeDeps"
@@ -42,10 +42,10 @@ class SiegeLauncherConanFile(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure()
+        cmake.configure(cli_args=["-DCMAKE_POLICY_VERSION_MINIMUM=3.5"])
         cmake.build()
 
     def package(self):
         cmake = CMake(self)
-        cmake.configure()
+        cmake.configure(cli_args=["-DCMAKE_POLICY_VERSION_MINIMUM=3.5"])
         cmake.install()

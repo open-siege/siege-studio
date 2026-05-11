@@ -16,11 +16,6 @@ using game_command_line_caps = siege::platform::game_command_line_caps;
 using namespace std::literals;
 
 extern "C" {
-// TODO there are other ways of controlling the game. Do we still need to hook directly into the game?
-#define DARKCALL __attribute__((regparm(3)))
-static DARKCALL char* (*ConsoleEval)(void*, std::int32_t, std::int32_t, const char**) = nullptr;
-
-
 extern auto command_line_caps = game_command_line_caps{
   .string_settings = { { L"connect" } },
   .ip_connect_setting = L"connect",

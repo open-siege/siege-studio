@@ -1,5 +1,6 @@
 #include <siege/extension/shared.hpp>
 #include <siege/configuration/uprising.hpp>
+#include <cassert>
 #include <utility>
 
 namespace fs = std::filesystem;
@@ -16,9 +17,6 @@ constexpr auto str(uprising_1_key_map::action action)
 
   return result;
 }
-static_assert(str(uprising_1_key_map::action::move_back) == action_str{ "2" });
-static_assert(str(uprising_1_key_map::action::auto_call_in) == action_str{ "16" });
-
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;
@@ -330,6 +328,9 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
   {
     return std::errc::bad_address;
   }
+
+  assert(str(action::move_back) == action_str{ "2" });
+  assert(str(action::auto_call_in) == action_str{ "16" });
 
   std::ifstream key_map_file("FONTS/keymap.cfg", std::ios::binary);
   auto key_map = read_key_map(key_map_file);

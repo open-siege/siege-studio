@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.30)
 project(siege-root)
 
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/generators)
     set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/build/generators)
 endif()
