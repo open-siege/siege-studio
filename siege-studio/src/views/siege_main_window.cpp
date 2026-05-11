@@ -14,6 +14,7 @@
 #include <siege/platform/win/dialog.hpp>
 #include <siege/platform/win/basic_window.hpp>
 #include <map>
+#include <unordered_set>
 #include <filesystem>
 #include <spanstream>
 
@@ -40,6 +41,8 @@ namespace siege::views
     std::list<fs::path> folders;
     std::list<fs::path> files;
     std::list<fs::path>::iterator selected_file;
+    std::unordered_set<HTREEITEM> expanded_folders;
+    int folder_image_index = -1;
     std::map<win32::lparam_t, fs::path> tab_working_directory_mapping;
     std::map<win32::lparam_t, fs::path>::iterator default_tab_mapping = tab_working_directory_mapping.end();
 
@@ -112,6 +115,7 @@ namespace siege::views
       dir_list.DeleteItem(nullptr);
       folders.clear();
       files.clear();
+      expanded_folders.clear();
 
       auto& current_path = folders.emplace_back(std::move(path));
       std::array<win32::tree_view_item, 1> root{ win32::tree_view_item(current_path) };
@@ -133,6 +137,7 @@ namespace siege::views
         if (hresult == S_OK)
         {
           root[0].item.iImage = info.iSysImageIndex;
+          folder_image_index = info.iSysImageIndex;
         }
       }
 
@@ -157,6 +162,7 @@ namespace siege::views
         auto& info = root[0].children.emplace_back(folder, folder.filename());
         info.item.iImage = root[0].item.iImage;
         info.item.iSelectedImage = root[0].item.iImage;
+        info.item.cChildren = 1;
       }
 
       for (auto& file : files)
@@ -1372,31 +1378,84 @@ namespace siege::views
       selected_file = std::find_if(files.begin(), files.end(), [&](const auto& existing) {
         return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
       });
+    }
+
+    BOOL dir_list_tvn_item_expanding(win32::tree_view, const NMTREEVIEWW& notification)
+    {
+      if (!(notification.action & TVE_EXPAND))
+      {
+        return FALSE;
+      }
+
+      if (expanded_folders.contains(notification.itemNew.hItem))
+      {
+        return FALSE;
+      }
+
+      // Protect against duplicates when Expand runs after InsertRoots.
+      if (dir_list.GetChild(notification.itemNew.hItem) != nullptr)
+      {
+        expanded_folders.insert(notification.itemNew.hItem);
+        return FALSE;
+      }
 
       auto folder = std::find_if(folders.begin(), folders.end(), [&](const auto& existing) {
         return existing.c_str() == (wchar_t*)notification.itemNew.lParam;
       });
 
-      if (folder != folders.end() && notification.itemNew.cChildren == 0)
+      if (folder == folders.end())
       {
-        for (auto const& dir_entry : fs::directory_iterator{ *folder })
-        {
-          if (!dir_entry.is_directory())
-          {
-            auto& temp = files.emplace_back(dir_entry.path());
-            win32::tree_view_item child(temp, temp.filename());
-            child.hParent = notification.itemNew.hItem;
-            child.hInsertAfter = TVI_LAST;
-
-
-            dir_list.InsertItem(child);
-          }
-        }
+        return FALSE;
       }
-    }
 
-    BOOL dir_list_tvn_item_expanding(win32::tree_view, const NMTREEVIEWW& notification)
-    {
+      SHSTOCKICONINFO icon_info{ .cbSize = sizeof(SHSTOCKICONINFO) };
+
+      // Folders first, then files, so directories stay grouped at the top (matches the
+      // root population in repopulate_tree_view).
+      for (auto const& dir_entry : fs::directory_iterator{ *folder })
+      {
+        if (!dir_entry.is_directory())
+        {
+          continue;
+        }
+
+        auto& temp = folders.emplace_back(dir_entry.path());
+        win32::tree_view_item child(temp, temp.filename());
+        child.hParent = notification.itemNew.hItem;
+        child.hInsertAfter = TVI_LAST;
+        child.item.cChildren = 1;
+        if (folder_image_index >= 0)
+        {
+          child.item.iImage = folder_image_index;
+          child.item.iSelectedImage = folder_image_index;
+        }
+        dir_list.InsertItem(child);
+      }
+
+      for (auto const& dir_entry : fs::directory_iterator{ *folder })
+      {
+        if (dir_entry.is_directory())
+        {
+          continue;
+        }
+
+        auto& temp = files.emplace_back(dir_entry.path());
+        win32::tree_view_item child(temp, temp.filename());
+        child.hParent = notification.itemNew.hItem;
+        child.hInsertAfter = TVI_LAST;
+
+        auto ext_icon = extensions.find(to_lower(temp.extension().native()));
+        if (ext_icon != extensions.end() && ::SHGetStockIconInfo(SHSTOCKICONID(ext_icon->second), SHGSI_SYSICONINDEX, &icon_info) == S_OK)
+        {
+          child.item.iImage = icon_info.iSysImageIndex;
+          child.item.iSelectedImage = icon_info.iSysImageIndex;
+        }
+
+        dir_list.InsertItem(child);
+      }
+
+      expanded_folders.insert(notification.itemNew.hItem);
+
       return FALSE;
     }
 

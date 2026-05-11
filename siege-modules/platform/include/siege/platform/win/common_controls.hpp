@@ -1680,6 +1680,11 @@ namespace win32
       return TreeView_GetParent(*this, item);
     }
 
+    [[nodiscard]] inline HTREEITEM GetChild(HTREEITEM item)
+    {
+      return TreeView_GetChild(*this, item);
+    }
+
     [[nodiscard]] inline HTREEITEM HitTest(TVHITTESTINFO& info)
     {
       return TreeView_HitTest(*this, &info);

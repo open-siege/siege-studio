@@ -1,6 +1,8 @@
 # Siege Studio + Siege Launcher 26.20 Development Release
 * Fixed file recognition for upper-case extensions of resource/archive files (such as .VOL, .VPK and .PAK).
 * Files with upper-case extensions now show the correct icon instead of the default.
+* Fixed directory tree view duplicating entries when a folder was selected a second time.
+* Directory tree view now supports navigating folders more than two levels deep.
 
 # Siege Studio + Siege Launcher 26.17 Development Release
 * Fixed issue in preferences dialog where the query console should appear even though it wasn't selected.
