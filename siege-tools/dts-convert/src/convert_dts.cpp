@@ -5,8 +5,6 @@
 #include <bitset>
 #include <utility>
 #include <unordered_map>
-#include <siege/content/json_boost.hpp>
-#include <siege/content/dts/complex_serializer.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/content/dts/darkstar.hpp>
 #include <siege/content/dts/renderable_shapes.hpp>

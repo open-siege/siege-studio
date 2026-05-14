@@ -1,1 +1,0 @@
-# starsiege-veh-editor

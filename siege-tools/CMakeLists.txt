@@ -3,8 +3,7 @@ project(siege-tools)
 
 add_subdirectory(unvol)
 
-add_subdirectory(dts-to-json)
-add_subdirectory(dts-to-obj)
+add_subdirectory(dts-convert)
 
 if(WIN32) 
 	add_subdirectory(game-unpack)

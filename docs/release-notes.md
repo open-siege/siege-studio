@@ -3,6 +3,8 @@
 * Files with upper-case extensions now show the correct icon instead of the default.
 * Fixed directory tree view duplicating entries when a folder was selected a second time.
 * Directory tree view now supports navigating folders more than two levels deep.
+* Removed dts-to-json and json-to-dts and related code to reduce bloat.
+* Removed legacy Python code from tools.
 
 # Siege Studio + Siege Launcher 26.17 Development Release
 * Fixed issue in preferences dialog where the query console should appear even though it wasn't selected.

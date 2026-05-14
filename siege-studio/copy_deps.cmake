@@ -2,8 +2,7 @@ add_custom_target(${PROJECT_NAME}-dependencies ALL COMMAND ${CMAKE_COMMAND} -E m
 
 add_custom_command(TARGET ${PROJECT_NAME}-dependencies POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:unvol> $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-json> $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-to-obj> $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:dts-convert> $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 
 if(TARGET game-unpack)
    add_custom_command(TARGET ${PROJECT_NAME}-dependencies POST_BUILD
@@ -17,8 +16,7 @@ add_dependencies(${PROJECT_NAME}-dependencies
     siege-presentation-3d 
     siege-presentation-resource 
     siege-presentation-audio 
-    dts-to-json
-    dts-to-obj
+    dts-convert
     unvol)
 
 set(CONTENT_TARGETS siege-presentation-2d 
@@ -28,8 +26,7 @@ set(CONTENT_TARGETS siege-presentation-2d
 					siege-presentation-configuration
 					siege-presentation-executable
 					${PROJECT_NAME}-core
-                    dts-to-json
-                    dts-to-obj
+                    dts-convert
                     unvol
                     )
 
