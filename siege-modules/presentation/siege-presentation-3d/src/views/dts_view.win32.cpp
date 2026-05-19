@@ -603,6 +603,13 @@ namespace siege::views
         return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
+      case WM_LBUTTONDOWN:
+      case WM_MBUTTONDOWN:
+      case WM_RBUTTONDOWN:
+      case WM_XBUTTONDOWN:
+        return (LRESULT)wm_mouse_button_down((std::size_t)wparam, POINTS{ .x = (SHORT)GET_X_LPARAM(lparam), .y = (SHORT)GET_Y_LPARAM(lparam) });
+      case WM_MOUSEMOVE:
+        return (LRESULT)wm_mouse_move((std::size_t)wparam, POINTS{ .x = (SHORT)GET_X_LPARAM(lparam), .y = (SHORT)GET_Y_LPARAM(lparam) });
       default:
         return std::nullopt;
       }
