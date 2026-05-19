@@ -1,5 +1,6 @@
 #include <string_view>
 #include <istream>
+#include <set>
 #include <spanstream>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/basic_window.hpp>
@@ -49,8 +50,15 @@ namespace siege::views
     std::optional<POINTS> last_mouse_position = std::nullopt;
     std::wstring filename = L"";
 
-    glm::vec3 translation = { 0, 0, -20 };
-    content::vector3f rotation = { 45, 90, -35 };
+    static constexpr glm::vec3 initial_translation = { 0, 0, -20 };
+    static constexpr content::vector3f initial_rotation = { 45, 90, -35 };
+    static constexpr float keyboard_step = 5.f;
+
+    glm::vec3 translation = initial_translation;
+    content::vector3f rotation = initial_rotation;
+
+    inline static std::set<dts_view*> active_views;
+    inline static HHOOK keyboard_hook = nullptr;
 
     dts_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
     {
@@ -58,6 +66,13 @@ namespace siege::views
 
     ~dts_view()
     {
+      active_views.erase(this);
+      if (active_views.empty() && keyboard_hook)
+      {
+        ::UnhookWindowsHookEx(keyboard_hook);
+        keyboard_hook = nullptr;
+      }
+
       if (pan_timer)
       {
         pan_timer();
@@ -134,7 +149,83 @@ namespace siege::views
       opengl_context.reset(::wglCreateContext(gdi_context));
       assert(opengl_context.get() != nullptr);
 
+      active_views.insert(this);
+      if (active_views.size() == 1)
+      {
+        keyboard_hook = ::SetWindowsHookExW(WH_GETMESSAGE, &dts_view::keyboard_hook_proc, nullptr, ::GetCurrentThreadId());
+      }
+
       return 0;
+    }
+
+    static LRESULT CALLBACK keyboard_hook_proc(int code, WPARAM wparam, LPARAM lparam)
+    {
+      if (code == HC_ACTION && wparam == PM_REMOVE)
+      {
+        auto* msg = (MSG*)lparam;
+        if (msg->message == WM_KEYDOWN)
+        {
+          for (auto* view : active_views)
+          {
+            if (!::IsWindowVisible(view->ref())) continue;
+            if (::GetAncestor(view->ref(), GA_ROOT) != ::GetForegroundWindow()) continue;
+            if (view->handle_key((int)msg->wParam))
+            {
+              msg->message = WM_NULL;
+              break;
+            }
+          }
+        }
+      }
+      return ::CallNextHookEx(nullptr, code, wparam, lparam);
+    }
+
+    bool handle_key(int vk)
+    {
+      bool ctrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
+      bool changed = true;
+      switch (vk)
+      {
+      case 'W':
+      case VK_UP:
+        if (ctrl) rotation.x += keyboard_step;
+        else translation.z += keyboard_step;
+        break;
+      case 'S':
+      case VK_DOWN:
+        if (ctrl) rotation.x -= keyboard_step;
+        else translation.z -= keyboard_step;
+        break;
+      case 'A':
+      case VK_LEFT:
+        if (ctrl) rotation.y -= keyboard_step;
+        else translation.x -= keyboard_step;
+        break;
+      case 'D':
+      case VK_RIGHT:
+        if (ctrl) rotation.y += keyboard_step;
+        else translation.x += keyboard_step;
+        break;
+      case 'Q':
+        if (ctrl) rotation.z += keyboard_step;
+        else translation.y -= keyboard_step;
+        break;
+      case 'E':
+        if (ctrl) rotation.z -= keyboard_step;
+        else translation.y += keyboard_step;
+        break;
+      case 'R':
+        translation = initial_translation;
+        rotation = initial_rotation;
+        break;
+      default:
+        changed = false;
+      }
+      if (changed)
+      {
+        ::InvalidateRect(render_view, nullptr, TRUE);
+      }
+      return changed;
     }
 
     void set_is_panning(bool is_panning)

@@ -10,6 +10,7 @@
 * Fixed regression where the filename search bar in the archive view sometimes did not filter results.
 * Fixed regression where Uprising .cln archives failed to open.
 * Fixed regression where pan and rotate in the 3D model view did not respond to mouse movement.
+* Added keyboard shortcuts to the 3D model view: W/S zoom, A/D pan horizontally, Q/E pan vertically, Ctrl with the same keys rotates, and R resets the view.
 * Removed dts-to-json and json-to-dts and related code to reduce bloat.
 * Removed legacy Python code from tools.
 
