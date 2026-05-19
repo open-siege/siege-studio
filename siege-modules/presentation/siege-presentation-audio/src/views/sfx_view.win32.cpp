@@ -98,7 +98,7 @@ namespace siege::views
       auto button_size = SIZE{ .cx = left_size.cx / player_buttons.ButtonCount(), .cy = height };
       recreate_image_list(player_buttons.GetIdealIconSize(button_size));
 
-      SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+      player_buttons.SetImageList(image_list.get());
 
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
       player_buttons.SetWindowPos(POINT{});
@@ -139,7 +139,7 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         recreate_image_list(std::nullopt);
-        SendMessageW(player_buttons, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+        player_buttons.SetImageList(image_list.get());
 
         return 0;
       }
@@ -211,7 +211,7 @@ namespace siege::views
 
         if (index == loop_id)
         {
-          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, loop_id, 0);
+          auto state = player_buttons.GetState(loop_id);
 
           if (!(state & TBSTATE_CHECKED))
           {
@@ -221,7 +221,7 @@ namespace siege::views
 
         if (index == play_id)
         {
-          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, loop_id, 0);
+          auto state = player_buttons.GetState(loop_id);
 
           bool loop = false;
           if (state & TBSTATE_CHECKED)
@@ -254,8 +254,8 @@ namespace siege::views
           {
             continue;
           }
-          auto state = ::SendMessageW(player_buttons, TB_GETSTATE, i, 0);
-          ::SendMessageW(player_buttons, TB_SETSTATE, i, MAKELPARAM(state & ~TBSTATE_CHECKED, 0));
+          auto state = player_buttons.GetState(i);
+          player_buttons.SetState(i, state & ~TBSTATE_CHECKED);
         }
       }
       return TRUE;

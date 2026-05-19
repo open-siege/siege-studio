@@ -166,7 +166,7 @@ namespace win32
 
           if (custom_draw.dwDrawStage == CDDS_ITEMPREPAINT)
           {
-            auto focused_item = Header_GetFocusedItem(custom_draw.hdr.hwndFrom);
+            auto focused_item = win32::header(custom_draw.hdr.hwndFrom).GetFocusedItem();
 
             auto text_highlight_color = get_color_for_window(window_ref(custom_draw.hdr.hwndFrom), properties::header::text_highlight_color);
             auto text_bk_color = get_color_for_window(window_ref(custom_draw.hdr.hwndFrom), properties::header::text_bk_color);
@@ -392,11 +392,13 @@ namespace win32
             parent_context.FillRect(*client_area, get_solid_brush(bk_color));
           }
 
-          RECT item_rect;
-          for (auto i = 0; i < TabCtrl_GetItemCount(self); ++i)
+          for (auto i = 0; i < tabs.GetItemCount(); ++i)
           {
-            TabCtrl_GetItemRect(self, i, &item_rect);
-            Rectangle(hdc, item_rect.left, item_rect.top, item_rect.right, item_rect.bottom);
+            auto item_rect = tabs.GetItemRect(i);
+            if (item_rect)
+            {
+              ::Rectangle(hdc, item_rect->left, item_rect->top, item_rect->right, item_rect->bottom);
+            }
           }
 
           SelectObject(hdc, old_pen);
@@ -600,10 +602,11 @@ namespace win32
             win32::theme_module().SetWindowTheme(self, L"Explorer", nullptr);
           }
 
-          ListView_SetBkColor(self, win32::get_color_for_window(win32::window_ref(self), properties::list_view::bk_color));
-          ListView_SetTextColor(self, win32::get_color_for_window(win32::window_ref(self), properties::list_view::text_color));
-          ListView_SetTextBkColor(self, win32::get_color_for_window(win32::window_ref(self), properties::list_view::text_bk_color));
-          ListView_SetOutlineColor(self, win32::get_color_for_window(win32::window_ref(self), properties::list_view::outline_color));
+          win32::list_view list(self);
+          list.SetBkColor(win32::get_color_for_window(win32::window_ref(self), properties::list_view::bk_color));
+          list.SetTextColor(win32::get_color_for_window(win32::window_ref(self), properties::list_view::text_color));
+          list.SetTextBkColor(win32::get_color_for_window(win32::window_ref(self), properties::list_view::text_bk_color));
+          list.SetOutlineColor(win32::get_color_for_window(win32::window_ref(self), properties::list_view::outline_color));
         }
 
         if (message == WM_WINDOWPOSCHANGING && controls.contains(self))
@@ -671,12 +674,12 @@ namespace win32
               .stateMask = 0xff,
             };
 
-            auto control = custom_draw.nmcd.hdr.hwndFrom;
+            win32::list_view control(custom_draw.nmcd.hdr.hwndFrom);
 
-            if (ListView_GetGroupInfo(control, nGroupId, &lvg))
+            if (auto fetched = control.GetGroupInfo(nGroupId, lvg); fetched)
             {
-              RECT header_rect{};
-              ListView_GetGroupRect(control, nGroupId, LVGGR_HEADER, &header_rect);
+              lvg = *fetched;
+              auto header_rect = control.GetGroupRect(nGroupId, LVGGR_HEADER).value_or(RECT{});
 
               SetTextColor(custom_draw.nmcd.hdc, win32::get_color_for_window(win32::window_ref(control), properties::list_view::text_color));
 
@@ -810,14 +813,10 @@ namespace win32
             win32::theme_module().SetWindowTheme(self, L"Explorer", nullptr);
           }
 
-          auto color = win32::get_color_for_window(window_ref(self), properties::tree_view::bk_color);
-          TreeView_SetBkColor(self, color);
-
-          color = win32::get_color_for_window(window_ref(self), properties::tree_view::text_color);
-          TreeView_SetTextColor(self, color);
-
-          color = win32::get_color_for_window(window_ref(self), properties::tree_view::line_color);
-          TreeView_SetLineColor(self, color);
+          win32::tree_view tree(self);
+          tree.SetBkColor(win32::get_color_for_window(window_ref(self), properties::tree_view::bk_color));
+          tree.SetTextColor(win32::get_color_for_window(window_ref(self), properties::tree_view::text_color));
+          tree.SetLineColor(win32::get_color_for_window(window_ref(self), properties::tree_view::line_color));
         }
 
         if (message == WM_NCDESTROY && controls.contains(self))
@@ -912,7 +911,7 @@ namespace win32
           scheme.clrBtnHighlight = highlight_color;
           scheme.clrBtnShadow = shadow_color;
 
-          ::SendMessageW(self, TB_SETCOLORSCHEME, 0, (LPARAM)&scheme);
+          win32::tool_bar(self).SetColorScheme(scheme);
         }
 
         if (message == WM_NCDESTROY && controls.contains(self))

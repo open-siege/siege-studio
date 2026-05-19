@@ -261,7 +261,7 @@ namespace siege::views
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
 
       recreate_image_list(table_settings.GetIdealIconSize(SIZE{ .cx = client_size.cx / table_settings.ButtonCount(), .cy = top_size.cy }));
-      SendMessageW(table_settings, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+      table_settings.SetImageList(image_list.get());
 
       table_settings.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       table_settings.SetWindowPos(top_size, SWP_DEFERERASE);
@@ -272,7 +272,7 @@ namespace siege::views
       auto column_count = table.GetColumnCount();
       auto table_size = table.GetClientSize();
 
-      auto padding = Header_GetBitmapMargin(table.GetHeader());
+      auto padding = table.GetHeader().GetBitmapMargin();
       auto column_width = (table_size->cx / column_count);
 
       for (auto i = 0u; i < column_count; ++i)
@@ -292,7 +292,7 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         recreate_image_list(std::nullopt);
-        SendMessageW(table_settings, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+        table_settings.SetImageList(image_list.get());
 
         return 0;
       }
@@ -346,7 +346,7 @@ namespace siege::views
               int formats[2] = { LVCFMT_LEFT, LVCFMT_LEFT };
               LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
 
-              ListView_SetTileInfo(table, &item_info);
+              win32::list_view(table).SetTileInfo(item_info);
             }
           }
         };
@@ -666,7 +666,7 @@ namespace siege::views
           .cchTextMax = (int)temp.size()
         };
 
-        ListView_GetItem(table, &item_info);
+        table.GetItem(item_info);
 
         temp.resize(temp.find(L'\0'));
 

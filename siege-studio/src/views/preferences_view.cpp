@@ -137,7 +137,7 @@ namespace siege::views
 
       if (preference == 0)
       {
-        Button_SetCheck(by_system, BST_CHECKED);
+        by_system.SetCheck(BST_CHECKED);
       }
 
       forced_light = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
@@ -157,7 +157,7 @@ namespace siege::views
 
       if (preference == 1)
       {
-        Button_SetCheck(forced_light, BST_CHECKED);
+        forced_light.SetCheck(BST_CHECKED);
       }
 
       forced_dark = *win32::CreateWindowExW<win32::button>(::CREATESTRUCTW{
@@ -177,7 +177,7 @@ namespace siege::views
 
       if (preference == 2)
       {
-        Button_SetCheck(forced_dark, BST_CHECKED);
+        forced_dark.SetCheck(BST_CHECKED);
       }
 
       advanced_options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
@@ -366,19 +366,19 @@ namespace siege::views
         text_inputs.SetPropW(L"Orientation", ORIENTATION_PREFERENCE::ORIENTATION_PREFERENCE_PORTRAIT);
         text_inputs.SetPropW(L"DefaultHeight", win32::get_system_metrics(SM_CYSIZE) * 2);
 
-        auto text = win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
+        auto text = win32::CreateWindowExW<win32::edit>(::CREATESTRUCTW{
           .hwndParent = text_inputs,
           .style = WS_CHILD | WS_VISIBLE,
           .lpszClass = L"Edit" });
 
-        Edit_SetCueBannerText(*text, L"Edit Control");
+        text->SetCueBannerText(L"Edit Control");
 
         win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
           .hwndParent = text_inputs,
           .style = WS_CHILD | WS_VISIBLE | ES_PASSWORD,
           .lpszClass = L"Edit" });
 
-        Edit_SetCueBannerText(*text, L"Password Edit Control");
+        text->SetCueBannerText(L"Password Edit Control");
 
         win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
           .hwndParent = text_inputs,
@@ -461,13 +461,15 @@ namespace siege::views
               context* info = (context*)raw;
               static std::wstring empty{};
 
+              win32::list_view results(info->results);
+
               if (!info->columns_updated)
               {
                 if (info->column_count > count)
                 {
                   for (auto i = count; i < info->column_count; ++i)
                   {
-                    ListView_DeleteColumn(info->results, i);
+                    results.DeleteColumn(i);
                   }
 
                   info->column_count = count;
@@ -491,7 +493,7 @@ namespace siege::views
 
                   for (auto i = info->column_count; i < count; ++i)
                   {
-                    ListView_InsertColumn(info->results, i, &col);
+                    results.InsertColumn(i, col);
                   }
 
                   info->column_count = count;
@@ -507,12 +509,12 @@ namespace siege::views
                     .pszText = info->temp.data(),
                     .cchTextMax = (int)info->temp.size(),
                   };
-                  ListView_SetColumn(info->results, i, &col);
+                  results.SetColumn(i, col);
                 }
                 info->columns_updated = true;
               }
 
-              int last_item = ListView_GetItemCount(info->results);
+              int last_item = results.GetItemCount();
               for (auto i = 0; i < info->column_count; ++i)
               {
                 info->temp.resize(std::strlen(values[i]));
@@ -525,9 +527,9 @@ namespace siege::views
                     .pszText = empty.data(),
                     .cchTextMax = (int)empty.size(),
                   };
-                  last_item = ListView_InsertItem(info->results, &item);
+                  last_item = results.InsertItem(-1, item);
                 }
-                ListView_SetItemText(info->results, last_item, i, info->temp.data());
+                results.SetItemText(last_item, i, info->temp);
               }
 
               return 0;
@@ -537,15 +539,12 @@ namespace siege::views
           context info{
             .results = sql_results.get()
           };
-          ::LVCOLUMNW col{
-            .mask = LVCF_WIDTH
-          };
 
-          while (ListView_GetColumn(sql_results, info.column_count, &col))
+          while (sql_results.GetColumn(info.column_count, { .mask = LVCF_WIDTH }))
           {
             info.column_count++;
           }
-          ListView_DeleteAllItems(sql_results);
+          sql_results.DeleteAllItems();
 
           std::string query;
           query.resize(::GetWindowTextLengthA(sql_query));
@@ -581,7 +580,7 @@ namespace siege::views
 
       // Tab Control
 
-      ListBox_SetItemHeight(options, 0, options.GetItemHeight(0) * 2);
+      options.SetItemHeight(0, options.GetItemHeight(0) * 2);
 
       return 0;
     }

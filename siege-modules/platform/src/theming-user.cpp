@@ -573,7 +573,7 @@ namespace win32
               auto hot_color = win32::get_color_for_window(button.ref(), properties::button::hot_bk_color);
               auto focus_color = win32::get_color_for_window(button.ref(), properties::button::focus_bk_color);
               auto pushed_color = win32::get_color_for_window(button.ref(), properties::button::pushed_bk_color);
-              auto state = Button_GetState(button);
+              auto state = win32::button(header->hwndFrom).GetState();
 
               auto font = (HFONT)::SendMessageW(button, WM_GETFONT, 0, 0);
               SelectFont(custom_draw.hdc, font);
@@ -609,7 +609,7 @@ namespace win32
             if (custom_draw.dwDrawStage == CDDS_POSTPAINT)
             {
               static std::wstring temp(255, L'\0');
-              Button_GetText(header->hwndFrom, temp.data(), temp.size());
+              win32::button(header->hwndFrom).GetText(temp);
 
               ::DrawTextExW(custom_draw.hdc, temp.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOCLIP, nullptr);
             }
@@ -859,7 +859,7 @@ namespace win32
 
           if (size)
           {
-            ListBox_SetItemHeight(self, 0, size->cy * 2);
+            win32::list_box(self).SetItemHeight(0, size->cy * 2);
           }
 
           return result;
@@ -884,7 +884,7 @@ namespace win32
 
           if (context.CtlType == ODT_LISTBOX && controls_by_id.contains((HMENU)context.CtlID))
           {
-            context.itemHeight = ListBox_GetItemHeight(controls_by_id[(HMENU)context.itemID], context.itemID);
+            context.itemHeight = win32::list_box(controls_by_id[(HMENU)context.itemID]).GetItemHeight(context.itemID);
           }
         }
 

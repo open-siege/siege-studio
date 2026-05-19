@@ -219,7 +219,7 @@ namespace siege::views
 
       logo = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | SS_ICON | SS_REALSIZECONTROL });
 
-      ::SendMessageW(logo, STM_SETIMAGE, IMAGE_ICON, (LPARAM)logo_icon.get());
+      logo.SetIcon(logo_icon.get());
 
 
       win32::image_list large_shell_images;
@@ -256,9 +256,9 @@ namespace siege::views
                                                    .pszText = const_cast<wchar_t*>(L"Supported Formats"),
                                                  });
 
-      ListView_SetImageList(supported_games_by_engine, normal_icons, LVSIL_NORMAL);
-      ListView_SetImageList(supported_games_by_engine, small_icons, LVSIL_SMALL);
-      ListView_SetView(supported_games_by_engine, LV_VIEW_TILE);
+      supported_games_by_engine.SetImageList(LVSIL_NORMAL, normal_icons);
+      supported_games_by_engine.SetImageList(LVSIL_SMALL, small_icons);
+      supported_games_by_engine.SetView(win32::list_view::view_type::tile_view);
       supported_games_by_engine.SetExtendedListViewStyle(0, LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERINALLVIEWS);
       supported_games_by_engine.EnableGroupView(true);
 
@@ -299,7 +299,7 @@ namespace siege::views
           int item = -1;
           do {
 
-            item = ListView_FindItem(supported_games_by_engine, item, &find_info);
+            item = supported_games_by_engine.FindItem(item, find_info);
 
             if (item != -1)
             {
@@ -340,7 +340,7 @@ namespace siege::views
           for (auto i = 0; i < supported_games_by_engine.GetItemCount(); i++)
           {
             temp.resize(255, L'\0');
-            ListView_GetItemText(supported_games_by_engine, i, message.iItem, temp.data(), temp.size());
+            supported_games_by_engine.GetItemText(i, message.iItem, temp);
 
             if (auto size = temp.find(L'\0'); size != -1)
             {
@@ -391,7 +391,7 @@ namespace siege::views
         .cLines = 2
       };
 
-      ListView_SetTileViewInfo(supported_games_by_engine, &tileViewInfo);
+      supported_games_by_engine.SetTileViewInfo(tileViewInfo);
 
       std::wstring temp;
 
@@ -449,13 +449,13 @@ namespace siege::views
         int formats[2] = { LVCFMT_LEFT, LVCFMT_LEFT };
         LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)new_item, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
 
-        ListView_SetTileInfo(supported_games_by_engine, &item_info);
+        supported_games_by_engine.SetTileInfo(item_info);
       }
 
       win32::SetTimer(ref(), USER_TIMER_MINIMUM, [this](auto, auto, auto cancel, auto) {
         for (auto i = 0; i < 100; ++i)
         {
-          if (!ListView_Scroll(supported_games_by_engine, 0, -i))
+          if (!supported_games_by_engine.Scroll(0, -i))
           {
             break;
           }
@@ -647,7 +647,7 @@ namespace siege::views
                 .iImage = normal_index
               };
 
-              ListView_SetItem(supported_games_by_engine, &item_icon);
+              supported_games_by_engine.SetItem(item_icon);
             }
           }
         };
@@ -710,7 +710,7 @@ namespace siege::views
           int formats[1] = { LVCFMT_LEFT };
           LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)item, .cColumns = 1, .puColumns = columns, .piColFmt = formats };
 
-          ListView_SetTileInfo(supported_games_by_engine, &item_info);
+          supported_games_by_engine.SetTileInfo(item_info);
           return item;
         };
 
@@ -826,7 +826,7 @@ namespace siege::views
               .lParam = (LPARAM)detected_path.first->first.c_str()
             };
 
-            auto item = ListView_FindItem(this->supported_games_by_engine, -1, &find_info);
+            auto item = this->supported_games_by_engine.FindItem(-1, find_info);
 
             if (item != -1)
             {
@@ -903,11 +903,11 @@ namespace siege::views
             .lParam = (LPARAM)game_iter->preferered_extension->data()
           };
 
-          auto item = ListView_FindItem(this->supported_games_by_engine, -1, &find_info);
+          auto item = this->supported_games_by_engine.FindItem(-1, find_info);
 
           if (item != -1)
           {
-            ListView_SetItemText(supported_games_by_engine, item, 1, (wchar_t*)detected_path.first->first.c_str());
+            supported_games_by_engine.SetItemText(item, 1, detected_path.first->first.native());
 
             supported_games_by_engine.SetItem(LVITEMW{
               .mask = LVIF_PARAM,
@@ -917,7 +917,7 @@ namespace siege::views
           else
           {
             find_info.lParam = (LPARAM)detected_path.first->first.c_str();
-            item = ListView_FindItem(this->supported_games_by_engine, -1, &find_info);
+            item = this->supported_games_by_engine.FindItem(-1, find_info);
 
             if (item == -1)
             {
@@ -1040,7 +1040,7 @@ namespace siege::views
         if (action == 2)
         {
           std::array<wchar_t, 256> temp{};
-          ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
+          supported_games_by_engine.GetItemText(message.iItem, 1, temp);
           if (temp[0] != L'\0')
           {
             fs::path file_path = temp.data();
@@ -1068,7 +1068,7 @@ namespace siege::views
       {
         std::array<wchar_t, 256> temp{};
 
-        ListView_GetItemText(supported_games_by_engine, message.iItem, 1, temp.data(), 256);
+        supported_games_by_engine.GetItemText(message.iItem, 1, temp);
         if (temp[0] != L'\0')
         {
           fs::path file_path = temp.data();

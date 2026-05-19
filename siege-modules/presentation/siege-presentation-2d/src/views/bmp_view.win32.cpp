@@ -232,11 +232,11 @@ namespace siege::views
     {
       this->is_panning = is_panning;
 
-      auto state = SendMessageW(bitmap_actions, TB_GETSTATE, 2, 0);
+      auto state = bitmap_actions.GetState(2);
 
       if (state != -1)
       {
-        SendMessageW(bitmap_actions, TB_SETSTATE, 2, is_panning ? MAKEWORD(state | TBSTATE_CHECKED, 0) : MAKEWORD(state & ~TBSTATE_CHECKED, 0));
+        bitmap_actions.SetState(2, is_panning ? (state | TBSTATE_CHECKED) : (state & ~TBSTATE_CHECKED));
       }
 
       if (is_panning && !pan_timer)
@@ -480,7 +480,7 @@ namespace siege::views
 
         if (result != 0)
         {
-          ListView_SetCheckState(sender, info.iItem, TRUE);
+          sender.SetCheckState(info.iItem, true);
         }
       }
     }
@@ -510,14 +510,14 @@ namespace siege::views
         }
 
 
-        for (auto i = 0; i < ListView_GetItemCount(sender); ++i)
+        for (auto i = 0; i < sender.GetItemCount(); ++i)
         {
           if (i == info.iItem)
           {
             continue;
           }
 
-          ListView_SetCheckState(sender, i, FALSE);
+          sender.SetCheckState(i, false);
         }
       }
       else
@@ -577,8 +577,8 @@ namespace siege::views
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
 
       recreate_image_list(bitmap_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / (LONG)bitmap_actions.ButtonCount(), .cy = top_size.cy }));
-      SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)bitmap_actions_icons.get());
-      ListView_SetImageList(palette_list, ratio_button_icons, LVSIL_STATE);
+      bitmap_actions.SetImageList(bitmap_actions_icons.get());
+      palette_list.SetImageList(LVSIL_STATE, ratio_button_icons);
 
       bitmap_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       bitmap_actions.SetWindowPos(top_size, SWP_DEFERERASE);
@@ -752,8 +752,8 @@ namespace siege::views
       if (message.setting == L"ImmersiveColorSet")
       {
         recreate_image_list(std::nullopt);
-        SendMessageW(bitmap_actions, TB_SETIMAGELIST, 0, (LPARAM)bitmap_actions_icons.get());
-        ListView_SetImageList(palette_list, ratio_button_icons, LVSIL_STATE);
+        bitmap_actions.SetImageList(bitmap_actions_icons.get());
+        palette_list.SetImageList(LVSIL_STATE, ratio_button_icons);
 
         return 0;
       }
@@ -929,8 +929,8 @@ namespace siege::views
 
                 palette_list.InsertGroups(groups);
 
-                ListView_SetCheckState(palette_list, selected_index, TRUE);
-                ListView_SetItemState(palette_list, selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED); });
+                palette_list.SetCheckState(selected_index, true);
+                palette_list.SetItemState(selected_index, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED); });
 
           return TRUE;
         }

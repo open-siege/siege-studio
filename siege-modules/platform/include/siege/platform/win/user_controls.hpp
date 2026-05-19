@@ -3,6 +3,9 @@
 
 #include <expected>
 #include <functional>
+#include <span>
+#include <string>
+#include <string_view>
 #include <siege/platform/win/window.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <CommCtrl.h>
@@ -124,6 +127,26 @@ namespace win32
     constexpr static auto class_name = WC_BUTTONW;
     constexpr static std::uint16_t dialog_id = 0x0080;
 
+    [[nodiscard]] inline auto GetState()
+    {
+      return Button_GetState(*this);
+    }
+
+    [[maybe_unused]] inline auto SetState(int state)
+    {
+      return Button_SetState(*this, state);
+    }
+
+    [[maybe_unused]] inline auto SetCheck(int check)
+    {
+      return Button_SetCheck(*this, check);
+    }
+
+    [[maybe_unused]] inline auto GetText(std::span<wchar_t> buffer)
+    {
+      return Button_GetText(*this, buffer.data(), static_cast<int>(buffer.size()));
+    }
+
     [[maybe_unused]] inline std::function<void()> bind_bn_clicked(std::move_only_function<void(button, const NMHDR&)> callback)
     {
       return bind_notification<button, NMHDR>(this->GetParent()->ref(), this->ref(), BN_CLICKED, std::move(callback));
@@ -227,6 +250,16 @@ namespace win32
     constexpr static auto class_name = WC_EDITW;
     constexpr static std::uint16_t dialog_id = 0x0081;
 
+    [[maybe_unused]] inline bool SetCueBannerText(std::wstring_view text)
+    {
+      if (!text.empty() && text.data()[text.size()] == L'\0')
+      {
+        return Edit_SetCueBannerText(*this, text.data()) != 0;
+      }
+      std::wstring copy(text);
+      return Edit_SetCueBannerText(*this, copy.c_str()) != 0;
+    }
+
     [[maybe_unused]] inline std::function<void()> bind_en_change(std::move_only_function<void(edit, const NMHDR&)> callback)
     {
       return bind_notification<edit, NMHDR>(this->GetParent()->ref(), this->ref(), EN_CHANGE, std::move(callback));
@@ -248,6 +281,11 @@ namespace win32
     HBITMAP SetImage(HBITMAP image)
     {
       return HBITMAP(SendMessageW(*this, STM_SETIMAGE, IMAGE_BITMAP, lparam_t(image)));
+    }
+
+    HICON SetIcon(HICON icon)
+    {
+      return HICON(SendMessageW(*this, STM_SETIMAGE, IMAGE_ICON, lparam_t(icon)));
     }
 
     HBITMAP GetBitmap()
@@ -349,6 +387,16 @@ namespace win32
       return SendMessageW(*this, LB_GETITEMHEIGHT, index, 0);
     }
 
+    [[maybe_unused]] inline lresult_t SetItemHeight(wparam_t index, int height)
+    {
+      return SendMessageW(*this, LB_SETITEMHEIGHT, index, MAKELPARAM(height, 0));
+    }
+
+    [[nodiscard]] inline lresult_t GetSelItems(int max, int* items)
+    {
+      return SendMessageW(*this, LB_GETSELITEMS, max, reinterpret_cast<LPARAM>(items));
+    }
+
     [[maybe_unused]] inline lresult_t GetText(wparam_t index, wchar_t* data)
     {
       return SendMessageW(*this, LB_GETTEXT, index, (LPARAM)data);
@@ -361,12 +409,12 @@ namespace win32
 
     [[maybe_unused]] inline wparam_t AddString(std::wstring_view text)
     {
-      return SendMessageW(*this, LB_ADDSTRING, 0, std::bit_cast<LPARAM>(text.data()));
+      return SendMessageW(*this, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text.data()));
     }
 
     [[maybe_unused]] inline wparam_t InsertString(wparam_t index, std::wstring_view text)
     {
-      return SendMessageW(*this, LB_INSERTSTRING, index, std::bit_cast<LPARAM>(text.data()));
+      return SendMessageW(*this, LB_INSERTSTRING, index, reinterpret_cast<LPARAM>(text.data()));
     }
 
     [[maybe_unused]] inline std::function<void()> bind_lbn_sel_change(std::move_only_function<void(list_box, const NMHDR&)> callback)

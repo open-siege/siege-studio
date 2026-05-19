@@ -60,7 +60,7 @@ namespace siege::views
       info.pt = point;
       info.flags = LVHT_ONITEM;
 
-      if (ListView_SubItemHitTest(launch_table, &info) == -1)
+      if (launch_table.SubItemHitTest(info) == -1)
       {
         return;
       }
@@ -70,14 +70,14 @@ namespace siege::views
         return;
       }
 
-      RECT temp_rect;
+      auto temp_rect = launch_table.GetSubItemRect(info.iItem, info.iSubItem, LVIR_BOUNDS);
 
-      if (!ListView_GetSubItemRect(launch_table, info.iItem, info.iSubItem, LVIR_BOUNDS, &temp_rect))
+      if (!temp_rect)
       {
         return;
       }
 
-      auto result = launch_table.MapWindowPoints(*this, temp_rect);
+      auto result = launch_table.MapWindowPoints(*this, *temp_rect);
 
       if (!result)
       {
@@ -91,7 +91,7 @@ namespace siege::views
         .iItem = info.iItem
       };
 
-      ListView_GetItem(launch_table, &item);
+      item = launch_table.GetItem(item).value_or(item);
 
       auto setting = get_game_setting(state, (std::size_t)item.lParam - 1);
 
@@ -100,7 +100,7 @@ namespace siege::views
         return;
       }
 
-      ListView_GetItemText(launch_table, info.iItem, 0, text.data(), text.size());
+      launch_table.GetItemText(info.iItem, 0, text);
 
       bool uses_combo = false;
 
@@ -109,20 +109,18 @@ namespace siege::views
       {
         if (auto values = setting->get().get_predefined_string(setting->get().setting_name); !values.empty())
         {
-          ::SendMessageW(this->launch.launch_table_combo, CB_RESETCONTENT, 0, 0);
+          this->launch.launch_table_combo.ResetContent();
 
           for (auto& item : values)
           {
             uses_combo = true;
             temp = item.label;
-            ::COMBOBOXEXITEMW new_item{
+            this->launch.launch_table_combo.InsertItem(::COMBOBOXEXITEMW{
               .mask = CBEIF_LPARAM | CBEIF_TEXT,
               .iItem = -1,
               .pszText = temp.data(),
               .cchTextMax = (int)temp.size(),
-              .lParam = (LPARAM)item.value
-            };
-            ::SendMessageW(this->launch.launch_table_combo, CBEM_INSERTITEMW, 0, (LPARAM)&new_item);
+              .lParam = (LPARAM)item.value });
           }
         }
       }
@@ -130,20 +128,18 @@ namespace siege::views
       {
         if (auto values = setting->get().get_predefined_int(setting->get().setting_name); !values.empty())
         {
-          ::SendMessageW(this->launch.launch_table_combo, CB_RESETCONTENT, 0, 0);
+          this->launch.launch_table_combo.ResetContent();
 
           for (auto& item : values)
           {
             uses_combo = true;
             temp = item.label;
-            ::COMBOBOXEXITEMW new_item{
+            this->launch.launch_table_combo.InsertItem(::COMBOBOXEXITEMW{
               .mask = CBEIF_LPARAM | CBEIF_TEXT,
               .iItem = -1,
               .pszText = temp.data(),
               .cchTextMax = (int)temp.size(),
-              .lParam = (LPARAM)item.value
-            };
-            ::SendMessageW(this->launch.launch_table_combo, CBEM_INSERTITEMW, 0, (LPARAM)&new_item);
+              .lParam = (LPARAM)item.value });
           }
         }
       }
@@ -159,26 +155,30 @@ namespace siege::views
         this->launch.launch_table_combo.SetWindowPos(result->second);
         this->launch.launch_table_combo.SetWindowPos(HWND_TOP);
         this->launch.launch_table_combo.SetWindowStyle(this->launch.launch_table_combo.GetWindowStyle() | WS_VISIBLE);
-        ::SendMessageW(this->launch.launch_table_combo, CB_SHOWDROPDOWN, TRUE, 0);
+        this->launch.launch_table_combo.ShowDropDown();
 
         this->launch.launch_table_edit_unbind = this->launch.launch_table_combo.bind_cbn_sel_change([this, info, setting](auto, const auto&) {
           std::fill_n(text.data(), text.size(), L'\0');
-          ::COMBOBOXEXITEMW new_item{
-            .mask = CBEIF_LPARAM | CBEIF_TEXT,
-            .iItem = ::SendMessageW(this->launch.launch_table_combo, CB_GETCURSEL, 0, 0),
-            .pszText = text.data(),
-            .cchTextMax = (int)text.size(),
-          };
+          auto selected_index = this->launch.launch_table_combo.GetCurSel();
 
-          if (::SendMessageW(this->launch.launch_table_combo, CBEM_GETITEMW, 0, (LPARAM)&new_item))
+          if (!selected_index)
+          {
+            return;
+          }
+
+          if (auto fetched = this->launch.launch_table_combo.GetItem(::COMBOBOXEXITEMW{
+                .mask = CBEIF_LPARAM | CBEIF_TEXT,
+                .iItem = *selected_index,
+                .pszText = text.data(),
+                .cchTextMax = (int)text.size() }))
           {
             if (setting->get().get_predefined_string)
             {
-              setting->get().update_value(new_item.lParam ? (wchar_t*)new_item.lParam : L"", text.data());
+              setting->get().update_value(fetched->lParam ? (wchar_t*)fetched->lParam : L"", text.data());
             }
             else
             {
-              setting->get().update_value((int)new_item.lParam, text.data());
+              setting->get().update_value((int)fetched->lParam, text.data());
             }
           }
         });
@@ -193,7 +193,7 @@ namespace siege::views
           this->launch.launch_table_ip_address.SetWindowPos(HWND_TOP);
           this->launch.launch_table_ip_address.SetWindowStyle(this->launch.launch_table_ip_address.GetWindowStyle() | WS_VISIBLE);
 
-          ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+          launch_table.GetItemText(info.iItem, info.iSubItem, text);
 
           ::SetWindowTextW(this->launch.launch_table_ip_address, text.data());
 
@@ -210,7 +210,7 @@ namespace siege::views
           this->launch.launch_table_edit.SetWindowStyle(this->launch.launch_table_edit.GetWindowStyle() | WS_VISIBLE | WS_BORDER);
 
 
-          ListView_GetItemText(launch_table, info.iItem, info.iSubItem, text.data(), text.size());
+          launch_table.GetItemText(info.iItem, info.iSubItem, text);
 
           ::SetWindowTextW(this->launch.launch_table_edit, text.data());
 
@@ -474,10 +474,10 @@ namespace siege::views
         .mask = LVIF_PARAM
       };
 
-      auto existing_state = ::SendMessageW(exe_actions, TB_GETSTATE, this->launch.launch_selected_id, 0);
+      auto existing_state = exe_actions.GetState(this->launch.launch_selected_id);
 
       existing_state &= ~TBSTATE_ENABLED;
-      ::SendMessageW(exe_actions, TB_SETSTATE, this->launch.launch_selected_id, MAKEWORD(existing_state, 0));
+      exe_actions.SetState(this->launch.launch_selected_id, existing_state);
 
       auto global = ::CreateFileMappingW(
         INVALID_HANDLE_VALUE,// use paging file
@@ -499,7 +499,7 @@ namespace siege::views
 
       this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, existing_state, global] mutable {
                                                     existing_state |= TBSTATE_ENABLED;
-                                                    ::SendMessageW(this->exe_actions, TB_SETSTATE, this->launch.launch_selected_id, MAKEWORD(existing_state, 0));
+                                                    this->exe_actions.SetState(this->launch.launch_selected_id, existing_state);
                                                     auto _ = std::shared_ptr<void>{
                                                       nullptr, [this](...) {
                                                         this->launch.injector.reset();

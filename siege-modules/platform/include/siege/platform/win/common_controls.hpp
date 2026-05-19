@@ -461,6 +461,16 @@ namespace win32
       return std::nullopt;
     }
 
+    [[nodiscard]] inline auto GetBitmapMargin()
+    {
+      return Header_GetBitmapMargin(*this);
+    }
+
+    [[nodiscard]] inline auto GetFocusedItem()
+    {
+      return Header_GetFocusedItem(*this);
+    }
+
     [[maybe_unused]] inline bool SetItem(wparam_t index, HDITEMW item)
     {
       return Header_SetItem(*this, index, &item) != 0;
@@ -654,7 +664,7 @@ namespace win32
 
     inline HIMAGELIST SetImageList(wparam_t wparam, HIMAGELIST image_list)
     {
-      return std::bit_cast<HIMAGELIST>(SendMessageW(*this, LVM_SETIMAGELIST, wparam, std::bit_cast<lparam_t>(image_list)));
+      return reinterpret_cast<HIMAGELIST>(SendMessageW(*this, LVM_SETIMAGELIST, wparam, reinterpret_cast<lparam_t>(image_list)));
     }
 
     inline bool SetView(view_type type)
@@ -715,7 +725,7 @@ namespace win32
         info.dwMask |= LVTVIM_LABELMARGIN;
       }
 
-      return SendMessageW(*this, LVM_SETTILEVIEWINFO, 0, std::bit_cast<lparam_t>(&info));
+      return SendMessageW(*this, LVM_SETTILEVIEWINFO, 0, reinterpret_cast<lparam_t>(&info));
     }
 
     inline wparam_t InsertGroup(wparam_t index, LVGROUP group)
@@ -794,7 +804,7 @@ namespace win32
         group.mask |= LVGF_SUBSETITEMS;
       }
 
-      return SendMessageW(*this, LVM_INSERTGROUP, index, std::bit_cast<lparam_t>(&group));
+      return SendMessageW(*this, LVM_INSERTGROUP, index, reinterpret_cast<lparam_t>(&group));
     }
 
     [[nodiscard]] inline win32::header GetHeader()
@@ -807,11 +817,9 @@ namespace win32
       return GetHeader().GetItemCount();
     }
 
-    [[nodiscard]] inline std::optional<LVCOLUMNW> GetColumn(wparam_t index)
+    [[nodiscard]] inline std::optional<LVCOLUMNW> GetColumn(wparam_t index, LVCOLUMNW result = {})
     {
-      LVCOLUMNW result;
-
-      if (SendMessageW(*this, LVM_GETCOLUMNW, index, std::bit_cast<lparam_t>(&result)))
+      if (::SendMessageW(*this, LVM_GETCOLUMNW, index, reinterpret_cast<lparam_t>(&result)))
       {
         return result;
       }
@@ -884,7 +892,7 @@ namespace win32
 
       position = position == -1 ? GetColumnCount() : position;
 
-      auto index = SendMessageW(*this, LVM_INSERTCOLUMNW, position, std::bit_cast<win32::lparam_t>(&column));
+      auto index = SendMessageW(*this, LVM_INSERTCOLUMNW, position, reinterpret_cast<win32::lparam_t>(&column));
 
 
       if (column.cx)
@@ -910,16 +918,140 @@ namespace win32
 
       item.iItem = index;
 
-      return SendMessageW(*this, LVM_INSERTITEMW, 0, std::bit_cast<lparam_t>(&item));
+      return SendMessageW(*this, LVM_INSERTITEMW, 0, reinterpret_cast<lparam_t>(&item));
     }
 
     inline std::optional<LVITEMW> GetItem(LVITEMW item)
     {
-      if (SendMessageW(*this, LVM_GETITEM, 0, std::bit_cast<lparam_t>(&item)))
+      if (SendMessageW(*this, LVM_GETITEM, 0, reinterpret_cast<lparam_t>(&item)))
       {
         return item;
       }
 
+      return std::nullopt;
+    }
+
+    [[maybe_unused]] inline bool SetTileInfo(LVTILEINFO info)
+    {
+      info.cbSize = sizeof(LVTILEINFO);
+      return ::SendMessageW(*this, LVM_SETTILEINFO, 0, reinterpret_cast<lparam_t>(&info)) != 0;
+    }
+
+    [[nodiscard]] inline lresult_t FindItem(wparam_t start, LVFINDINFOW info)
+    {
+      return ::SendMessageW(*this, LVM_FINDITEMW, start, reinterpret_cast<lparam_t>(&info));
+    }
+
+    [[maybe_unused]] inline void GetItemText(wparam_t item, int sub_item, std::span<wchar_t> text)
+    {
+      ListView_GetItemText(*this, item, sub_item, text.data(), static_cast<int>(text.size()));
+    }
+
+    // LVM_SETITEMTEXT requires a null-terminated buffer. Views from std::wstring
+    // and string literals already are; otherwise copy to a temporary.
+    [[maybe_unused]] inline void SetItemText(wparam_t item, int sub_item, std::wstring_view text)
+    {
+      if (!text.empty() && text.data()[text.size()] == L'\0')
+      {
+        ListView_SetItemText(*this, item, sub_item, const_cast<wchar_t*>(text.data()));
+        return;
+      }
+      std::wstring owned(text);
+      ListView_SetItemText(*this, item, sub_item, owned.data());
+    }
+
+    [[maybe_unused]] inline bool Scroll(int dx, int dy)
+    {
+      return ::SendMessageW(*this, LVM_SCROLL, dx, dy) != 0;
+    }
+
+    [[maybe_unused]] inline bool DeleteColumn(wparam_t index)
+    {
+      return ::SendMessageW(*this, LVM_DELETECOLUMN, index, 0) != 0;
+    }
+
+    [[maybe_unused]] inline bool SetColumn(wparam_t index, LVCOLUMNW column)
+    {
+      return ::SendMessageW(*this, LVM_SETCOLUMNW, index, reinterpret_cast<lparam_t>(&column)) != 0;
+    }
+
+    [[maybe_unused]] inline bool DeleteAllItems()
+    {
+      return ::SendMessageW(*this, LVM_DELETEALLITEMS, 0, 0) != 0;
+    }
+
+    [[maybe_unused]] inline bool DeleteItem(wparam_t index)
+    {
+      return ::SendMessageW(*this, LVM_DELETEITEM, index, 0) != 0;
+    }
+
+    [[maybe_unused]] inline void SetCheckState(wparam_t index, bool checked)
+    {
+      ListView_SetCheckState(*this, index, checked ? TRUE : FALSE);
+    }
+
+    [[maybe_unused]] inline void SetItemState(wparam_t index, UINT state, UINT mask)
+    {
+      ListView_SetItemState(*this, index, state, mask);
+    }
+
+    [[nodiscard]] inline lresult_t GetNextItem(int start, UINT flags)
+    {
+      return ::SendMessageW(*this, LVM_GETNEXTITEM, start, MAKELPARAM(flags, 0));
+    }
+
+    [[nodiscard]] inline lresult_t SubItemHitTest(LVHITTESTINFO& info)
+    {
+      return ::SendMessageW(*this, LVM_SUBITEMHITTEST, 0, reinterpret_cast<lparam_t>(&info));
+    }
+
+    [[maybe_unused]] inline std::optional<RECT> GetSubItemRect(int item, int sub_item, int area)
+    {
+      RECT rect{ .left = area, .top = sub_item };
+      if (::SendMessageW(*this, LVM_GETSUBITEMRECT, item, reinterpret_cast<lparam_t>(&rect)))
+      {
+        return rect;
+      }
+      return std::nullopt;
+    }
+
+    [[maybe_unused]] inline bool SetBkColor(COLORREF color)
+    {
+      return ::SendMessageW(*this, LVM_SETBKCOLOR, 0, color) != 0;
+    }
+
+    [[maybe_unused]] inline bool SetTextColor(COLORREF color)
+    {
+      return ::SendMessageW(*this, LVM_SETTEXTCOLOR, 0, color) != 0;
+    }
+
+    [[maybe_unused]] inline bool SetTextBkColor(COLORREF color)
+    {
+      return ::SendMessageW(*this, LVM_SETTEXTBKCOLOR, 0, color) != 0;
+    }
+
+    [[maybe_unused]] inline COLORREF SetOutlineColor(COLORREF color)
+    {
+      return (COLORREF)::SendMessageW(*this, LVM_SETOUTLINECOLOR, 0, color);
+    }
+
+    [[maybe_unused]] inline std::optional<LVGROUP> GetGroupInfo(int group_id, LVGROUP info)
+    {
+      info.cbSize = sizeof(LVGROUP);
+      if (::SendMessageW(*this, LVM_GETGROUPINFO, group_id, reinterpret_cast<lparam_t>(&info)) != -1)
+      {
+        return info;
+      }
+      return std::nullopt;
+    }
+
+    [[maybe_unused]] inline std::optional<RECT> GetGroupRect(int group_id, int type = LVGGR_GROUP)
+    {
+      RECT rect{ .top = type };
+      if (::SendMessageW(*this, LVM_GETGROUPRECT, group_id, reinterpret_cast<lparam_t>(&rect)) != 0)
+      {
+        return rect;
+      }
       return std::nullopt;
     }
 
@@ -1063,6 +1195,21 @@ namespace win32
     {
       auto result = TabCtrl_SetItemSize(*this, size.cx, size.cy);
       return SIZE{ .cx = LOWORD(result), .cy = HIWORD(result) };
+    }
+
+    [[maybe_unused]] inline auto SetPadding(int x, int y)
+    {
+      return TabCtrl_SetPadding(*this, x, y);
+    }
+
+    [[maybe_unused]] inline auto DeleteItem(wparam_t index)
+    {
+      return TabCtrl_DeleteItem(*this, index);
+    }
+
+    [[nodiscard]] inline auto HitTest(TCHITTESTINFO& info)
+    {
+      return TabCtrl_HitTest(*this, &info);
     }
 
     [[nodiscard]] inline std::optional<TCITEMW> GetItem(wparam_t index, TCITEMW result)
@@ -1279,7 +1426,7 @@ namespace win32
     [[nodiscard]] inline std::optional<RECT> GetItemRect(wparam_t index)
     {
       RECT result;
-      if (SendMessageW(*this, TB_GETITEMRECT, index, std::bit_cast<lparam_t>(&result)))
+      if (SendMessageW(*this, TB_GETITEMRECT, index, reinterpret_cast<lparam_t>(&result)))
       {
         return result;
       }
@@ -1290,7 +1437,7 @@ namespace win32
     [[nodiscard]] inline std::optional<RECT> GetRect(wparam_t id)
     {
       RECT result;
-      if (SendMessageW(*this, TB_GETRECT, id, std::bit_cast<lparam_t>(&result)))
+      if (SendMessageW(*this, TB_GETRECT, id, reinterpret_cast<lparam_t>(&result)))
       {
         return result;
       }
@@ -1319,18 +1466,50 @@ namespace win32
       }
 
       SendMessageW(*this, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
-      return SendMessageW(*this, TB_INSERTBUTTONW, index, std::bit_cast<win32::lparam_t>(&button));
+      return SendMessageW(*this, TB_INSERTBUTTONW, index, reinterpret_cast<win32::lparam_t>(&button));
     }
 
     [[maybe_unused]] inline bool AddButtons(std::span<TBBUTTON> buttons)
     {
       SendMessageW(*this, TB_BUTTONSTRUCTSIZE, sizeof(TBBUTTON), 0);
-      return SendMessageW(*this, TB_ADDBUTTONSW, wparam_t(buttons.size()), std::bit_cast<win32::lparam_t>(buttons.data()));
+      return SendMessageW(*this, TB_ADDBUTTONSW, wparam_t(buttons.size()), reinterpret_cast<win32::lparam_t>(buttons.data()));
     }
 
     inline auto LoadImages(wparam_t image_list_id)
     {
       return SendMessageW(*this, TB_LOADIMAGES, image_list_id, (LPARAM)HINST_COMMCTRL);
+    }
+
+    [[maybe_unused]] inline HIMAGELIST SetImageList(HIMAGELIST list, wparam_t image_list_id = 0)
+    {
+      return reinterpret_cast<HIMAGELIST>(::SendMessageW(*this, TB_SETIMAGELIST, image_list_id, reinterpret_cast<lparam_t>(list)));
+    }
+
+    [[maybe_unused]] inline bool SetBitmapSize(SIZE size)
+    {
+      return ::SendMessageW(*this, TB_SETBITMAPSIZE, 0, MAKELPARAM(size.cx, size.cy)) != 0;
+    }
+
+    [[nodiscard]] inline lresult_t GetState(wparam_t id)
+    {
+      return ::SendMessageW(*this, TB_GETSTATE, id, 0);
+    }
+
+    [[maybe_unused]] inline bool SetState(wparam_t id, int state)
+    {
+      return ::SendMessageW(*this, TB_SETSTATE, id, MAKELPARAM(state, 0)) != 0;
+    }
+
+    [[maybe_unused]] inline bool SetButtonInfo(wparam_t id, TBBUTTONINFOW info)
+    {
+      info.cbSize = sizeof(TBBUTTONINFOW);
+      return ::SendMessageW(*this, TB_SETBUTTONINFO, id, reinterpret_cast<lparam_t>(&info)) != 0;
+    }
+
+    [[maybe_unused]] inline void SetColorScheme(COLORSCHEME scheme)
+    {
+      scheme.dwSize = sizeof(COLORSCHEME);
+      ::SendMessageW(*this, TB_SETCOLORSCHEME, 0, reinterpret_cast<lparam_t>(&scheme));
     }
 
     inline auto PressButton(wparam_t id, bool is_pressed = true)
@@ -1473,17 +1652,52 @@ namespace win32
 
     [[maybe_unused]] inline bool EnsureVisible(HTREEITEM item)
     {
-      return SendMessageW(*this, TVM_ENSUREVISIBLE, 0, std::bit_cast<lparam_t>(item));
+      return SendMessageW(*this, TVM_ENSUREVISIBLE, 0, reinterpret_cast<lparam_t>(item));
     }
 
     [[maybe_unused]] inline bool DeleteItem(HTREEITEM item)
     {
-      return SendMessageW(*this, TVM_DELETEITEM, 0, std::bit_cast<lparam_t>(item));
+      return SendMessageW(*this, TVM_DELETEITEM, 0, reinterpret_cast<lparam_t>(item));
     }
 
     [[maybe_unused]] inline bool SetImageList(wparam_t type, HIMAGELIST list)
     {
-      return SendMessageW(*this, TVM_SETIMAGELIST, type, std::bit_cast<lparam_t>(list));
+      return SendMessageW(*this, TVM_SETIMAGELIST, type, reinterpret_cast<lparam_t>(list));
+    }
+
+    [[nodiscard]] inline std::optional<TVITEMW> GetItem(TVITEMW info)
+    {
+      if (TreeView_GetItem(*this, &info))
+      {
+        return info;
+      }
+
+      return std::nullopt;
+    }
+
+    [[nodiscard]] inline HTREEITEM GetParent(HTREEITEM item)
+    {
+      return TreeView_GetParent(*this, item);
+    }
+
+    [[nodiscard]] inline HTREEITEM HitTest(TVHITTESTINFO& info)
+    {
+      return TreeView_HitTest(*this, &info);
+    }
+
+    [[maybe_unused]] inline auto SetBkColor(COLORREF color)
+    {
+      return TreeView_SetBkColor(*this, color);
+    }
+
+    [[maybe_unused]] inline auto SetTextColor(COLORREF color)
+    {
+      return TreeView_SetTextColor(*this, color);
+    }
+
+    [[maybe_unused]] inline auto SetLineColor(COLORREF color)
+    {
+      return TreeView_SetLineColor(*this, color);
     }
 
     void SetItemMask(TVITEMW& info)
@@ -1530,7 +1744,7 @@ namespace win32
     {
       SetItemMask(info.item);
 
-      if (auto result = HTREEITEM(SendMessageW(*this, TVM_INSERTITEMW, 0, std::bit_cast<lparam_t>(&info))); result)
+      if (auto result = HTREEITEM(SendMessageW(*this, TVM_INSERTITEMW, 0, reinterpret_cast<lparam_t>(&info))); result)
       {
         return result;
       }
@@ -1542,7 +1756,7 @@ namespace win32
     {
       SetItemMask(info);
 
-      return SendMessageW(*this, TVM_SETITEMW, 0, std::bit_cast<lparam_t>(&info));
+      return SendMessageW(*this, TVM_SETITEMW, 0, reinterpret_cast<lparam_t>(&info));
     }
 
     [[maybe_unused]] inline void InsertRoots(std::span<tree_view_item> items)
@@ -1609,6 +1823,45 @@ namespace win32
   {
     using control::control;
     constexpr static auto class_name = WC_COMBOBOXEXW;
+
+    [[maybe_unused]] inline auto ResetContent()
+    {
+      return ComboBox_ResetContent(*this);
+    }
+
+    [[maybe_unused]] inline bool ShowDropDown(bool show = true)
+    {
+      return ComboBox_ShowDropdown(*this, show ? TRUE : FALSE) != 0;
+    }
+
+    [[nodiscard]] inline std::optional<int> GetCurSel()
+    {
+      auto result = ComboBox_GetCurSel(*this);
+      if (result == CB_ERR)
+      {
+        return std::nullopt;
+      }
+      return result;
+    }
+
+    [[maybe_unused]] inline std::optional<int> InsertItem(COMBOBOXEXITEMW item)
+    {
+      auto result = SendMessageW(*this, CBEM_INSERTITEMW, 0, reinterpret_cast<lparam_t>(&item));
+      if (result == -1)
+      {
+        return std::nullopt;
+      }
+      return (int)result;
+    }
+
+    [[maybe_unused]] inline std::optional<COMBOBOXEXITEMW> GetItem(COMBOBOXEXITEMW item)
+    {
+      if (SendMessageW(*this, CBEM_GETITEMW, 0, reinterpret_cast<lparam_t>(&item)))
+      {
+        return item;
+      }
+      return std::nullopt;
+    }
 
     [[maybe_unused]] inline std::function<void()> bind_cbn_sel_change(std::move_only_function<void(combo_box_ex, const NMHDR&)> callback)
     {

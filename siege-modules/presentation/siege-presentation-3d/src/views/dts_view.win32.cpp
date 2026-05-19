@@ -83,8 +83,8 @@ namespace siege::views
       });
       detail_level_list.bind_lbn_sel_change([this](win32::list_box, const NMHDR&) {
         std::vector<int> indexes;
-        indexes.resize(ListBox_GetCount(detail_level_list));
-        indexes.resize(ListBox_GetSelItems(detail_level_list, indexes.size(), indexes.data()));
+        indexes.resize(detail_level_list.GetCount());
+        indexes.resize(detail_level_list.GetSelItems(indexes.size(), indexes.data()));
 
         std::vector<std::size_t> widened;
         widened.reserve(indexes.size());
@@ -199,7 +199,7 @@ namespace siege::views
       };
 
       image_list = win32::create_icon_list(icons, icon_size);
-      SendMessageW(shape_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+      shape_actions.SetImageList(image_list.get());
     }
 
     auto wm_destroy()
@@ -370,13 +370,12 @@ namespace siege::views
     {
       auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
 
-
       auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy - top_size.cy };
       auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy - top_size.cy };
 
       recreate_image_list(shape_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / (LONG)shape_actions.ButtonCount(), .cy = top_size.cy }));
 
-      SendMessageW(shape_actions, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+      shape_actions.SetImageList(image_list.get());
       shape_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       shape_actions.SetWindowPos(top_size, SWP_DEFERERASE);
       shape_actions.SetButtonSize(SIZE{ .cx = top_size.cx / (LONG)shape_actions.ButtonCount(), .cy = top_size.cy });

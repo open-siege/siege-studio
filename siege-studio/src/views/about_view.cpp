@@ -117,7 +117,7 @@ namespace siege::views
 
     auto wm_destroy()
     {
-      ::DeleteObject((HBITMAP)::SendMessageW(logo, STM_GETIMAGE, IMAGE_BITMAP, 0));
+      ::DeleteObject(logo.GetBitmap());
       return 0;
     }
 
@@ -147,16 +147,14 @@ namespace siege::views
           .scale(image_size.cx, image_size.cy, win32::wic::interpolation_mode::WICBitmapInterpolationModeFant)
           .copy_pixels(target.get_stride(), target.get_pixels_as_bytes());
 
-        auto result = ::SendMessageW(logo, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)target.get());
+        auto previous = logo.SetImage(target.get());
 
-        if (result != (LRESULT)target.get())
+        if (previous != target.get())
         {
-          DeleteObject((HBITMAP)result);
+          DeleteObject(previous);
         }
 
-        result = ::SendMessageW(logo, STM_GETIMAGE, IMAGE_BITMAP, 0);
-
-        if (result == (LRESULT)target.get())
+        if (logo.GetBitmap() == target.get())
         {
           target.release();
         }

@@ -253,21 +253,21 @@ namespace siege::views
         device_context.SetWindowStyle(device_context.GetWindowStyle() | WS_VISIBLE);
         custom_mapping.SetWindowStyle(custom_mapping.GetWindowStyle() | WS_VISIBLE);
 
-        ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)controller_context::controller_xbox, MAKELPARAM(0, 0));
-        ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)controller_context::controller_playstation_3, MAKELPARAM(TBSTATE_ENABLED, 0));
-        ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)controller_context::controller_playstation_4, MAKELPARAM(TBSTATE_ENABLED, 0));
-        ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)controller_context::joystick, MAKELPARAM(TBSTATE_ENABLED, 0));
-        ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)controller_context::custom, MAKELPARAM(TBSTATE_ENABLED, 0));
-        
+        device_context.SetState((WPARAM)controller_context::controller_xbox, 0);
+        device_context.SetState((WPARAM)controller_context::controller_playstation_3, TBSTATE_ENABLED);
+        device_context.SetState((WPARAM)controller_context::controller_playstation_4, TBSTATE_ENABLED);
+        device_context.SetState((WPARAM)controller_context::joystick, TBSTATE_ENABLED);
+        device_context.SetState((WPARAM)controller_context::custom, TBSTATE_ENABLED);
+
         auto context = item->second.state.info.detected_context;
 
         if (context == hardware_context::controller_xbox)
         {
-          ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)context, MAKELPARAM(TBSTATE_CHECKED, 0));
+          device_context.SetState((WPARAM)context, TBSTATE_CHECKED);
         }
         else if (siege::platform::is_for_controller(context))
         {
-          ::SendMessageW(device_context, TB_SETSTATE, (WPARAM)context, MAKELPARAM(TBSTATE_CHECKED | TBSTATE_ENABLED, 0));
+          device_context.SetState((WPARAM)context, TBSTATE_CHECKED | TBSTATE_ENABLED);
         }
 
         refresh_ui(item->second.state);
@@ -290,7 +290,7 @@ namespace siege::views
       device_context.InsertButton(-1, { .idCommand = (int)controller_context::custom, .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_CHECKGROUP, .iString = (INT_PTR)L"Custom" }, false);
       device_context.bind_nm_click([this](auto device_context, const auto& message) {
         auto controller = std::find_if(registered_controllers.begin(), registered_controllers.end(), [this](auto& controller) {
-          return controller.second.item == ListView_GetNextItem(device_selection, -1, LVNI_SELECTED);
+          return controller.second.item == device_selection.GetNextItem(-1, LVNI_SELECTED);
         });
 
         if (controller == registered_controllers.end())
@@ -333,7 +333,7 @@ namespace siege::views
 
       custom_mapping.bind_nm_dbl_click([this](win32::list_view custom_mapping, const NMITEMACTIVATE& message) {
         auto controller = std::find_if(registered_controllers.begin(), registered_controllers.end(), [this](auto& controller) {
-          return controller.second.item == ListView_GetNextItem(device_selection, -1, LVNI_SELECTED);
+          return controller.second.item == device_selection.GetNextItem(-1, LVNI_SELECTED);
         });
 
         if (controller == registered_controllers.end())
@@ -657,7 +657,7 @@ namespace siege::views
         device_selection.SetColumnWidth(i, column_width);
       }
 
-      auto current_item = ListView_GetNextItem(device_selection, -1, LVNI_SELECTED);
+      auto current_item = device_selection.GetNextItem(-1, LVNI_SELECTED);
 
       auto remaining = SIZE{ .cx = (client_size.cx - one_quarter.cx) / 4, .cy = client_size.cy };
       auto button_size = SIZE{ .cx = remaining.cx / 4, .cy = remaining.cx / 4 };
@@ -760,23 +760,23 @@ namespace siege::views
 
       info->second.state.last_state = std::move(new_state);
 
-      Button_SetState(controller_controls.a_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_A ? TRUE : FALSE);
-      Button_SetState(controller_controls.b_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_B ? TRUE : FALSE);
-      Button_SetState(controller_controls.x_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_X ? TRUE : FALSE);
-      Button_SetState(controller_controls.y_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_Y ? TRUE : FALSE);
+      controller_controls.a_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_A ? TRUE : FALSE);
+      controller_controls.b_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_B ? TRUE : FALSE);
+      controller_controls.x_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_X ? TRUE : FALSE);
+      controller_controls.y_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_Y ? TRUE : FALSE);
 
-      Button_SetState(controller_controls.view_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK ? TRUE : FALSE);
-      Button_SetState(controller_controls.menu_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_START ? TRUE : FALSE);
-      Button_SetState(controller_controls.left_bumper, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER ? TRUE : FALSE);
-      Button_SetState(controller_controls.right_bumper, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER ? TRUE : FALSE);
+      controller_controls.view_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK ? TRUE : FALSE);
+      controller_controls.menu_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_START ? TRUE : FALSE);
+      controller_controls.left_bumper.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER ? TRUE : FALSE);
+      controller_controls.right_bumper.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER ? TRUE : FALSE);
 
-      Button_SetState(controller_controls.dpad_up_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP ? TRUE : FALSE);
-      Button_SetState(controller_controls.dpad_down_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN ? TRUE : FALSE);
-      Button_SetState(controller_controls.dpad_left_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT ? TRUE : FALSE);
-      Button_SetState(controller_controls.dpad_right_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT ? TRUE : FALSE);
+      controller_controls.dpad_up_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP ? TRUE : FALSE);
+      controller_controls.dpad_down_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN ? TRUE : FALSE);
+      controller_controls.dpad_left_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT ? TRUE : FALSE);
+      controller_controls.dpad_right_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT ? TRUE : FALSE);
 
-      Button_SetState(controller_controls.left_stick_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB ? TRUE : FALSE);
-      Button_SetState(controller_controls.right_stick_button, new_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB ? TRUE : FALSE);
+      controller_controls.left_stick_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB ? TRUE : FALSE);
+      controller_controls.right_stick_button.SetState(new_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB ? TRUE : FALSE);
 
       ::SendMessageW(controller_controls.left_trigger, TBM_SETPOS, FALSE, new_state.Gamepad.bLeftTrigger);
       ::SendMessageW(controller_controls.left_trigger, TBM_SETSEL, TRUE, MAKELPARAM(0, new_state.Gamepad.bLeftTrigger));
@@ -991,7 +991,7 @@ namespace siege::views
 
       if (iter != registered_keyboards.end())
       {
-        ListView_DeleteItem(device_selection, iter->second);
+        device_selection.DeleteItem(iter->second);
         registered_keyboards.erase(handle);
         return;
       }
@@ -1000,7 +1000,7 @@ namespace siege::views
 
       if (iter != registered_mice.end())
       {
-        ListView_DeleteItem(device_selection, iter->second);
+        device_selection.DeleteItem(iter->second);
         registered_mice.erase(handle);
         return;
       }
@@ -1012,7 +1012,7 @@ namespace siege::views
         return;
       }
 
-      ListView_DeleteItem(device_selection, controller_iter->second.item);
+      device_selection.DeleteItem(controller_iter->second.item);
       registered_controllers.erase(handle);
     }
 
@@ -1146,18 +1146,18 @@ namespace siege::views
         {
           auto name = label_for_vkey(mapping.vkey, state.info.detected_context);
           temp = L"Button " + std::to_wstring(mapping.index.index + 1);
-          ListView_SetItemText(custom_mapping, mapping.item, 0, name.data());
-          ListView_SetItemText(custom_mapping, mapping.item, 1, temp.data());
+          custom_mapping.SetItemText(mapping.item, 0, name);
+          custom_mapping.SetItemText(mapping.item, 1, temp);
           button_item.iItem = mapping.item;
-          ListView_SetItem(custom_mapping, &button_item);
+          custom_mapping.SetItem(button_item);
         }
         else
         {
           temp = L"";
-          ListView_SetItemText(custom_mapping, mapping.item, 0, temp.data());
-          ListView_SetItemText(custom_mapping, mapping.item, 1, temp.data());
+          custom_mapping.SetItemText(mapping.item, 0, temp);
+          custom_mapping.SetItemText(mapping.item, 1, temp);
           invisible_item.iItem = mapping.item;
-          ListView_SetItem(custom_mapping, &invisible_item);
+          custom_mapping.SetItem(invisible_item);
         }
       }
 
@@ -1167,18 +1167,18 @@ namespace siege::views
         {
           auto name = label_for_vkey(mapping.vkey, state.info.detected_context);
           temp = L"Axis " + std::to_wstring(mapping.index.index + 1);
-          ListView_SetItemText(custom_mapping, mapping.item, 0, name.data());
-          ListView_SetItemText(custom_mapping, mapping.item, 1, temp.data());
+          custom_mapping.SetItemText(mapping.item, 0, name);
+          custom_mapping.SetItemText(mapping.item, 1, temp);
           axis_item.iItem = mapping.item;
-          ListView_SetItem(custom_mapping, &axis_item);
+          custom_mapping.SetItem(axis_item);
         }
         else
         {
           temp = L"";
-          ListView_SetItemText(custom_mapping, mapping.item, 0, temp.data());
-          ListView_SetItemText(custom_mapping, mapping.item, 1, temp.data());
+          custom_mapping.SetItemText(mapping.item, 0, temp);
+          custom_mapping.SetItemText(mapping.item, 1, temp);
           invisible_item.iItem = mapping.item;
-          ListView_SetItem(custom_mapping, &invisible_item);
+          custom_mapping.SetItem(invisible_item);
         }
       }
     }

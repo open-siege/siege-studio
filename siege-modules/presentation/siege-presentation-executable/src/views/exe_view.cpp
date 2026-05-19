@@ -158,7 +158,7 @@ namespace siege::views
         .fsState = resource.selected_resource_items.empty() ? BYTE(0x00) : BYTE(TBSTATE_ENABLED),
       };
 
-      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
+      exe_actions.SetButtonInfo(extract_selected_id, button_info);
     });
 
     resource.resource_table.bind_nm_rclick([this](win32::list_view resource_table, const NMITEMACTIVATE& message) {
@@ -206,7 +206,7 @@ namespace siege::views
     auto three_quarters = SIZE{ .cx = client_size.cx - one_quarter.cx, .cy = client_size.cy - top_size.cy };
 
     recreate_image_lists(exe_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / exe_actions.ButtonCount(), .cy = top_size.cy }));
-    SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)exe_actions_icons.get());
+    exe_actions.SetImageList(exe_actions_icons.get());
 
     exe_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
     exe_actions.SetWindowPos(top_size, SWP_DEFERERASE);
@@ -434,7 +434,7 @@ namespace siege::views
             .fsState = 0,
           };
 
-          ::SendMessageW(exe_actions, TB_SETBUTTONINFO, extract_selected_id, (LPARAM)&button_info);
+          exe_actions.SetButtonInfo(extract_selected_id, button_info);
         }
       });
 
@@ -449,9 +449,9 @@ namespace siege::views
         .fsState = TBSTATE_ENABLED,
       };
 
-      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, launch.launch_selected_id, (LPARAM)&button_info);
-      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, input.controllers_selected_id, (LPARAM)&button_info);
-      ::SendMessageW(exe_actions, TB_SETBUTTONINFO, add_to_firewall_selected_id, (LPARAM)&button_info);
+      exe_actions.SetButtonInfo(launch.launch_selected_id, button_info);
+      exe_actions.SetButtonInfo(input.controllers_selected_id, button_info);
+      exe_actions.SetButtonInfo(add_to_firewall_selected_id, button_info);
     }
 
     auto count = load_executable(state, stream, std::move(path));
@@ -485,7 +485,7 @@ namespace siege::views
           column.lParam = (LPARAM)setting_index;
           column.iGroupId = setting.group_id;
 
-          setting.persist = [setting_index, launch_table = launch.launch_table.get(), &setting, persist = std::move(setting.persist)]() {
+          setting.persist = [setting_index, launch_table_hwnd = launch.launch_table.get(), &setting, persist = std::move(setting.persist)]() {
             if (persist)
             {
               persist();
@@ -496,7 +496,8 @@ namespace siege::views
               .lParam = (LPARAM)setting_index
             };
 
-            auto item = ListView_FindItem(launch_table, -1, &find_info);
+            win32::list_view launch_table(launch_table_hwnd);
+            auto item = launch_table.FindItem(-1, find_info);
 
             if (item == -1)
             {
@@ -504,7 +505,7 @@ namespace siege::views
             }
 
             auto value = setting.get_computed_display_value();
-            ListView_SetItemText(launch_table, item, 1, value.data());
+            launch_table.SetItemText(item, 1, value);
           };
           launch.launch_table.InsertRow(std::move(column));
         }
@@ -671,7 +672,7 @@ namespace siege::views
     if (message.setting == L"ImmersiveColorSet")
     {
       recreate_image_lists(std::nullopt);
-      SendMessageW(exe_actions, TB_SETIMAGELIST, 0, (LPARAM)exe_actions_icons.get());
+      exe_actions.SetImageList(exe_actions_icons.get());
 
       return 0;
     }

@@ -11,14 +11,11 @@ namespace win32
       static LRESULT __stdcall on_message(HWND window, UINT message, WPARAM wparam, LPARAM lparam, UINT_PTR id, DWORD_PTR data)
       {
         auto get_window_from_item = [window](auto item) {
-          TCITEMW info{
-            .mask = TCIF_PARAM
-          };
           HWND child = nullptr;
 
-          if (TabCtrl_GetItem(window, item, &info) && info.lParam && ::IsWindow((HWND)info.lParam))
+          if (auto info = win32::tab_control(window).GetItem(item, TCIF_PARAM); info && info->lParam && ::IsWindow((HWND)info->lParam))
           {
-            child = (HWND)info.lParam;
+            child = (HWND)info->lParam;
           }
 
           return child;
@@ -35,9 +32,8 @@ namespace win32
 
           auto button = ::FindWindowExW(window, nullptr, L"Button", nullptr);
 
-          RECT size{};
-          TabCtrl_GetItemRect(window, result, &size);
-          
+          auto size = win32::tab_control(window).GetItemRect(result).value_or(RECT{});
+
           if (button == nullptr)
           {
             auto height = size.bottom - size.top;
@@ -76,8 +72,7 @@ namespace win32
           {
             auto button_id = ::GetWindowLongPtrW(button, GWLP_ID);
 
-            RECT size{};
-            TabCtrl_GetItemRect(window, button_id, &size);
+            auto size = win32::tab_control(window).GetItemRect(button_id).value_or(RECT{});
             auto height = size.bottom - size.top;
             auto width = win32::get_system_metrics(SM_CXSIZE);
             auto padding = (int)::GetPropW(button, L"TabItemXPadding") * 2;
@@ -92,7 +87,7 @@ namespace win32
         {
           auto result = def_subclass_proc(window, message, wparam, lparam);
 
-          auto current = TabCtrl_GetCurSel(window);
+          auto current = win32::tab_control(window).GetCurrentSelection();
           auto button = ::FindWindowExW(window, nullptr, L"Button", nullptr);
 
           auto button_id = ::GetWindowLongPtrW(button, GWLP_ID);
@@ -140,7 +135,7 @@ namespace win32
               ::DestroyWindow(child);
             }
 
-            auto count = TabCtrl_GetItemCount(window);
+            auto count = win32::tab_control(window).GetItemCount();
             if (!count)
             {
               auto button = ::FindWindowExW(window, nullptr, L"Button", nullptr);
@@ -154,7 +149,7 @@ namespace win32
             }
 
             auto index = std::clamp<int>(wparam, 0, count - 1);
-            TabCtrl_SetCurSel(window, index);
+            win32::tab_control(window).SetCurrentSelection(index);
 
             auto parent = ::GetAncestor(window, GA_PARENT);
 
@@ -175,7 +170,7 @@ namespace win32
 
         if (message == WM_COMMAND && HIWORD(wparam) == BN_CLICKED)
         {
-          TabCtrl_DeleteItem(window, LOWORD(wparam));
+          win32::tab_control(window).DeleteItem(LOWORD(wparam));
         }
 
 

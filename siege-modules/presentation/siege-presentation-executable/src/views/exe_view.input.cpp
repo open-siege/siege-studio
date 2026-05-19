@@ -60,7 +60,7 @@ namespace siege::views
 
     input.controller_table.EnableGroupView(true);
 
-    ListView_SetView(input.controller_table, LV_VIEW_TILE);
+    input.controller_table.SetView(win32::list_view::view_type::tile_view);
 
     LVTILEVIEWINFO tileViewInfo{
       .cbSize = sizeof(tileViewInfo),
@@ -69,7 +69,7 @@ namespace siege::views
       .cLines = 2
     };
 
-    ListView_SetTileViewInfo(input.controller_table, &tileViewInfo);
+    input.controller_table.SetTileViewInfo(tileViewInfo);
 
     for (auto i = 0; i < input.controller_table.GetItemCount(); ++i)
     {
@@ -77,7 +77,7 @@ namespace siege::views
       int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
       LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)i, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
 
-      ListView_SetTileInfo(input.controller_table, &item_info);
+      input.controller_table.SetTileInfo(item_info);
     }
 
 
@@ -117,7 +117,7 @@ namespace siege::views
         binding.context = context;
 
         auto temp = label_for_vkey(binding.vkey, binding.context);
-        ListView_SetItemText(keyboard_table, message.iItem, 1, temp.data());
+        keyboard_table.SetItemText(message.iItem, 1, temp);
       }
       else
       {
@@ -156,7 +156,7 @@ namespace siege::views
           .iItem = message.iItem,
           .iImage = get_image_index_for_button(vkey)
         };
-        ListView_SetItem(controller_table, &item_to_update);
+        controller_table.SetItem(item_to_update);
         return;
       }
 
@@ -182,10 +182,10 @@ namespace siege::views
       auto vkey = LOWORD(result);
 
       std::wstring temp = category_for_vkey(vkey, context);
-      ListView_SetItemText(controller_table, message.iItem, 1, temp.data());
+      controller_table.SetItemText(message.iItem, 1, temp);
 
       temp = label_for_vkey(vkey, context);
-      ListView_SetItemText(controller_table, message.iItem, 2, temp.data());
+      controller_table.SetItemText(message.iItem, 2, temp);
       binding.to_context = context;
       binding.to_vkey = vkey;
     });
@@ -210,7 +210,7 @@ namespace siege::views
       int formats[2] = { LVCFMT_LEFT, LVCFMT_RIGHT };
       LVTILEINFO item_info{ .cbSize = sizeof(LVTILEINFO), .iItem = (int)index, .cColumns = 2, .puColumns = columns, .piColFmt = formats };
 
-      ListView_SetTileInfo(input.controller_table, &item_info);
+      input.controller_table.SetTileInfo(item_info);
     };
 
     if (actions.empty())

@@ -202,9 +202,9 @@ namespace siege::views
       {
         self->is_resizing = false;
 
-        auto state = Button_GetState(self->separator);
+        auto state = self->separator.GetState();
 
-        Button_SetState(self->separator, state & ~BST_PUSHED);
+        self->separator.SetState(state & ~BST_PUSHED);
       }
 
       if (self->is_resizing && (msg == WM_MOUSEMOVE || msg == WM_LBUTTONDOWN))
@@ -689,12 +689,12 @@ namespace siege::views
       auto max = right_size.cx > 25 ? right_size.cx - 25 : fallback;
       auto width = std::clamp<int>(total_width / count, fallback > max ? max : fallback, max);// TODO figure out the correct sizing for the tab control
 
-      TabCtrl_SetPadding(tab_control, 10, 0);
-      auto old_height = HIWORD(TabCtrl_SetItemSize(tab_control, width, 40));
-      TabCtrl_SetItemSize(tab_control, width, old_height);
+      tab_control.SetPadding(10, 0);
+      auto old_height = tab_control.SetItemSize(SIZE{ .cx = width, .cy = 40 }).cy;
+      tab_control.SetItemSize(SIZE{ .cx = width, .cy = old_height });
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-      SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
+      tab_rect = tab_control.AdjustRect(false, tab_rect);
 
       for (auto i = 0; i < tab_control.GetItemCount(); ++i)
       {
@@ -744,7 +744,7 @@ namespace siege::views
                           .value()
                           .second;
 
-        SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
+        tab_rect = tab_control.AdjustRect(false, tab_rect);
 
         std::shared_ptr<void> deferred{ nullptr, [old_path = fs::current_path()](...) {
                                          fs::current_path(old_path);
@@ -938,20 +938,20 @@ namespace siege::views
     {
       auto item = tab_control.GetItem(index);
 
-      auto current_index = TabCtrl_GetCurSel(tab_control);
+      auto current_index = tab_control.GetCurrentSelection();
 
       assert(::DestroyWindow(win32::hwnd_t(item->lParam)) == TRUE);
-      TabCtrl_DeleteItem(tab_control, index);
+      tab_control.DeleteItem(index);
 
       if (index == current_index)
       {
-        auto count = TabCtrl_GetItemCount(tab_control);
+        auto count = tab_control.GetItemCount();
 
         if (count > 0)
         {
           index = std::clamp<int>(index, 0, count - 1);
 
-          TabCtrl_SetCurSel(tab_control, index);
+          tab_control.SetCurrentSelection(index);
           tab_control_tcn_sel_change(win32::tab_control(tab_control.get()), NMHDR{ .hwndFrom = tab_control, .code = TCN_SELCHANGE });
         }
       }
@@ -968,7 +968,7 @@ namespace siege::views
           .flags = TCHT_ONITEMLABEL
         };
 
-        if (auto index = TabCtrl_HitTest(sender, &hit_test); index != -1)
+        if (auto index = sender.HitTest(hit_test); index != -1)
         {
           auto tab_rect = sender.GetItemRect(index);
           auto height = tab_rect->bottom - tab_rect->top;
@@ -985,7 +985,7 @@ namespace siege::views
 
     BOOL tab_control_tcn_sel_changing(win32::tab_control sender, const NMHDR& notification)
     {
-      auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+      auto current_index = sender.GetCurrentSelection();
 
       auto tab_item = tab_control.GetItem(current_index);
       ::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
@@ -1072,7 +1072,7 @@ namespace siege::views
 
     void tab_control_tcn_sel_change(win32::tab_control sender, const NMHDR& notification)
     {
-      auto current_index = SendMessageW(sender, TCM_GETCURSEL, 0, 0);
+      auto current_index = sender.GetCurrentSelection();
 
       if (current_index == -1)
       {
@@ -1108,7 +1108,7 @@ namespace siege::views
     {
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-      SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
+      tab_rect = tab_control.AdjustRect(false, tab_rect);
 
       auto child = win32::CreateWindowExW(::CREATESTRUCTW{
         .hwndParent = *this,
@@ -1183,7 +1183,7 @@ namespace siege::views
           fs::current_path(get_working_directory_for_path(file_path));
           auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-          SendMessageW(tab_control, TCM_ADJUSTRECT, FALSE, std::bit_cast<win32::lparam_t>(&tab_rect));
+          tab_rect = tab_control.AdjustRect(false, tab_rect);
 
           auto child = plugin->CreateWindowExW(::CREATESTRUCTW{
             .hwndParent = *this,
@@ -1312,13 +1312,13 @@ namespace siege::views
         std::array<wchar_t, 255> text;
         TVITEMW info{ .mask = TVIF_TEXT | TVIF_IMAGE, .hItem = item, .pszText = text.data(), .cchTextMax = text.size() };
 
-        if (TreeView_GetItem(sender, &info) && icon.iSysImageIndex == info.iImage)
+        if (auto item = sender.GetItem(info); item && icon.iSysImageIndex == item->iImage)
         {
           result = fs::path(text.data()) / result;
         }
 
         do {
-          auto parent = TreeView_GetParent(sender, item);
+          auto parent = sender.GetParent(item);
 
           if (parent == nullptr)
           {
@@ -1327,7 +1327,7 @@ namespace siege::views
           item = parent;
           info.hItem = item;
 
-          if (TreeView_GetItem(sender, &info) && icon.iSysImageIndex == info.iImage)
+          if (auto item = sender.GetItem(info); item && icon.iSysImageIndex == item->iImage)
           {
             result = fs::path(text.data()) / result;
           }
@@ -1350,7 +1350,7 @@ namespace siege::views
           .pt = point,
           .flags = TVHT_ONITEM
         };
-        auto item = TreeView_HitTest(sender, &info);
+        auto item = sender.HitTest(info);
 
         if (item && ::ClientToScreen(sender, &point))
         {
