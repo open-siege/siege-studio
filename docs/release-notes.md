@@ -8,6 +8,7 @@
 * Fixed directory tree view duplicating entries when a folder was selected a second time.
 * Directory tree view now supports navigating folders more than two levels deep.
 * Fixed regression where the filename search bar in the archive view sometimes did not filter results.
+* Fixed regression where Uprising .cln archives failed to open.
 * Removed dts-to-json and json-to-dts and related code to reduce bloat.
 * Removed legacy Python code from tools.
 

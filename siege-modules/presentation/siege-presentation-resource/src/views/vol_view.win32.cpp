@@ -7,6 +7,7 @@
 #include <siege/platform/resource.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/basic_window.hpp>
+#include <siege/platform/stream.hpp>
 #include <spanstream>
 #include <map>
 #include <unordered_map>
@@ -360,7 +361,7 @@ namespace siege::views
         
         if (path)
         {
-          std::ifstream file_stream{ *path, std::ios::binary };
+          siege::platform::ifstream_with_path file_stream{ *path, std::ios::binary };
           count = load_volume(shared_state, file_stream, path, on_new_item);
         }
         else
