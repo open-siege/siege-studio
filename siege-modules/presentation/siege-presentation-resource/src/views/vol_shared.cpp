@@ -157,11 +157,13 @@ namespace siege::views
 
             if (auto file_info = std::get_if<siege::platform::file_info>(&info); file_info)
             {
+              resource_reader::content_info* stable;
               {
                 std::unique_lock guard(state.lock);
                 state.contents.emplace_back(info);
+                stable = &state.contents.back();
               }
-              on_new_item(info);
+              on_new_item(*stable);
             }
           }
         };
