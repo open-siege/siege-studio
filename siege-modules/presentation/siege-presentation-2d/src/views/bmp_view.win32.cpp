@@ -760,6 +760,12 @@ namespace siege::views
         bitmap_actions.SetImageList(bitmap_actions_icons.get());
         palette_list.SetImageList(LVSIL_STATE, ratio_button_icons);
 
+        // WM_SETTINGCHANGE resets button widths; restore the distributed layout.
+        if (auto client_size = this->GetClientSize())
+        {
+          wm_size(SIZE_RESTORED, *client_size);
+        }
+
         return 0;
       }
 

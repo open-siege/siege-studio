@@ -301,6 +301,12 @@ namespace siege::views
         recreate_image_list(std::nullopt);
         table_settings.SetImageList(image_list.get());
 
+        // WM_SETTINGCHANGE resets button widths; restore the distributed layout.
+        if (auto client_size = this->GetClientSize())
+        {
+          wm_size(SIZE_RESTORED, *client_size);
+        }
+
         return 0;
       }
 

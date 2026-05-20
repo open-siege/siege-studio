@@ -678,6 +678,12 @@ namespace siege::views
       recreate_image_lists(std::nullopt);
       exe_actions.SetImageList(exe_actions_icons.get());
 
+      // WM_SETTINGCHANGE resets button widths; restore the distributed layout.
+      if (auto client_size = this->GetClientSize())
+      {
+        wm_size(SIZE_RESTORED, *client_size);
+      }
+
       return 0;
     }
 
