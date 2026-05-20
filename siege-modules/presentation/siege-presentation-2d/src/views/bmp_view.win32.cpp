@@ -301,6 +301,54 @@ namespace siege::views
       {
         auto selection = ::TrackPopupMenu(image_export_menu, TPM_CENTERALIGN | TPM_RETURNCMD, mouse_pos.x, mouse_pos.y, 0, *this, nullptr);
 
+        if (selection == 1)
+        {
+          // "Save As": map the chosen file extension back to an encoder via the
+          // format atoms registered in encoder_creators.
+          if (auto dialog = win32::com::CreateFileSaveDialog())
+          {
+            auto save_dialog = *dialog;
+
+            constexpr COMDLG_FILTERSPEC filters[] = {
+              { L"Microsoft BMP (*.bmp)", L"*.bmp" },
+              { L"PNG (*.png)", L"*.png" },
+              { L"JPEG (*.jpg)", L"*.jpg" },
+              { L"GIF (*.gif)", L"*.gif" },
+              { L"TIFF (*.tif)", L"*.tif" },
+              { L"DDS (*.dds)", L"*.dds" },
+            };
+            save_dialog->SetFileTypes((UINT)std::size(filters), filters);
+            save_dialog->SetFileTypeIndex(1);
+            save_dialog->SetDefaultExtension(L"bmp");
+
+            if (save_dialog->Show(nullptr) == S_OK)
+            {
+              if (auto result = save_dialog.GetResult())
+              {
+                if (auto path = result->GetFileSysPath())
+                {
+                  auto extension = path->extension().wstring();
+                  auto matching_atom = extension.empty() ? ATOM{} : ::FindAtomW(extension.c_str());
+                  auto creator_it = encoder_creators.find(matching_atom);
+
+                  if (creator_it != encoder_creators.end())
+                  {
+                    std::ofstream stream(*path, std::ios::trunc);
+                    auto encoder = creator_it->second(*path);
+                    auto frame = encoder->create_new_frame();
+                    frame.write_source(*current_frame);
+                    frame.commit();
+                    encoder->commit();
+                    win32::launch_shell_process(path->parent_path());
+                  }
+                }
+              }
+            }
+          }
+
+          return TBDDRET_NODEFAULT;
+        }
+
         auto creator = encoder_creators.find(selection);
 
         if (creator != encoder_creators.end())
