@@ -343,6 +343,15 @@ namespace win32
           ::SetPropW(self, L"PaddingY", (HANDLE)HIWORD(lParam));
         }
 
+        if ((message == WM_SETTINGCHANGE || message == WM_THEMECHANGED) && controls.contains(self))
+        {
+          // The default tab proc won't repaint owner-drawn tabs on a theme change,
+          // leaving stale pixels; force a full redraw with the new palette.
+          auto result = superclass.control_proc(self, message, wParam, lParam);
+          ::InvalidateRect(self, nullptr, TRUE);
+          return result;
+        }
+
         if ((message == WM_PAINT || message == WM_PRINTCLIENT) && controls.contains(self))
         {
           PAINTSTRUCT ps{};
@@ -393,13 +402,23 @@ namespace win32
           client_area->top = std::clamp<LONG>(client_area->top - y_border, 0, client_area->top);
           client_area->bottom += y_border;
 
-          auto count = tabs.GetItemCount();
+          auto count = (int)tabs.GetItemCount();
 
           if (count > 0)
           {
-            auto tab_rect = tabs.GetItemRect(count - 1);
-            rect->left = tab_rect->right;
-            rect->bottom = tab_rect->bottom;
+            // With an overflow spinner the model's last tab is off-screen, so walk
+            // back to the last visible tab for the trailing fill's left edge.
+            auto client_width = rect->right;
+            for (auto i = count - 1; i >= 0; --i)
+            {
+              auto tab_rect = tabs.GetItemRect(i);
+              if (tab_rect && tab_rect->left < client_width)
+              {
+                rect->left = std::min<LONG>(tab_rect->right, client_width);
+                rect->bottom = tab_rect->bottom;
+                break;
+              }
+            }
           }
 
           if (ps.fErase)

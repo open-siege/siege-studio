@@ -1,6 +1,7 @@
 # Siege Studio + Siege Launcher 26.22 Development Release
 * Fixed Save button in the bitmap view not opening the export menu when the icon or label was clicked (only the dropdown arrow responded).
 * Fixed toolbars in the archive, executable, and bitmap views collapsing to narrow buttons after a system theme change instead of staying spread across the available width.
+* Fixed tab buttons rendering as solid dark bars after a system theme change or when too many tabs are open. Tabs now repaint with the new colors and the trailing fill no longer overdraws visible tabs when the overflow spinner is active.
 * Improved text in Siege Studio appearing too small on high-DPI displays. Fonts now scale to match the display's DPI setting.
 * Fonts rescale automatically when the window is moved between monitors with different DPI settings.
 * Improved file and folder icons in the tree view appearing too small on high-DPI displays.
