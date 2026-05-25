@@ -368,14 +368,18 @@ namespace siege::views
 
     auto wm_size(std::size_t type, SIZE client_size)
     {
-      auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
+      // Toolbar DPI / sizing contract: see theming-common.cpp::apply_tool_bar_theme.
+      auto dpi = win32::get_dpi_awareness_for_window(*this);
+      auto icon_target = ::MulDiv(16, dpi, USER_DEFAULT_SCREEN_DPI);
+      recreate_image_list(SIZE{ .cx = icon_target, .cy = icon_target });
+      shape_actions.SetBitmapSize(SIZE{ .cx = icon_target, .cy = icon_target });
+      shape_actions.SetImageList(image_list.get());
+
+      auto toolbar_height = shape_actions.GetButtonSize().cy;
+      auto top_size = SIZE{ .cx = client_size.cx, .cy = toolbar_height };
 
       auto left_size = SIZE{ .cx = (client_size.cx / 3) * 2, .cy = client_size.cy - top_size.cy };
       auto right_size = SIZE{ .cx = client_size.cx - left_size.cx, .cy = client_size.cy - top_size.cy };
-
-      recreate_image_list(shape_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / (LONG)shape_actions.ButtonCount(), .cy = top_size.cy }));
-
-      shape_actions.SetImageList(image_list.get());
       shape_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       shape_actions.SetWindowPos(top_size, SWP_DEFERERASE);
       shape_actions.SetButtonSize(SIZE{ .cx = top_size.cx / (LONG)shape_actions.ButtonCount(), .cy = top_size.cy });

@@ -93,12 +93,15 @@ namespace siege::views
       auto right_size = SIZE{ .cx = client_size.cx / 3, .cy = client_size.cy };
       auto left_size = SIZE{ .cx = client_size.cx - right_size.cx, .cy = client_size.cy };
 
-      auto height = left_size.cy / 12;
-
-      auto button_size = SIZE{ .cx = left_size.cx / player_buttons.ButtonCount(), .cy = height };
-      recreate_image_list(player_buttons.GetIdealIconSize(button_size));
-
+      // Toolbar DPI / sizing contract: see theming-common.cpp::apply_tool_bar_theme.
+      auto dpi = win32::get_dpi_awareness_for_window(*this);
+      auto icon_target = ::MulDiv(16, dpi, USER_DEFAULT_SCREEN_DPI);
+      recreate_image_list(SIZE{ .cx = icon_target, .cy = icon_target });
+      player_buttons.SetBitmapSize(SIZE{ .cx = icon_target, .cy = icon_target });
       player_buttons.SetImageList(image_list.get());
+
+      auto height = player_buttons.GetButtonSize().cy;
+      auto button_size = SIZE{ .cx = left_size.cx / player_buttons.ButtonCount(), .cy = height };
 
       player_buttons.SetWindowPos(SIZE{ .cx = left_size.cx, .cy = height });
       player_buttons.SetWindowPos(POINT{});

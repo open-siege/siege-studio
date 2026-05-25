@@ -65,7 +65,7 @@ namespace siege::views
     bool is_dark_mode = false;
 
     win32::gdi::bitmap menu_sizer = [] {
-      win32::gdi::bitmap result(SIZE{ 1, ::GetSystemMetrics(SM_CYSIZE) * 2 }, win32::gdi::bitmap::skip_shared_handle);
+      win32::gdi::bitmap result(SIZE{ 1, win32::get_system_metrics(SM_CYSIZE) * 2 }, win32::gdi::bitmap::skip_shared_handle);
       return result;
     }();
 
@@ -110,6 +110,47 @@ namespace siege::views
       win32::apply_track_bar_theme();
     }
 
+    // Patches a synchronously-loaded stock icon into the tree image list at its system index,
+    // so lazily-realized icons (zip/compressed folder) aren't blank on first paint.
+    void patch_tree_stock_icon(SHSTOCKICONID id)
+    {
+      SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };
+      if (::SHGetStockIconInfo(id, SHGSI_SYSICONINDEX | SHGSI_ICON, &info) != S_OK)
+      {
+        return;
+      }
+
+      win32::patch_shell_image_list_icon(shell_images, info.iSysImageIndex, info.hIcon);
+
+      if (info.hIcon)
+      {
+        ::DestroyIcon(info.hIcon);
+      }
+    }
+
+    void rebuild_shell_images()
+    {
+      shell_images = win32::create_dpi_small_shell_image_list(win32::get_dpi_awareness_for_window(*this));
+
+      if (!shell_images)
+      {
+        return;
+      }
+
+      dir_list.SetImageList(TVSIL_NORMAL, shell_images);
+
+      patch_tree_stock_icon(SIID_FOLDER);
+
+      std::set<std::int32_t> seen;
+      for (auto& [ext, id] : extensions)
+      {
+        if (seen.insert(id).second)
+        {
+          patch_tree_stock_icon(SHSTOCKICONID(id));
+        }
+      }
+    }
+
     void repopulate_tree_view(fs::path path)
     {
       dir_list.DeleteItem(nullptr);
@@ -124,14 +165,13 @@ namespace siege::views
 
       if (!shell_images)
       {
-        hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, shell_images.put_void());
+        rebuild_shell_images();
       }
 
       SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };
 
       if (shell_images)
       {
-        dir_list.SetImageList(TVSIL_NORMAL, shell_images);
         hresult = SHGetStockIconInfo(SIID_FOLDER, SHGSI_SYSICONINDEX, &info);
 
         if (hresult == S_OK)
@@ -1459,6 +1499,34 @@ namespace siege::views
       return FALSE;
     }
 
+    std::optional<LRESULT> wm_dpi_changed(LPARAM lparam)
+    {
+      auto new_height = win32::get_system_metrics(SM_CYSIZE) * 2;
+      auto new_bitmap = win32::gdi::bitmap(SIZE{ 1, new_height }, win32::gdi::bitmap::skip_shared_handle);
+
+      auto item_id = ::GetMenuItemID(main_menu.get(), 3);
+      ::ModifyMenuW(main_menu.get(), 3, MF_BITMAP | MF_BYPOSITION, item_id, (LPCWSTR)new_bitmap.get());
+
+      menu_sizer = std::move(new_bitmap);
+
+      rebuild_shell_images();
+
+      ::SendMessageW(*this, WM_SETTINGCHANGE, 0, (LPARAM)L"ImmersiveColorSet");
+
+      if (auto* suggested = (RECT*)lparam)
+      {
+        ::SetWindowPos(*this,
+          nullptr,
+          suggested->left,
+          suggested->top,
+          suggested->right - suggested->left,
+          suggested->bottom - suggested->top,
+          SWP_NOZORDER | SWP_NOACTIVATE);
+      }
+
+      return 0;
+    }
+
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
       static auto unpack_done_id = ::RegisterWindowMessageW(L"SIEGE_UNPACK_DONE");
@@ -1485,6 +1553,8 @@ namespace siege::views
         return wm_destroy();
       case WM_SETTINGCHANGE:
         return wm_setting_change(win32::setting_change_message(wparam, lparam));
+      case WM_DPICHANGED:
+        return wm_dpi_changed(lparam);
       case WM_SIZE:
         return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
       case WM_COPYDATA:

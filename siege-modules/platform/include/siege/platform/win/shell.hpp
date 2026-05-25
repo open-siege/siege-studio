@@ -8,9 +8,153 @@
 #include <shlwapi.h>
 #include <commoncontrols.h>
 #include <siege/platform/win/com.hpp>
+#include <siege/platform/win/common_controls.hpp>
 
 namespace win32
 {
+  inline int shell_image_list_source_kind(int target_size)
+  {
+    if (target_size <= 16)
+    {
+      return SHIL_SMALL;
+    }
+
+    if (target_size <= 32)
+    {
+      return SHIL_LARGE;
+    }
+
+    if (target_size <= 48)
+    {
+      return SHIL_EXTRALARGE;
+    }
+
+    return SHIL_JUMBO;
+  }
+
+  inline win32::image_list create_dpi_shell_image_list(int target_size)
+  {
+    auto source_kind = shell_image_list_source_kind(target_size);
+
+    win32::com::com_ptr<IImageList> source;
+    if (::SHGetImageList(source_kind, IID_IImageList, (void**)source.put()) != S_OK || !source)
+    {
+      return {};
+    }
+
+    int total = 0;
+    if (source->GetImageCount(&total) != S_OK || total <= 0)
+    {
+      return {};
+    }
+
+    win32::image_list result(target_size, target_size, ILC_COLOR32 | ILC_MASK, total, 16);
+    ::ImageList_SetImageCount(result.get(), total);
+
+    for (int i = 0; i < total; ++i)
+    {
+      HICON raw = nullptr;
+      if (source->GetIcon(i, ILD_TRANSPARENT, &raw) != S_OK || !raw)
+      {
+        continue;
+      }
+
+      HICON resized = (HICON)::CopyImage(raw, IMAGE_ICON, target_size, target_size, 0);
+      ::DestroyIcon(raw);
+
+      if (!resized)
+      {
+        continue;
+      }
+
+      ::ImageList_ReplaceIcon(result.get(), i, resized);
+      ::DestroyIcon(resized);
+    }
+
+    return result;
+  }
+
+  inline win32::image_list create_dpi_small_shell_image_list(UINT dpi)
+  {
+    return create_dpi_shell_image_list(::MulDiv(16, dpi, USER_DEFAULT_SCREEN_DPI));
+  }
+
+  inline win32::image_list create_dpi_large_shell_image_list(UINT dpi)
+  {
+    return create_dpi_shell_image_list(::MulDiv(32, dpi, USER_DEFAULT_SCREEN_DPI));
+  }
+
+  // Extracts a system icon by image-list index, forcing it present first (some shell icons,
+  // e.g. compressed folders, are realized on a background thread). Caller owns the result.
+  inline HICON extract_present_shell_icon(int sys_index, int target_size)
+  {
+    if (sys_index < 0)
+    {
+      return nullptr;
+    }
+
+    auto source_kind = shell_image_list_source_kind(target_size);
+
+    win32::com::com_ptr<IImageList2> source;
+    if (::SHGetImageList(source_kind, IID_IImageList2, (void**)source.put()) != S_OK || !source)
+    {
+      return nullptr;
+    }
+
+    source->ForceImagePresent(sys_index, ILFIP_ALWAYS);
+
+    HICON raw = nullptr;
+    if (source->GetIcon(sys_index, ILD_TRANSPARENT, &raw) != S_OK)
+    {
+      return nullptr;
+    }
+
+    return raw;
+  }
+
+  // Patches a DPI-resized icon into a private shell image list at sys_index. Pass a known-good
+  // source (e.g. a synchronous SHGSI_ICON stock icon, owned by the caller); otherwise the icon
+  // is re-extracted (forced present) from the system list.
+  inline void patch_shell_image_list_icon(win32::image_list& list, int sys_index, HICON source = nullptr)
+  {
+    if (!list || sys_index < 0)
+    {
+      return;
+    }
+
+    auto size = list.GetIconSize();
+    if (!size)
+    {
+      return;
+    }
+
+    HICON present = source ? source : extract_present_shell_icon(sys_index, size->cx);
+    if (!present)
+    {
+      return;
+    }
+
+    HICON resized = (HICON)::CopyImage(present, IMAGE_ICON, size->cx, size->cy, 0);
+
+    if (!source)
+    {
+      ::DestroyIcon(present);
+    }
+
+    if (!resized)
+    {
+      return;
+    }
+
+    if (::ImageList_GetImageCount(list.get()) <= sys_index)
+    {
+      ::ImageList_SetImageCount(list.get(), sys_index + 1);
+    }
+
+    ::ImageList_ReplaceIcon(list.get(), sys_index, resized);
+    ::DestroyIcon(resized);
+  }
+
   inline void launch_shell_process(const std::filesystem::path& path)
   {
     auto desktop = ::GetDesktopWindow();

@@ -52,7 +52,7 @@ namespace siege::views
     { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
     { L"id Tech 3.0 (Elite Force Branch)"sv, L"id_tech-3.0-raven"sv, L"id_tech-3.0"sv },
     { L"id Tech 3.0 (Wolfenstein Branch)"sv, L"id_tech-3.0-wolf"sv, L"id_tech-3.0"sv },
-    { L"id Tech 3.0 (with ÜberTools)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
+    { L"id Tech 3.0 (with ï¿½berTools)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
     { L"id Tech 2.5"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
     { L"id Tech 2.0"sv, L"id_tech-2.0"sv, std::nullopt },
     { L"id Tech 1.0"sv, L"id_tech-1.0"sv, L"id_tech-raven"sv },
@@ -191,7 +191,7 @@ namespace siege::views
     win32::static_control heading;//"Welcome to Siege Studio."
     win32::static_control logo;
 
-    win32::image_list normal_icons = win32::image_list({ .width = ::GetSystemMetrics(SM_CXICON), .height = ::GetSystemMetrics(SM_CYICON), .capacity = (int)games.size() });
+    win32::image_list normal_icons = win32::image_list({ .width = ::MulDiv(24, win32::get_current_dpi(), USER_DEFAULT_SCREEN_DPI), .height = ::MulDiv(24, win32::get_current_dpi(), USER_DEFAULT_SCREEN_DPI), .capacity = (int)games.size() });
     win32::image_list small_icons = win32::image_list({ .width = ::GetSystemMetrics(SM_CXSMICON), .height = ::GetSystemMetrics(SM_CYSMICON), .capacity = (int)games.size() });
 
     win32::list_view supported_games_by_engine;
@@ -222,11 +222,12 @@ namespace siege::views
       logo.SetIcon(logo_icon.get());
 
 
-      win32::image_list large_shell_images;
+      auto normal_target = ::MulDiv(24, win32::get_dpi_awareness_for_window(*this), USER_DEFAULT_SCREEN_DPI);
+      auto large_shell_images = win32::create_dpi_shell_image_list(normal_target);
       win32::image_list small_shell_images;
 
       SHSTOCKICONINFO info{ .cbSize = sizeof(SHSTOCKICONINFO) };
-      if (::SHGetImageList(SHIL_SMALL, IID_IImageList, small_shell_images.put_void()) == S_OK && ::SHGetImageList(SHIL_LARGE, IID_IImageList, large_shell_images.put_void()) == S_OK && ::SHGetStockIconInfo(SIID_APPLICATION, SHGSI_SYSICONINDEX, &info) == S_OK)
+      if (large_shell_images && ::SHGetImageList(SHIL_SMALL, IID_IImageList, small_shell_images.put_void()) == S_OK && ::SHGetStockIconInfo(SIID_APPLICATION, SHGSI_SYSICONINDEX, &info) == S_OK)
       {
         ImageList_AddIcon(normal_icons, ImageList_GetIcon(large_shell_images, info.iSysImageIndex, 0));
         ImageList_AddIcon(small_icons, ImageList_GetIcon(small_shell_images, info.iSysImageIndex, 0));

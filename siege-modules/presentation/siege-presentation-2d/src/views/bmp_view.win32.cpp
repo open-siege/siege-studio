@@ -574,11 +574,16 @@ namespace siege::views
         return std::nullopt;
       }
 
-      auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
-
-      recreate_image_list(bitmap_actions.GetIdealIconSize(SIZE{ .cx = client_size.cx / (LONG)bitmap_actions.ButtonCount(), .cy = top_size.cy }));
+      // Toolbar DPI / sizing contract: see theming-common.cpp::apply_tool_bar_theme.
+      auto dpi = win32::get_dpi_awareness_for_window(*this);
+      auto icon_target = ::MulDiv(16, dpi, USER_DEFAULT_SCREEN_DPI);
+      recreate_image_list(SIZE{ .cx = icon_target, .cy = icon_target });
+      bitmap_actions.SetBitmapSize(SIZE{ .cx = icon_target, .cy = icon_target });
       bitmap_actions.SetImageList(bitmap_actions_icons.get());
       palette_list.SetImageList(LVSIL_STATE, ratio_button_icons);
+
+      auto toolbar_height = bitmap_actions.GetButtonSize().cy;
+      auto top_size = SIZE{ .cx = client_size.cx, .cy = toolbar_height };
 
       bitmap_actions.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       bitmap_actions.SetWindowPos(top_size, SWP_DEFERERASE);

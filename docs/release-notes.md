@@ -1,4 +1,7 @@
-# Siege Studio + Siege Launcher 26.20 Development Release
+# Siege Studio + Siege Launcher 26.22 Development Release
+* Improved text in Siege Studio appearing too small on high-DPI displays. Fonts now scale to match the display's DPI setting.
+* Fonts rescale automatically when the window is moved between monitors with different DPI settings.
+* Improved file and folder icons in the tree view appearing too small on high-DPI displays.
 * Fixed file recognition for upper-case extensions of resource/archive files (such as .VOL, .VPK and .PAK).
 * Files with upper-case extensions now show the correct icon instead of the default.
 * Fixed directory tree view duplicating entries when a folder was selected a second time.

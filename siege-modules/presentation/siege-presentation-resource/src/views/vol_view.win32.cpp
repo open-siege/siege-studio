@@ -52,6 +52,8 @@ namespace siege::views
 
     std::optional<bool> has_saved = std::nullopt;
     win32::image_list image_list;
+    win32::image_list shell_normal_images;
+    win32::image_list shell_small_images;
 
     constexpr static int extract_selected_id = 10;
 
@@ -202,22 +204,21 @@ namespace siege::views
       header.bind_hdn_filter_change(std::bind_front(&vol_view::table_filter_change, this));
       header.bind_hdn_end_filter_edit(std::bind_front(&vol_view::table_filter_change, this));
 
-      HIMAGELIST image_list = nullptr;
-      auto hresult = SHGetImageList(SHIL_LARGE, IID_IImageList, (void**)&image_list);
+      auto dpi = win32::get_dpi_awareness_for_window(*this);
+      shell_normal_images = win32::create_dpi_large_shell_image_list(dpi);
+      shell_small_images = win32::create_dpi_small_shell_image_list(dpi);
 
-      if (hresult == S_OK)
+      if (shell_normal_images)
       {
-        table.SetImageList(LVSIL_NORMAL, image_list);
+        table.SetImageList(LVSIL_NORMAL, shell_normal_images);
       }
 
-      hresult = SHGetImageList(SHIL_SMALL, IID_IImageList, (void**)&image_list);
-
-      if (hresult == S_OK)
+      if (shell_small_images)
       {
-        table.SetImageList(LVSIL_SMALL, image_list);
+        table.SetImageList(LVSIL_SMALL, shell_small_images);
       }
 
-      hresult = SHGetStockIconInfo(SIID_MIXEDFILES, SHGSI_SYSICONINDEX, &default_icon);
+      auto hresult = SHGetStockIconInfo(SIID_MIXEDFILES, SHGSI_SYSICONINDEX, &default_icon);
 
       wm_setting_change(win32::setting_change_message{ 0, (LPARAM)L"ImmersiveColorSet" });
 
@@ -258,10 +259,15 @@ namespace siege::views
         return 0;
       }
 
-      auto top_size = SIZE{ .cx = client_size.cx, .cy = client_size.cy / 12 };
-
-      recreate_image_list(table_settings.GetIdealIconSize(SIZE{ .cx = client_size.cx / table_settings.ButtonCount(), .cy = top_size.cy }));
+      // Toolbar DPI / sizing contract: see theming-common.cpp::apply_tool_bar_theme.
+      auto dpi = win32::get_dpi_awareness_for_window(*this);
+      auto icon_target = ::MulDiv(16, dpi, USER_DEFAULT_SCREEN_DPI);
+      recreate_image_list(SIZE{ .cx = icon_target, .cy = icon_target });
+      table_settings.SetBitmapSize(SIZE{ .cx = icon_target, .cy = icon_target });
       table_settings.SetImageList(image_list.get());
+
+      auto toolbar_height = table_settings.GetButtonSize().cy;
+      auto top_size = SIZE{ .cx = client_size.cx, .cy = toolbar_height };
 
       table_settings.SetWindowPos(POINT{}, SWP_DEFERERASE | SWP_NOREDRAW);
       table_settings.SetWindowPos(top_size, SWP_DEFERERASE);
@@ -920,6 +926,29 @@ namespace siege::views
       }
     }
 
+    std::optional<LRESULT> wm_dpi_changed()
+    {
+      auto dpi = win32::get_dpi_awareness_for_window(*this);
+      shell_normal_images = win32::create_dpi_large_shell_image_list(dpi);
+      shell_small_images = win32::create_dpi_small_shell_image_list(dpi);
+
+      if (shell_normal_images)
+      {
+        table.SetImageList(LVSIL_NORMAL, shell_normal_images);
+      }
+
+      if (shell_small_images)
+      {
+        table.SetImageList(LVSIL_SMALL, shell_small_images);
+      }
+
+      auto icon_target = ::MulDiv(16, dpi, USER_DEFAULT_SCREEN_DPI);
+      recreate_image_list(SIZE{ .cx = icon_target, .cy = icon_target });
+      SendMessageW(table_settings, TB_SETIMAGELIST, 0, (LPARAM)image_list.get());
+
+      return std::nullopt;
+    }
+
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
     {
       switch (message)
@@ -928,6 +957,8 @@ namespace siege::views
         return wm_create();
       case WM_SETTINGCHANGE:
         return wm_setting_change(win32::setting_change_message(wparam, lparam));
+      case WM_DPICHANGED:
+        return wm_dpi_changed();
       case WM_SIZE:
         return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
       case WM_COPYDATA:

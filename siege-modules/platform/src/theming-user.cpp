@@ -76,6 +76,22 @@ namespace win32
         return result;
       }
 
+      if (dwRefData && message == WM_DPICHANGED)
+      {
+        auto& controls = *(std::unordered_set<HWND>*)dwRefData;
+
+        if (auto best_font = get_best_system_font())
+        {
+          for (auto& control : controls)
+          {
+            auto font = win32::load_font(LOGFONTW{ .lfPitchAndFamily = VARIABLE_PITCH }, *best_font);
+            ::SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), TRUE);
+          }
+        }
+
+        return def_subclass_proc(root, message, wParam, lParam);
+      }
+
       if (message == WM_NCDESTROY)
       {
         remove_window_subclass(root, handle_root_message, 0);

@@ -190,12 +190,31 @@ namespace win32
   {
     auto active_window = ::GetActiveWindow();
 
-    if (!active_window)
+    if (active_window)
     {
-      return get_dpi_awareness_for_process();
+      return get_dpi_awareness_for_window(active_window);
     }
 
-    return get_dpi_awareness_for_window(active_window);
+    POINT origin{};
+    auto monitor = ::MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY);
+
+    if (monitor)
+    {
+      win32::module shcore(L"shcore.dll", true);
+      auto get_dpi_for_monitor = (std::add_pointer_t<decltype(GetDpiForMonitor)>)::GetProcAddress(shcore, "GetDpiForMonitor");
+
+      if (get_dpi_for_monitor)
+      {
+        UINT x = 0;
+        UINT y = 0;
+        if (get_dpi_for_monitor(monitor, MDT_EFFECTIVE_DPI, &x, &y) == S_OK)
+        {
+          return x;
+        }
+      }
+    }
+
+    return get_dpi_awareness_for_process();
   }
 
   inline auto get_system_metrics(int index, bool for_dpi = true)

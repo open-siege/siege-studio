@@ -5,9 +5,44 @@
 
 namespace win32
 {
+  namespace
+  {
+    LONG resolve_default_font_height(UINT dpi)
+    {
+      NONCLIENTMETRICSW ncm{ .cbSize = sizeof(NONCLIENTMETRICSW) };
+
+      HMODULE user32 = nullptr;
+      ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"user32.dll", &user32);
+      auto sysparam_for_dpi = (std::add_pointer_t<decltype(::SystemParametersInfoForDpi)>)::GetProcAddress(user32, "SystemParametersInfoForDpi");
+
+      if (sysparam_for_dpi && sysparam_for_dpi(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0, dpi))
+      {
+        return ncm.lfMessageFont.lfHeight;
+      }
+
+      if (::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0))
+      {
+        return ncm.lfMessageFont.lfHeight;
+      }
+
+      return -::MulDiv(9, dpi, USER_DEFAULT_SCREEN_DPI);
+    }
+  }
+
   gdi::font_ref load_font(LOGFONTW font_info, std::wstring_view font_name)
   {
     thread_local std::map<std::wstring, gdi::font> loaded_fonts;
+
+    UINT dpi = win32::get_current_dpi();
+
+    if (font_info.lfHeight == 0)
+    {
+      font_info.lfHeight = resolve_default_font_height(dpi);
+    }
+    else if (font_info.lfHeight > 0)
+    {
+      font_info.lfHeight = ::MulDiv(font_info.lfHeight, dpi, USER_DEFAULT_SCREEN_DPI);
+    }
 
     if (!font_info.lfCharSet)
     {

@@ -72,6 +72,22 @@ namespace win32
         return result;
       }
 
+      if (dwRefData && message == WM_DPICHANGED)
+      {
+        auto& controls = *(std::unordered_set<HWND>*)dwRefData;
+
+        if (auto best_font = get_best_system_font())
+        {
+          for (auto& control : controls)
+          {
+            auto font = win32::load_font(LOGFONTW{ .lfPitchAndFamily = VARIABLE_PITCH }, *best_font);
+            ::SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), TRUE);
+          }
+        }
+
+        return def_subclass_proc(root, message, wParam, lParam);
+      }
+
       if (message == WM_NCDESTROY)
       {
         remove_window_subclass(root, handle_root_message, 0);
@@ -894,7 +910,29 @@ namespace win32
               *best_font);
             SendMessageW(self, WM_SETFONT, (WPARAM)font.get(), FALSE);
           }
-          ::SendMessageW(self, CCM_DPISCALE, TRUE, 0);
+          // Toolbar DPI / sizing contract (authoritative reference; views point here).
+          //
+          // We just called SetWindowTheme(L"", L"") above to unthemed the toolbar. With the
+          // default CCM_DPISCALE TRUE, an unthemed toolbar caches the *startup* system DPI
+          // scale and re-applies that stale factor to every image_list assigned later — so
+          // an image_list created at the new DPI after a runtime scale change still gets
+          // stretched by the old factor. CCM_DPISCALE FALSE disables this; the toolbar then
+          // renders image lists at their native pixel size.
+          //
+          // Views must then own DPI awareness explicitly in wm_size:
+          //   1. icon size = MulDiv(base_dip, GetDpiForWindow, USER_DEFAULT_SCREEN_DPI)
+          //      (16 DIP is the standard base; CCM_DPISCALE off means this size IS what
+          //      renders, with no extra scaling)
+          //   2. recreate_image_list at that size, TB_SETBITMAPSIZE to match, TB_SETIMAGELIST
+          //   3. toolbar height = toolbar.GetButtonSize().cy — the only API that includes
+          //      the toolbar's internal icon-to-text vertical gap (~25 px at 200% DPI).
+          //      TB_GETPADDING / TB_GETMETRICS only expose per-side padding and only apply
+          //      to BTNS_AUTOSIZE buttons, neither of which fits our case.
+          //      Don't add a margin — that creates a feedback loop where each wm_size
+          //      grows the height because the toolbar reports back what we last set.
+          //
+          // See any presentation view's wm_size for the canonical 7-line implementation.
+          ::SendMessageW(self, CCM_DPISCALE, FALSE, 0);
           ::SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
 
           return result;
