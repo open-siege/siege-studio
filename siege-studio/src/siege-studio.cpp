@@ -97,6 +97,8 @@ static auto* register_windows_ptr = &register_windows;
 static auto* deregister_windows_ptr = &deregister_windows;
 static ATOM main_atom = 0;
 
+static void open_command_line_files(HWND window);
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
   std::array<char, 256> data{};
@@ -202,6 +204,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   }
 
   auto deferred = std::shared_ptr<void>(nullptr, [hInstance](...) { deregister_windows_ptr(hInstance); });
+
+  open_command_line_files(::FindWindowW((LPCWSTR)MAKEINTATOM(main_atom), nullptr));
 
   MSG msg;
 
@@ -485,4 +489,51 @@ discover_temp:
   }
 
   return info;
+}
+
+static void open_command_line_files(HWND window)
+{
+  if (!window)
+  {
+    return;
+  }
+
+  int argc = 0;
+  LPWSTR* argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
+
+  if (!argv)
+  {
+    return;
+  }
+
+  for (int i = 1; i < argc; ++i)
+  {
+    std::wstring_view path(argv[i]);
+
+    if (path.empty() || !fs::exists(path))
+    {
+      continue;
+    }
+
+    auto buf_size = sizeof(DROPFILES) + (path.size() + 2) * sizeof(wchar_t);
+    HGLOBAL hdrop = ::GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, buf_size);
+
+    if (!hdrop)
+    {
+      continue;
+    }
+
+    auto* drop = (DROPFILES*)::GlobalLock(hdrop);
+    drop->pFiles = sizeof(DROPFILES);
+    drop->fWide = TRUE;
+    std::wmemcpy((wchar_t*)((BYTE*)drop + sizeof(DROPFILES)), path.data(), path.size());
+    ::GlobalUnlock(hdrop);
+
+    if (!::PostMessageW(window, WM_DROPFILES, (WPARAM)hdrop, 0))
+    {
+      ::GlobalFree(hdrop);
+    }
+  }
+
+  ::LocalFree(argv);
 }
