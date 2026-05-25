@@ -15,7 +15,7 @@ add_subdirectory(presentation/siege-presentation-2d)
 add_subdirectory(presentation/siege-presentation-3d)
 add_subdirectory(presentation/siege-presentation-resource)
 add_subdirectory(presentation/siege-presentation-audio)
-add_subdirectory(presentation/siege-presentation-configuration)
+add_subdirectory(presentation/siege-presentation-scripting)
 add_subdirectory(presentation/siege-presentation-executable)
 
 add_subdirectory(extension/siege-extension)

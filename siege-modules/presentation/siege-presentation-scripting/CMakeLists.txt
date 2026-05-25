@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(siege-presentation-configuration)
+project(siege-presentation-scripting)
 
 file(GLOB_RECURSE LIB_SRC_FILES src/*.cpp)
 file(GLOB_RECURSE WIN32_SRC_FILES src/*.win32.cpp)     

@@ -23,7 +23,7 @@ set(CONTENT_TARGETS siege-presentation-2d
 					siege-presentation-3d 
 					siege-presentation-resource 
 					siege-presentation-audio 
-					siege-presentation-configuration
+					siege-presentation-scripting
 					siege-presentation-executable
 					${PROJECT_NAME}-core
                     dts-convert
