@@ -85,6 +85,7 @@ namespace siege::views
                   || siege::platform::bitmap::is_microsoft_bmp(image_stream)
                   || siege::content::tim::is_tim(image_stream)
                   || siege::content::bmp::is_phoenix_bmp(image_stream)
+                  || siege::content::bmp::is_phoenix_bmp_array(image_stream)
                   || siege::platform::bitmap::is_jpg(image_stream)
                   || siege::platform::bitmap::is_gif(image_stream)
                   || siege::platform::bitmap::is_png(image_stream);
@@ -235,52 +236,62 @@ namespace siege::views
       {
         self->original_image.emplace(platform::bitmap::get_bmp_data(image_stream));
       }
-      else if (bmp::is_phoenix_bmp(image_stream))
+      else if (bmp::is_phoenix_bmp(image_stream) || bmp::is_phoenix_bmp_array(image_stream))
       {
-        auto image = bmp::get_pbmp_data(image_stream);
-
-        platform::bitmap::windows_bmp_data dest{};
-
-        dest.info.bit_depth = 32;
-        dest.info.width = image.bmp_header.width;
-        dest.info.height = image.bmp_header.height;
+        auto images = bmp::is_phoenix_bmp_array(image_stream)
+                        ? bmp::get_pba_data(image_stream)
+                        : std::vector<bmp::pbmp_data>{ bmp::get_pbmp_data(image_stream) };
 
         pending_load.wait();
-        if (!self->palettes.empty())
-        {
-          self->selected_palette = 0;
-          self->selected_palette_file = std::find_if(self->palettes.begin(), self->palettes.end(), [&](palette_info& group) {
-            return std::any_of(group.children.begin(), group.children.end(), [&](pal::palette& pal) {
-              return pal.index == image.palette_index;
+
+        auto find_palette = [&](auto palette_index) {
+          for (auto file = self->palettes.begin(); file != self->palettes.end(); ++file)
+          {
+            auto match = std::find_if(file->children.begin(), file->children.end(), [&](pal::palette& entry) {
+              return entry.index == palette_index;
             });
+
+            if (match != file->children.end())
+            {
+              return std::pair(file, std::size_t(std::distance(file->children.begin(), match)));
+            }
+          }
+
+          return std::pair(self->palettes.begin(), std::size_t(0));
+        };
+
+        if (!self->palettes.empty() && !images.empty())
+        {
+          auto selected = find_palette(images.front().palette_index);
+          self->selected_palette_file = selected.first;
+          self->selected_palette = selected.second;
+        }
+
+        std::vector<platform::bitmap::windows_bmp_data> frames;
+        frames.reserve(images.size());
+
+        for (auto& image : images)
+        {
+          auto [palette_file, child] = find_palette(image.palette_index);
+
+          platform::bitmap::windows_bmp_data dest{};
+          dest.info.bit_depth = 32;
+          dest.info.width = image.bmp_header.width;
+          dest.info.height = image.bmp_header.height;
+          dest.colours = self->palettes.empty() ? get_default_palette().colours : palette_file->children[child].colours;
+
+          dest.indexes.reserve(image.pixels.size());
+          std::transform(image.pixels.begin(), image.pixels.end(), std::back_inserter(dest.indexes), [](auto& value) {
+            return std::int32_t(value);
           });
 
-          if (self->selected_palette_file != self->palettes.end())
-          {
-            auto expected_pal = std::find_if(self->selected_palette_file->children.begin(), self->selected_palette_file->children.end(), [&](pal::palette& pal) {
-              return pal.index == image.palette_index;
-            });
-
-            self->selected_palette = std::distance(self->selected_palette_file->children.begin(), expected_pal);
-            dest.colours = expected_pal->colours;
-          }
-          else
-          {
-            self->selected_palette_file = self->palettes.begin();
-            dest.colours = self->palettes.begin()->children.begin()->colours;
-          }
+          frames.emplace_back(std::move(dest));
         }
-        else
+
+        if (!frames.empty())
         {
-          dest.colours = get_default_palette().colours;
+          self->original_image.emplace(std::span<platform::bitmap::windows_bmp_data>(frames));
         }
-
-        dest.indexes.reserve(image.pixels.size());
-        std::transform(image.pixels.begin(), image.pixels.end(), std::back_inserter(dest.indexes), [](auto& value) {
-          return std::int32_t(value);
-        });
-
-        self->original_image.emplace(std::move(dest));
       }
       else if (tim::is_tim(image_stream))
       {

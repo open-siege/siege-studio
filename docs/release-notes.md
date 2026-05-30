@@ -4,6 +4,7 @@
 * Fixed tab buttons rendering as solid dark bars after a system theme change or when too many tabs are open. Tabs now repaint with the new colors and the trailing fill no longer overdraws visible tabs when the overflow spinner is active.
 * Fixed "Save As" in the bitmap view Save dropdown doing nothing. It now opens a file save dialog with filters for BMP, PNG, JPEG, GIF, TIFF, and DDS, and writes the current frame in the chosen format.
 * Enabled "Export All Frames" in the bitmap view Save dropdown, which previously had the submenu disabled. Added the missing "Export As Multiple JPGs" entry and corrected the file extension used by "Export As Multiple GIFs" (was writing .pba files with GIF content).
+* Fixed .pba (Phoenix bitmap array) image files not opening in the bitmap view.
 * Improved text in Siege Studio appearing too small on high-DPI displays. Fonts now scale to match the display's DPI setting.
 * Fonts rescale automatically when the window is moved between monitors with different DPI settings.
 * Improved file and folder icons in the tree view appearing too small on high-DPI displays.
