@@ -56,6 +56,10 @@ namespace siege::resource
     {
       return vol::trophy_bass::make_rbx_resource_reader();
     }
+    else if (vol::trophy_bass::is_stream_tbv(stream))
+    {
+      return vol::trophy_bass::make_tbv_resource_reader();
+    }
     else if (clm::is_stream_supported(stream))
     {
       return clm::make_resource_reader();
