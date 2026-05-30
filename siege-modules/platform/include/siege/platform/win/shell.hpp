@@ -32,6 +32,36 @@ namespace win32
     return SHIL_JUMBO;
   }
 
+  // Scales a shell icon into image-list slot `index` with its alpha intact. CopyImage(IMAGE_ICON)
+  // drops alpha on resize, turning transparent file icons into black squares; DrawIconEx into a
+  // 32-bpp DIB doesn't.
+  inline bool replace_image_list_icon_scaled(HIMAGELIST list, int index, HICON icon, int size)
+  {
+    if (!list || !icon || index < 0 || size <= 0)
+    {
+      return false;
+    }
+
+    win32::gdi::bitmap dib(SIZE{ .cx = size, .cy = size }, win32::gdi::bitmap::skip_shared_handle);
+
+    if (!dib)
+    {
+      return false;
+    }
+
+    {
+      win32::gdi::memory_drawing_context dc;
+      ::SelectObject(dc, dib.get());
+
+      if (!::DrawIconEx(dc, 0, 0, icon, size, size, 0, nullptr, DI_NORMAL))
+      {
+        return false;
+      }
+    }
+
+    return ::ImageList_Replace(list, index, dib.get(), nullptr) == TRUE;
+  }
+
   inline win32::image_list create_dpi_shell_image_list(int target_size)
   {
     auto source_kind = shell_image_list_source_kind(target_size);
@@ -59,16 +89,8 @@ namespace win32
         continue;
       }
 
-      HICON resized = (HICON)::CopyImage(raw, IMAGE_ICON, target_size, target_size, 0);
+      replace_image_list_icon_scaled(result.get(), i, raw, target_size);
       ::DestroyIcon(raw);
-
-      if (!resized)
-      {
-        continue;
-      }
-
-      ::ImageList_ReplaceIcon(result.get(), i, resized);
-      ::DestroyIcon(resized);
     }
 
     return result;
@@ -134,25 +156,17 @@ namespace win32
       return;
     }
 
-    HICON resized = (HICON)::CopyImage(present, IMAGE_ICON, size->cx, size->cy, 0);
-
-    if (!source)
-    {
-      ::DestroyIcon(present);
-    }
-
-    if (!resized)
-    {
-      return;
-    }
-
     if (::ImageList_GetImageCount(list.get()) <= sys_index)
     {
       ::ImageList_SetImageCount(list.get(), sys_index + 1);
     }
 
-    ::ImageList_ReplaceIcon(list.get(), sys_index, resized);
-    ::DestroyIcon(resized);
+    replace_image_list_icon_scaled(list.get(), sys_index, present, size->cx);
+
+    if (!source)
+    {
+      ::DestroyIcon(present);
+    }
   }
 
   inline void launch_shell_process(const std::filesystem::path& path)
