@@ -1,3 +1,11 @@
+# Siege Studio + Siege Launcher 26.23 Development Release
+* Various fixes and improvements for Medal of Honor - Allied Assault and it's expansions.
+    * DPI scaling configuration fix applied.
+    * Fixed resolution selection.
+    * Breakthrough has the option to render with Pixomatic (for software rendering).
+    * The ability to configure multiplayer hosting.
+    * Each expansion shows more maps for selection.
+
 # Siege Studio + Siege Launcher 26.22 Development Release
 * Fixed Save button in the bitmap view not opening the export menu when the icon or label was clicked (only the dropdown arrow responded).
 * Fixed tab buttons rendering as solid dark bars after a system theme change or when too many tabs are open. Tabs now repaint with the new colors and the trailing fill no longer overdraws visible tabs when the overflow spinner is active.

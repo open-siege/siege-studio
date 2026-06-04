@@ -8,6 +8,8 @@
 #include <string_view>
 #include <fstream>
 #include <cassert>
+#include <execution>
+#include <mutex>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/resource/pak_resource.hpp>
@@ -1001,9 +1003,7 @@ predefined_string*
             {
               auto temp = fs::relative(file_info.folder_path, file_info.archive_path);
 
-              if (temp.string() == sub || 
-                  temp.string().starts_with(std::string(sub) + "/") || 
-                  temp.string().starts_with(std::string(sub) + "\\"))
+              if (temp.string() == sub || temp.string().starts_with(std::string(sub) + "/") || temp.string().starts_with(std::string(sub) + "\\"))
               {
                 temp = temp.string().replace(0, 5, "");
               }
@@ -1026,7 +1026,6 @@ predefined_string*
             }
           }
         }
-        
       });
     }
 
@@ -1060,22 +1059,29 @@ predefined_string*
 
 
 predefined_string*
-  get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept
+  get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs) noexcept
 {
   static std::vector<std::wstring> storage;
   static std::vector<predefined_string> results;
+  static std::mutex storage_lock;
 
   if (!results.empty())
   {
     return results.data();
   }
 
-  try
-  {
-    std::error_code errc{};
+  storage.reserve(32 * base_dirs.size());
 
-    if (fs::is_directory(base_dir, errc))
+  std::for_each(std::execution::par, base_dirs.begin(), base_dirs.end(), [](auto* base_dir) {
+    try
     {
+      std::error_code errc{};
+
+      if (!fs::is_directory(base_dir, errc))
+      {
+        return;
+      }
+
       std::vector<fs::path> pak_files;
       pak_files.reserve(16);
       for (auto const& dir_entry : std::filesystem::directory_iterator{ base_dir })
@@ -1088,7 +1094,7 @@ predefined_string*
         }
       }
 
-      std::for_each(pak_files.begin(), pak_files.end(), [](auto& dir_entry) {
+      std::for_each(std::execution::par, pak_files.begin(), pak_files.end(), [](auto& dir_entry) {
         std::any cache;
         std::ifstream stream(dir_entry, std::ios::binary);
 
@@ -1109,11 +1115,6 @@ predefined_string*
           }
         }
 
-        if (storage.capacity() == 0)
-        {
-          storage.reserve(contents.size());
-        }
-
         for (auto& content : contents)
         {
           if (std::get_if<siege::platform::folder_info>(&content) != nullptr)
@@ -1124,7 +1125,6 @@ predefined_string*
 
           if (file_info.filename.extension() == ".bsp" || file_info.filename.extension() == ".BSP")
           {
-
             auto temp = fs::relative(file_info.folder_path, file_info.archive_path);
 
             if (temp.string() == "maps")
@@ -1138,6 +1138,7 @@ predefined_string*
 
             if (temp.string() == "" || temp.string() == "/" || temp.string() == "\\")
             {
+              std::unique_lock lock{ storage_lock };
               storage.emplace_back(file_info.filename.stem().wstring());
             }
             else
@@ -1149,31 +1150,38 @@ predefined_string*
                 final_name = final_name.replace(final_name.find(std::filesystem::path::preferred_separator), 1, std::wstring(L"/"));
               }
 
+              std::unique_lock lock{ storage_lock };
               storage.emplace_back(std::move(final_name));
             }
           }
         }
       });
     }
-
-    results.emplace_back(predefined_string{
-      .label = L"No map",
-      .value = L"" });
-
-    for (auto& string : storage)
+    catch (...)
     {
-      results.emplace_back(predefined_string{
-        .label = string.c_str(),
-        .value = string.c_str() });
+      return;
     }
+  });
 
-    results.emplace_back(predefined_string{});
+  results.emplace_back(predefined_string{
+    .label = L"No map",
+    .value = L"" });
 
-    return results.data();
-  }
-  catch (...)
+  for (auto& string : storage)
   {
-    return nullptr;
+    results.emplace_back(predefined_string{
+      .label = string.c_str(),
+      .value = string.c_str() });
   }
+
+  results.emplace_back(predefined_string{});
+
+  return results.data();
+}
+
+predefined_string*
+  get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept
+{
+  return get_predefined_id_tech_3_map_command_line_settings_multiple({ base_dir });
 }
 }

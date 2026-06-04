@@ -26,10 +26,11 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 using key_type = siege::configuration::key_type;
 
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick" } },
+  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick", L"g_gametype" } },
   .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .listen_setting = L"g_gametype",
   .controller_enabled_setting = L"in_joystick"
 };
 
@@ -105,9 +106,9 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
 
 std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
-  if (exe_path_str == nullptr)
+  if (auto result = apply_dpi_awareness(exe_path_str); result != std::errc{})
   {
-    return std::errc::bad_address;
+    return result;
   }
 
   if (args == nullptr)
@@ -252,13 +253,28 @@ predefined_int*
   if (name_str == L"r_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"640x480", .value = 1 },
-      predefined_int{ .label = L"800x600", .value = 1 },
-      predefined_int{ .label = L"960x720", .value = 1 },
-      predefined_int{ .label = L"1024x768", .value = 1 },
-      predefined_int{ .label = L"1152x864", .value = 1 },
-      predefined_int{ .label = L"1280x960", .value = 1 },
-      predefined_int{ .label = L"1600x1200", .value = 1 },
+      predefined_int{ .label = L"640x480", .value = 3 },
+      predefined_int{ .label = L"800x600", .value = 4 },
+      predefined_int{ .label = L"960x720", .value = 5 },
+      predefined_int{ .label = L"1024x768", .value = 6 },
+      predefined_int{ .label = L"1152x864", .value = 7 },
+      predefined_int{ .label = L"1280x960", .value = 8 },
+      predefined_int{ .label = L"1600x1200", .value = 9 },
+      predefined_int{},
+    };
+
+    return modes.data();
+  }
+
+  if (name_str == L"g_gametype")
+  {
+    static auto modes = std::array<predefined_int, 7>{
+      predefined_int{ .label = L"Single-player", .value = 0 },
+      predefined_int{ .label = L"Free-for-All", .value = 1 },
+      predefined_int{ .label = L"Team-Based", .value = 2 },
+      predefined_int{ .label = L"Round-Based", .value = 3 },
+      predefined_int{ .label = L"Objective", .value = 4 },
+      predefined_int{ .label = L"Tug-of-War", .value = 5 },
       predefined_int{},
     };
 
@@ -269,14 +285,15 @@ predefined_int*
 }
 
 predefined_string*
-  get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept;
+  get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs) noexcept;
 
 predefined_string*
   get_predefined_string_command_line_settings(const wchar_t* name) noexcept
 {
   if (name && std::wstring_view(name) == L"map")
   {
-    return get_predefined_id_tech_3_map_command_line_settings(L"maintt");
+    // base + spearhead content
+    return get_predefined_id_tech_3_map_command_line_settings_multiple({ L"main", L"maintt" });
   }
 
   return nullptr;

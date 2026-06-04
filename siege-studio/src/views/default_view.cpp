@@ -52,7 +52,7 @@ namespace siege::views
     { L"id Tech 3.0"sv, L"id_tech-3.0"sv, L"id_tech-2.5"sv },
     { L"id Tech 3.0 (Elite Force Branch)"sv, L"id_tech-3.0-raven"sv, L"id_tech-3.0"sv },
     { L"id Tech 3.0 (Wolfenstein Branch)"sv, L"id_tech-3.0-wolf"sv, L"id_tech-3.0"sv },
-    { L"id Tech 3.0 (with �berTools)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
+    { L"id Tech 3.0 (with ÜberTools)"sv, L"id_tech-3.0-ritual"sv, L"id_tech-3.0"sv },
     { L"id Tech 2.5"sv, L"id_tech-2.5"sv, L"id_tech-2.0"sv },
     { L"id Tech 2.0"sv, L"id_tech-2.0"sv, std::nullopt },
     { L"id Tech 1.0"sv, L"id_tech-1.0"sv, L"id_tech-raven"sv },
