@@ -53,6 +53,7 @@ namespace siege::views
 
     std::optional<extension_setting_type> dedicated_setting_type{};
     std::optional<extension_setting_type> listen_setting_type{};
+    bool listen_setting_multiple_predefined = false;
 
     std::map<fs::path, networking_support> detected_networking_support;
 
@@ -367,6 +368,7 @@ namespace siege::views
     auto& self = get(state);
 
     self.launch_settings.clear();
+    self.listen_setting_multiple_predefined = false;
     auto& caps = self.matching_extension && self.matching_extension->caps ? *self.matching_extension->caps : empty_caps;
 
     bool has_ip = (caps.ip_connect_setting == nullptr || !std::wstring_view(caps.ip_connect_setting).empty());
@@ -534,7 +536,7 @@ namespace siege::views
 
             auto listen_and_connect_are_same = caps.listen_setting && caps.ip_connect_setting && std::wstring_view(caps.listen_setting) == caps.ip_connect_setting;
 
-            if (self.listen_setting_type && caps.listen_setting)
+            if (self.listen_setting_type && caps.listen_setting && !self.listen_setting_multiple_predefined)
             {
               auto listen_setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
                 return setting.setting_name == caps.listen_setting;
@@ -688,6 +690,51 @@ namespace siege::views
     std::wstring_view dedicated_setting = caps.dedicated_setting ? caps.dedicated_setting : L"";
     std::wstring_view listen_setting = caps.listen_setting ? caps.listen_setting : L"";
 
+    auto count_predefined_options = [&](std::wstring_view setting_name, extension_setting_type type) -> std::size_t {
+      if (!has_extension_module(state))
+      {
+        return 0;
+      }
+
+      auto& extension = get_extension(state);
+
+      if (type == extension_setting_type::int_setting)
+      {
+        auto proc = extension.get_predefined_int_command_line_settings_proc;
+        if (!proc)
+        {
+          return 0;
+        }
+
+        std::size_t count = 0;
+        for (auto* item = proc(setting_name.data()); item && item->label; ++item)
+        {
+          ++count;
+        }
+
+        return count;
+      }
+
+      if (type == extension_setting_type::string_setting)
+      {
+        auto proc = extension.get_predefined_string_command_line_settings_proc;
+        if (!proc)
+        {
+          return 0;
+        }
+
+        std::size_t count = 0;
+        for (auto* item = proc(setting_name.data()); item && item->label; ++item)
+        {
+          ++count;
+        }
+
+        return count;
+      }
+
+      return 0;
+    };
+
     for (auto& setting : caps.string_settings)
     {
       if (!setting)
@@ -752,7 +799,13 @@ namespace siege::views
       if (!listen_setting.empty() && setting == listen_setting)
       {
         self.listen_setting_type = extension_setting_type::string_setting;
-        continue;
+
+        if (count_predefined_options(listen_setting, extension_setting_type::string_setting) <= 1)
+        {
+          continue;
+        }
+
+        self.listen_setting_multiple_predefined = true;
       }
 
       auto proc = get_extension(state).get_predefined_string_command_line_settings_proc;
@@ -812,6 +865,13 @@ namespace siege::views
       if (!listen_setting.empty() && setting == listen_setting)
       {
         self.listen_setting_type = type;
+
+        if (count_predefined_options(listen_setting, type) > 1)
+        {
+          self.listen_setting_multiple_predefined = true;
+          return true;
+        }
+
         return false;
       }
 
