@@ -5,6 +5,8 @@
     * Breakthrough has the option to render with Pixomatic (for software rendering).
     * The ability to configure multiplayer hosting.
     * Each expansion shows more maps for selection.
+* Fixed issues filtering games when they are still loading.
+
 
 # Siege Studio + Siege Launcher 26.22 Development Release
 * Fixed Save button in the bitmap view not opening the export menu when the icon or label was clicked (only the dropdown arrow responded).
