@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <utility>
 #include <thread>
+#include <cwchar>
 #include <string_view>
 #include <fstream>
 #include <siege/platform/win/file.hpp>
@@ -138,6 +139,30 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
   insert_string_setting_once(*args, L"cl_playintro", L"0");
+  insert_string_setting_once(*args, L"ui_weaponsbar", L"0");
+
+    // hard-coding graphics/audio settings to "best" for now
+  insert_string_setting_once(*args, L"r_swapInterval", L"1");
+  insert_string_setting_once(*args, L"r_picmip", L"0");
+  insert_string_setting_once(*args, L"r_textureDetails", L"1");
+  insert_string_setting_once(*args, L"r_colorbits", L"32");
+  insert_string_setting_once(*args, L"r_texturebits", L"32");
+  insert_string_setting_once(*args, L"r_subdivisions", L"3");
+  insert_string_setting_once(*args, L"r_fastdlights", L"0");
+  insert_string_setting_once(*args, L"r_fastentlight", L"0");
+  insert_string_setting_once(*args, L"r_drawstaticdecals", L"1");
+  insert_string_setting_once(*args, L"ter_error", L"4");
+  insert_string_setting_once(*args, L"ter_maxlod", L"6");
+  insert_string_setting_once(*args, L"ter_maxtris", L"24576");
+  insert_string_setting_once(*args, L"vss_maxcount", L"10");
+  insert_string_setting_once(*args, L"vss_draw", L"1");
+  insert_string_setting_once(*args, L"cg_effectdetail", L"1.0");
+  insert_string_setting_once(*args, L"r_lodviewmodelcap", L"1.0");
+  insert_string_setting_once(*args, L"r_lodcap", L"1.0");
+  insert_string_setting_once(*args, L"r_lodscale", L"1.1");
+  insert_string_setting_once(*args, L"cg_shadows", L"2");
+  insert_string_setting_once(*args, L"cg_rain", L"1");
+  insert_string_setting_once(*args, L"s_khz", L"44");
 
   return std::errc{};
 }
@@ -252,14 +277,17 @@ predefined_int*
 
   if (name_str == L"r_mode")
   {
-    static auto modes = std::array<predefined_int, 8>{
+    static auto modes = std::array<predefined_int, 11>{
       predefined_int{ .label = L"640x480", .value = 3 },
       predefined_int{ .label = L"800x600", .value = 4 },
       predefined_int{ .label = L"960x720", .value = 5 },
       predefined_int{ .label = L"1024x768", .value = 6 },
       predefined_int{ .label = L"1152x864", .value = 7 },
-      predefined_int{ .label = L"1280x960", .value = 8 },
+      predefined_int{ .label = L"1280x1024", .value = 8 },
       predefined_int{ .label = L"1600x1200", .value = 9 },
+      predefined_int{ .label = L"2048x1536", .value = 10 },
+      predefined_int{ .label = L"856x480", .value = 11 },
+      predefined_int{ .label = L"Custom", .value = -1 },
       predefined_int{},
     };
 
@@ -285,15 +313,25 @@ predefined_int*
 }
 
 predefined_string*
-  get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs) noexcept;
-
-predefined_string*
   get_predefined_string_command_line_settings(const wchar_t* name) noexcept
 {
   if (name && std::wstring_view(name) == L"map")
   {
     // base + spearhead content
-    return get_predefined_id_tech_3_map_command_line_settings_multiple({ L"main", L"maintt" });
+    return get_predefined_id_tech_3_map_command_line_settings_multiple({ L"main", L"mainta" }, [](std::wstring_view label) {
+
+        if (label.contains(L"dm/") || label.contains(L"DM/"))
+        {
+          return true;
+        }
+
+        if (label.contains(L"dm\\") || label.contains(L"DM\\"))
+        {
+          return true;
+        }
+
+        return false;
+    });
   }
 
   return nullptr;

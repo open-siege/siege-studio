@@ -1059,7 +1059,7 @@ predefined_string*
 
 
 predefined_string*
-  get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs) noexcept
+  get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs, bool (*partition)(std::wstring_view)) noexcept
 {
   static std::vector<std::wstring> storage;
   static std::vector<predefined_string> results;
@@ -1163,6 +1163,21 @@ predefined_string*
     }
   });
 
+  {
+    std::unordered_set<std::wstring> seen;
+    const auto unique_end = std::remove_if(storage.begin(), storage.end(), [&](const std::wstring& label) {
+      return !seen.insert(siege::platform::to_lower(label)).second;
+    });
+    storage.erase(unique_end, storage.end());
+  }
+
+  if (partition)
+  {
+    std::stable_partition(storage.begin(), storage.end(), [&](const std::wstring& label) {
+      return partition(label);
+    });
+  }
+
   results.emplace_back(predefined_string{
     .label = L"No map",
     .value = L"" });
@@ -1182,6 +1197,6 @@ predefined_string*
 predefined_string*
   get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept
 {
-  return get_predefined_id_tech_3_map_command_line_settings_multiple({ base_dir });
+  return get_predefined_id_tech_3_map_command_line_settings_multiple({ base_dir }, nullptr);
 }
 }

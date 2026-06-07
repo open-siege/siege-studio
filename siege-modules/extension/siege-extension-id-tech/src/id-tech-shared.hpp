@@ -6,6 +6,8 @@
 #include <siege/platform/extension_module.hpp>
 #include <filesystem>
 #include <optional>
+#include <string_view>
+#include <vector>
 
 std::optional<siege::configuration::text_game_config> load_config_from_file(std::filesystem::path real_file_path);
 std::optional<siege::configuration::text_game_config> load_config_from_pak(std::filesystem::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path);
@@ -89,6 +91,7 @@ inline bool is_vkey_for_keyboard(WORD vkey)
 }
 
 extern "C" {
+siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs, bool (*partition)(std::wstring_view) = nullptr) noexcept;
 std::errc apply_dpi_awareness(const wchar_t* exe_path_str);
 LRESULT CALLBACK dispatch_input_to_cdecl_quake_2_console(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK dispatch_input_to_fastcall_quake_2_console(int code, WPARAM wParam, LPARAM lParam);
