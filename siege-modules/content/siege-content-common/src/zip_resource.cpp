@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <cstring>
 #include <zip.h>
 
 #include <siege/resource/common_resources.hpp>
@@ -116,17 +117,12 @@ namespace siege::resource::zip
     }
   };
 
-  struct cached_zip_stat : zip_stat
-  {
-    std::shared_ptr<std::string> name_storage;
-  };
-
-
   struct stream_cache
   {
     std::size_t start_offset;
     std::size_t stream_size;
-    std::vector<cached_zip_stat> stat_cache;
+    std::shared_ptr<const char[]> name_storage;
+    std::vector<zip_stat_t> stat_cache;
   };
 
   struct zip_cache
@@ -176,7 +172,6 @@ namespace siege::resource::zip
 
       auto* source = zip_source_function_create(process_zip_stream, &info, &src_error);
 
-      std::vector<cached_zip_stat> entries;
       zip_t* zip_file;
 
       zip_error_t err;
@@ -190,30 +185,61 @@ namespace siege::resource::zip
         return {};
       }
 
-      entries.reserve(entry_count);
+      const auto stored_name_len = [](const zip_stat_t& st) -> std::size_t {
+        auto name_len = std::strlen(st.name);
+        if (st.size == 0 && name_len > 0 && st.name[name_len - 1] == '/')
+        {
+          --name_len;
+        }
+        return name_len;
+      };
+
+      std::size_t name_buffer_size = 0;
 
       for (decltype(entry_count) i = 0; i < entry_count; ++i)
       {
-        cached_zip_stat st;
+        zip_stat_t st;
         zip_stat_init(&st);
         zip_stat_index(zip_file, i, 0, &st);
 
         if (st.name)
         {
-          st.name_storage = std::make_shared<std::string>(st.name);
-
-          if (st.size == 0 && st.name_storage->ends_with('/'))
-          {
-            st.name_storage->pop_back();
-          }
-
-          st.name = st.name_storage->c_str();
-          entries.emplace_back(std::move(st));
+          name_buffer_size += stored_name_len(st) + 1;
         }
       }
 
+      auto name_storage = std::shared_ptr<const char[]>(new char[name_buffer_size]);
+      char* write_ptr = const_cast<char*>(name_storage.get());
+
+      std::vector<zip_stat_t> entries;
+      entries.reserve(entry_count);
+
+      for (decltype(entry_count) i = 0; i < entry_count; ++i)
+      {
+        zip_stat_t st;
+        zip_stat_init(&st);
+        zip_stat_index(zip_file, i, 0, &st);
+
+        if (!st.name)
+        {
+          continue;
+        }
+
+        const auto name_len = stored_name_len(st);
+        std::memcpy(write_ptr, st.name, name_len);
+        write_ptr[name_len] = '\0';
+        st.name = write_ptr;
+        write_ptr += name_len + 1;
+        entries.emplace_back(st);
+      }
+
       cache_entry = zip_cache.stream_cache.emplace(cache_key,
-                                            stream_cache{ .start_offset = info.start_offset, .stream_size = info.stream_size, .stat_cache = std::move(entries) })
+                                            stream_cache{
+                                              .start_offset = info.start_offset,
+                                              .stream_size = info.stream_size,
+                                              .name_storage = std::move(name_storage),
+                                              .stat_cache = std::move(entries),
+                                            })
                       .first;
 
       zip_close(zip_file);
