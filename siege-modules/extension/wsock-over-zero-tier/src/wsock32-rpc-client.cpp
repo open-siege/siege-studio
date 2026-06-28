@@ -1,4 +1,5 @@
 #include <WinSock2.h>
+#include <ws2tcpip.h>
 
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/process.hpp>
@@ -81,6 +82,11 @@ decltype(::WSARecv)* wsock_WSARecv = nullptr;
 decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
 decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
+
+// not actually used by any games, but rather by the AMD OpenGL driver
+decltype(::getaddrinfo)* wsock_getaddrinfo = nullptr;
+decltype(::freeaddrinfo)* wsock_freeaddrinfo = nullptr;
+decltype(::inet_ntop)* wsock_inet_ntop = nullptr;
 
 std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::size_t size, std::optional<ATOM> key = std::nullopt)
 {
@@ -1049,6 +1055,28 @@ auto __stdcall siege_WSACancelBlockingCall()
   get_log() << "siege_WSACancelBlockingCall " << '\n';
   return wsock_WSACancelBlockingCall();
 }
+
+// This and freeaddrinfo needed by AMD's open GL driver for the RPC case
+auto __stdcall siege_getaddrinfo(const char* node_name, const char* service_name, const addrinfo* hints, addrinfo** results)
+{
+  load_system_wsock();
+  get_log() << "siege_getaddrinfo " << '\n';
+  return wsock_getaddrinfo(node_name, service_name, hints, results);
+}
+
+auto __stdcall siege_freeaddrinfo(addrinfo* results)
+{
+  load_system_wsock();
+  get_log() << "siege_freeaddrinfo " << '\n';
+  return wsock_freeaddrinfo(results);
+}
+
+auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::size_t buf_size)
+{
+  load_system_wsock();
+  get_log() << "siege_inet_ntop " << '\n';
+  return wsock_inet_ntop(family, addr, buf, buf_size);
+}
 }
 
 void load_system_wsock()
@@ -1149,6 +1177,9 @@ void load_system_wsock()
   wsock_WSARecvFrom = (decltype(wsock_WSARecvFrom))::GetProcAddress(wsock_module, "WSARecvFrom");
   wsock_WSAEventSelect = (decltype(wsock_WSAEventSelect))::GetProcAddress(wsock_module, "WSAEventSelect");
   wsock_WSAEnumNetworkEvents = (decltype(wsock_WSAEnumNetworkEvents))::GetProcAddress(wsock_module, "WSAEnumNetworkEvents");
+  wsock_getaddrinfo = (decltype(wsock_getaddrinfo))::GetProcAddress(wsock_module, "getaddrinfo");
+  wsock_freeaddrinfo = (decltype(wsock_freeaddrinfo))::GetProcAddress(wsock_module, "freeaddrinfo");
+  wsock_inet_ntop = (decltype(wsock_inet_ntop))::GetProcAddress(wsock_module, "inet_ntop");
 }
 
 std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()

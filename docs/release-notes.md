@@ -1,3 +1,6 @@
+# Siege Studio + Siege Launcher 26.27 Development Release
+* Fixed SiN launching with Zero Tier enabled on AMD GPUs.
+
 # Siege Studio + Siege Launcher 26.23 Development Release
 * Various fixes and improvements for Medal of Honor - Allied Assault and it's expansions.
     * DPI scaling configuration fix applied.

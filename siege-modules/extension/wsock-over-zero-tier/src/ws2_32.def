@@ -79,3 +79,8 @@ EXPORTS
 	siege_WSARecvFrom @93
 	WSARecv=siege_WSARecv
 	siege_WSARecv @91
+	getaddrinfo=siege_getaddrinfo
+	siege_getaddrinfo @98
+	freeaddrinfo=siege_freeaddrinfo
+	siege_freeaddrinfo @97
+	inet_ntop=siege_inet_ntop

@@ -1,7 +1,15 @@
+// TODO the time has well and truly come for us to separate things out.
+// We should separate the wsock wrapper over zero tier into it's own backend dll
+// with the most minimal API set required.
+// It should be greatly simplified (as we wouldn't need dynamic wsock loading in that particular case nor fallback).
+// Then, the complex wrapping is only done at this level and not at the backend level.
+// This is also needed for future backend support such as web sockets and game networking sockets.
+
 #include <ZeroTierSockets.h>
 
 #ifdef USE_WINSOCK2
 #include <WinSock2.h>
+#include <ws2tcpip.h>
 #else
 #include <WinSock.h>
 #endif
@@ -127,6 +135,11 @@ decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
 decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
 decltype(::WSASocketW)* wsock_WSASocketW = nullptr;
 decltype(::WSAIoctl)* wsock_WSAIoctl = nullptr;
+
+// not actually used by any games, but rather by the AMD OpenGL driver
+decltype(::getaddrinfo)* wsock_getaddrinfo = nullptr;
+decltype(::freeaddrinfo)* wsock_freeaddrinfo = nullptr;
+decltype(::inet_ntop)* wsock_inet_ntop = nullptr;
 #endif
 
 
@@ -1460,6 +1473,29 @@ auto __stdcall siege_WSAStringToAddressA(LPSTR address_str, INT family, LPWSAPRO
   load_system_wsock();
   return wsock_WSAStringToAddressA(address_str, family, info, out_address, out_len);
 }
+
+// This and freeaddrinfo needed by AMD's open GL driver for the RPC case
+auto __stdcall siege_getaddrinfo(const char* node_name, const char* service_name, const addrinfo* hints, addrinfo** results)
+{
+  load_system_wsock();
+  get_log() << "siege_getaddrinfo " << '\n';
+  return wsock_getaddrinfo(node_name, service_name, hints, results);
+}
+
+auto __stdcall siege_freeaddrinfo(addrinfo* results)
+{
+  load_system_wsock();
+  get_log() << "siege_freeaddrinfo " << '\n';
+  return wsock_freeaddrinfo(results);
+}
+
+auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::size_t buf_size)
+{
+  load_system_wsock();
+  get_log() << "siege_inet_ntop " << '\n';
+  return wsock_inet_ntop(family, addr, buf, buf_size);
+}
+
 #endif
 
 auto __stdcall siege_WSASetLastError(int error)
@@ -1590,6 +1626,9 @@ void load_system_wsock()
   wsock_WSAEnumNetworkEvents = (decltype(wsock_WSAEnumNetworkEvents))::GetProcAddress(wsock_module, "WSAEnumNetworkEvents");
   wsock_WSASocketW = (decltype(wsock_WSASocketW))::GetProcAddress(wsock_module, "WSASocketW");
   wsock_WSAIoctl = (decltype(wsock_WSAIoctl))::GetProcAddress(wsock_module, "WSAIoctl");
+  wsock_getaddrinfo = (decltype(wsock_getaddrinfo))::GetProcAddress(wsock_module, "getaddrinfo");
+  wsock_freeaddrinfo = (decltype(wsock_freeaddrinfo))::GetProcAddress(wsock_module, "freeaddrinfo");
+  wsock_inet_ntop = (decltype(wsock_inet_ntop))::GetProcAddress(wsock_module, "inet_ntop");
 #endif
 }
 
