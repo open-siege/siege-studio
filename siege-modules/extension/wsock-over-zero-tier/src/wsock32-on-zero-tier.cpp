@@ -14,21 +14,8 @@
 #include <WinSock.h>
 #endif
 #include <wsnwlink.h>
-#include <optional>
-#include <string>
-#include <map>
-#include <iomanip>
-#include <set>
-#include <array>
-#include <vector>
-#include <filesystem>
-
-#ifdef _DEBUG
-#include <fstream>
-#else
-#include <sstream>
-#endif
 #include <siege/platform/win/module.hpp>
+import std;
 
 namespace fs = std::filesystem;
 
