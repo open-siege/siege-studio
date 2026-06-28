@@ -15,7 +15,9 @@
 #endif
 #include <wsnwlink.h>
 #include <siege/platform/win/module.hpp>
+
 import std;
+import wsock32.shared;
 
 namespace fs = std::filesystem;
 
@@ -37,7 +39,7 @@ socket_handle_info& get_zero_tier_handles()
   return info;
 }
 
-void load_system_wsock();
+void ensure_imports();
 std::ostream& get_log();
 HMODULE get_ztlib();
 std::optional<std::uint64_t> get_zero_tier_network_id();
@@ -67,80 +69,20 @@ std::pair<zts_sockaddr_in, zts_socklen_t> copy_address(const sockaddr* name, int
 SOCKET from_zts(int);
 int to_zts(SOCKET);
 
+std::optional<wsock_imports> imports{};
+
 extern "C" {
-HMODULE wsock_module = nullptr;
-decltype(::WSAStartup)* wsock_WSAStartup = nullptr;
-decltype(::WSACleanup)* wsock_WSACleanup = nullptr;
-decltype(::socket)* wsock_socket = nullptr;
-decltype(::setsockopt)* wsock_setsockopt = nullptr;
-decltype(::getsockopt)* wsock_getsockopt = nullptr;
-decltype(::getsockname)* wsock_getsockname = nullptr;
-decltype(::getpeername)* wsock_getpeername = nullptr;
-decltype(::gethostbyaddr)* wsock_gethostbyaddr = nullptr;
-decltype(::gethostname)* wsock_gethostname = nullptr;
-decltype(::gethostbyname)* wsock_gethostbyname = nullptr;
-decltype(::recv)* wsock_recv = nullptr;
-decltype(::recvfrom)* wsock_recvfrom = nullptr;
-decltype(::send)* wsock_send = nullptr;
-decltype(::sendto)* wsock_sendto = nullptr;
-decltype(::ioctlsocket)* wsock_ioctlsocket = nullptr;
-decltype(::bind)* wsock_bind = nullptr;
-decltype(::connect)* wsock_connect = nullptr;
-decltype(::accept)* wsock_accept = nullptr;
-decltype(::listen)* wsock_listen = nullptr;
-decltype(::shutdown)* wsock_shutdown = nullptr;
-decltype(::select)* wsock_select = nullptr;
-decltype(::closesocket)* wsock_closesocket = nullptr;
-decltype(::__WSAFDIsSet)* wsock___WSAFDIsSet = nullptr;
-decltype(::htonl)* wsock_htonl = nullptr;
-decltype(::htons)* wsock_htons = nullptr;
-decltype(::ntohl)* wsock_ntohl = nullptr;
-decltype(::ntohs)* wsock_ntohs = nullptr;
-decltype(::inet_addr)* wsock_inet_addr = nullptr;
-decltype(::inet_ntoa)* wsock_inet_ntoa = nullptr;
-decltype(::WSASetBlockingHook)* wsock_WSASetBlockingHook = nullptr;
-decltype(::WSAUnhookBlockingHook)* wsock_WSAUnhookBlockingHook = nullptr;
-decltype(::WSACancelBlockingCall)* wsock_WSACancelBlockingCall = nullptr;
-decltype(::WSAGetLastError)* wsock_WSAGetLastError = nullptr;
-decltype(::WSASetLastError)* wsock_WSASetLastError = nullptr;
-decltype(::WSAAsyncGetHostByName)* wsock_WSAAsyncGetHostByName = nullptr;
-decltype(::WSACancelAsyncRequest)* wsock_WSACancelAsyncRequest = nullptr;
-decltype(::WSAAsyncSelect)* wsock_WSAAsyncSelect = nullptr;
-
-#ifdef USE_WINSOCK2
-decltype(::WSAStringToAddressA)* wsock_WSAStringToAddressA = nullptr;
-decltype(::WSAGetOverlappedResult)* wsock_WSAGetOverlappedResult = nullptr;
-decltype(::WSACreateEvent)* wsock_WSACreateEvent = nullptr;
-decltype(::WSAResetEvent)* wsock_WSAResetEvent = nullptr;
-decltype(::WSACloseEvent)* wsock_WSACloseEvent = nullptr;
-decltype(::WSAWaitForMultipleEvents)* wsock_WSAWaitForMultipleEvents = nullptr;
-decltype(::WSASendTo)* wsock_WSASendTo = nullptr;
-decltype(::WSASend)* wsock_WSASend = nullptr;
-decltype(::WSARecvFrom)* wsock_WSARecvFrom = nullptr;
-decltype(::WSARecv)* wsock_WSARecv = nullptr;
-decltype(::WSAEventSelect)* wsock_WSAEventSelect = nullptr;
-decltype(::WSAEnumNetworkEvents)* wsock_WSAEnumNetworkEvents = nullptr;
-decltype(::WSASocketW)* wsock_WSASocketW = nullptr;
-decltype(::WSAIoctl)* wsock_WSAIoctl = nullptr;
-
-// not actually used by any games, but rather by the AMD OpenGL driver
-decltype(::getaddrinfo)* wsock_getaddrinfo = nullptr;
-decltype(::freeaddrinfo)* wsock_freeaddrinfo = nullptr;
-decltype(::inet_ntop)* wsock_inet_ntop = nullptr;
-#endif
-
-
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version) << '\n';
-  auto result = wsock_WSAStartup(version, data);
+  auto result = imports->WSAStartup(version, data);
 
   if (auto network_id = get_zero_tier_network_id(); network_id && get_ztlib())
   {
     if (result == 0)
     {
-      wsock_WSACleanup();
+      imports->WSACleanup();
     }
 
     get_log() << "Zero Tier library available and network is set\n";
@@ -247,7 +189,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
 int __stdcall siege_WSACleanup()
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_WSACleanup" << '\n';
 
   if (use_zero_tier())
@@ -263,7 +205,7 @@ int __stdcall siege_WSACleanup()
     return 0;
   }
 
-  return wsock_WSACleanup();
+  return imports->WSACleanup();
 }
 
 static_assert(SOCK_STREAM == ZTS_SOCK_STREAM);
@@ -279,7 +221,7 @@ static_assert(IPPROTO_RAW == ZTS_IPPROTO_RAW);
 static_assert(AF_INET == ZTS_AF_INET);
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId() << '\n';
 
   if (use_zero_tier())
@@ -306,11 +248,11 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
         if (socket == ZTS_ERR_ARG)
         {
-          wsock_WSASetLastError(zt_to_winsock_error(get_zts_errno()));
+          imports->WSASetLastError(zt_to_winsock_error(get_zts_errno()));
         }
         else if (socket == ZTS_ERR_SERVICE)
         {
-          wsock_WSASetLastError(WSANOTINITIALISED);
+          imports->WSASetLastError(WSANOTINITIALISED);
         }
 
         return INVALID_SOCKET;
@@ -327,12 +269,12 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
       return from_zts(socket);
     }
 
-    wsock_WSASetLastError(WSAESOCKTNOSUPPORT);
+    imports->WSASetLastError(WSAESOCKTNOSUPPORT);
     return INVALID_SOCKET;
   }
 
 
-  auto result = wsock_socket(af, type, protocol);
+  auto result = imports->socket(af, type, protocol);
   get_log() << "Created winsock socket successfully (" << (int)result << ")" << '\n';
   return result;
 }
@@ -347,7 +289,7 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
     ::ExitProcess(-1);
   }
 
-  return wsock_WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
+  return imports->WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
 }
 
 int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
@@ -358,7 +300,7 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
     ::ExitProcess(-1);
   }
 
-  return wsock_WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
+  return imports->WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
 }
 
 int __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPDWORD numberOfBytesRecvd, LPDWORD flags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
@@ -369,7 +311,7 @@ int __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPDW
     ::ExitProcess(-1);
   }
 
-  return wsock_WSARecv(ws, buffers, bufferCount, numberOfBytesRecvd, flags, lpOverlapped, completionRoutine);
+  return imports->WSARecv(ws, buffers, bufferCount, numberOfBytesRecvd, flags, lpOverlapped, completionRoutine);
 }
 #endif
 
@@ -382,7 +324,7 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
       if (!get_zero_tier_handles().contains(to_zts(ws)))
       {
         get_log() << "Non zero tier socket passed in" << std::endl;
-        wsock_WSASetLastError(WSAENOTSOCK);
+        imports->WSASetLastError(WSAENOTSOCK);
         return SOCKET_ERROR;
       }
 
@@ -392,12 +334,12 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 
       return zt_to_winsock_result(zt_result);
     }
-    return wsock_recv(ws, buf, len, flags);
+    return imports->recv(ws, buf, len, flags);
   }
   catch (...)
   {
     get_log() << "Exception occurred in siege_recv" << std::endl;
-    wsock_WSASetLastError(exception_to_error_code());
+    imports->WSASetLastError(exception_to_error_code());
     return SOCKET_ERROR;
   }
 }
@@ -425,7 +367,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -475,11 +417,11 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
     return zt_to_winsock_result(zt_result);
   }
 
-  auto result = wsock_setsockopt(ws, level, optname, optval, optlen);
+  auto result = imports->setsockopt(ws, level, optname, optval, optlen);
 
   if (result != 0)
   {
-    get_log() << "setsockopt WSAGetLastError " << wsock_WSAGetLastError() << '\n';
+    get_log() << "setsockopt WSAGetLastError " << imports->WSAGetLastError() << '\n';
   }
 
   return result;
@@ -493,7 +435,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -535,11 +477,11 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
     return zt_to_winsock_result(zt_result);
   }
 
-  auto result = wsock_getsockopt(ws, level, optname, optval, optlen);
+  auto result = imports->getsockopt(ws, level, optname, optval, optlen);
 
   if (result != 0)
   {
-    get_log() << "getsockopt WSAGetLastError " << wsock_WSAGetLastError() << '\n';
+    get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError() << '\n';
   }
 
   return result;
@@ -554,7 +496,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
       if (!get_zero_tier_handles().contains(to_zts(ws)))
       {
         get_log() << "Non zero tier socket passed in" << std::endl;
-        wsock_WSASetLastError(WSAENOTSOCK);
+        imports->WSASetLastError(WSAENOTSOCK);
         return SOCKET_ERROR;
       }
 
@@ -591,11 +533,11 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
     }
 
 
-    auto result = wsock_recvfrom(ws, buf, len, flags, from, fromLen);
+    auto result = imports->recvfrom(ws, buf, len, flags, from, fromLen);
 
     if (result < 0)
     {
-      get_log() << "recvfrom WSAGetLastError " << wsock_WSAGetLastError() << '\n';
+      get_log() << "recvfrom WSAGetLastError " << imports->WSAGetLastError() << '\n';
     }
 
     return result;
@@ -603,7 +545,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
   catch (...)
   {
     get_log() << "Exception occurred in siege_recvfrom" << std::endl;
-    wsock_WSASetLastError(exception_to_error_code());
+    imports->WSASetLastError(exception_to_error_code());
     return SOCKET_ERROR;
   }
 }
@@ -616,7 +558,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -641,7 +583,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
     auto zt_result = zt_getsockname(to_zts(ws), nullptr, nullptr);
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_getsockname(ws, name, length);
+  return imports->getsockname(ws, name, length);
 }
 
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
@@ -652,7 +594,7 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -677,7 +619,7 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
     auto zt_result = zt_getpeername(to_zts(ws), nullptr, nullptr);
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_getpeername(ws, name, length);
+  return imports->getpeername(ws, name, length);
 }
 
 static_assert(FIONREAD == ZTS_FIONREAD);
@@ -695,7 +637,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -711,7 +653,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 
     return zt_to_winsock_result(zt_result);
   }
-  auto result = wsock_ioctlsocket(ws, cmd, argp);
+  auto result = imports->ioctlsocket(ws, cmd, argp);
 
   get_log() << "siege_ioctlsocket finished" << '\n';
 
@@ -726,7 +668,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -739,7 +681,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
     auto zt_result = zt_listen(to_zts(ws), backlog);
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_listen(ws, backlog);
+  return imports->listen(ws, backlog);
 }
 
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
@@ -750,7 +692,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -778,7 +720,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_accept(ws, name, namelen);
+  return imports->accept(ws, name, namelen);
 }
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
@@ -790,7 +732,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -809,7 +751,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_connect(ws, name, namelen);
+  return imports->connect(ws, name, namelen);
 }
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
@@ -821,7 +763,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -841,9 +783,9 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 
     return zt_to_winsock_result(zt_result);
   }
-  auto result = wsock_bind(ws, addr, namelen);
+  auto result = imports->bind(ws, addr, namelen);
 
-  get_log() << "Bind call has error " << wsock_WSAGetLastError() << "\n";
+  get_log() << "Bind call has error " << imports->WSAGetLastError() << "\n";
 
   return result;
 }
@@ -857,7 +799,7 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcep
       if (!get_zero_tier_handles().contains(to_zts(ws)))
       {
         get_log() << "Non zero tier socket passed in" << std::endl;
-        wsock_WSASetLastError(WSAENOTSOCK);
+        imports->WSASetLastError(WSAENOTSOCK);
         return SOCKET_ERROR;
       }
 
@@ -868,12 +810,12 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcep
 
       return zt_to_winsock_result(zt_result);
     }
-    return wsock_send(ws, buf, len, flags);
+    return imports->send(ws, buf, len, flags);
   }
   catch (...)
   {
     get_log() << "Exception occurred in siege_send" << std::endl;
-    wsock_WSASetLastError(exception_to_error_code());
+    imports->WSASetLastError(exception_to_error_code());
     return SOCKET_ERROR;
   }
 }
@@ -887,7 +829,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
       if (!get_zero_tier_handles().contains(to_zts(ws)))
       {
         get_log() << "Non zero tier socket passed in" << std::endl;
-        wsock_WSASetLastError(WSAENOTSOCK);
+        imports->WSASetLastError(WSAENOTSOCK);
         return SOCKET_ERROR;
       }
 
@@ -945,12 +887,12 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 
       return zt_to_winsock_result(zt_result);
     }
-    return wsock_sendto(ws, buf, len, flags, to, tolen);
+    return imports->sendto(ws, buf, len, flags, to, tolen);
   }
   catch (...)
   {
     get_log() << "Exception occurred in siege_sendto" << std::endl;
-    wsock_WSASetLastError(exception_to_error_code());
+    imports->WSASetLastError(exception_to_error_code());
     return SOCKET_ERROR;
   }
 }
@@ -968,7 +910,7 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -979,7 +921,7 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_shutdown(ws, how);
+  return imports->shutdown(ws, how);
 }
 
 int __stdcall siege_closesocket(SOCKET ws)
@@ -990,7 +932,7 @@ int __stdcall siege_closesocket(SOCKET ws)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -1000,7 +942,7 @@ int __stdcall siege_closesocket(SOCKET ws)
 
     return zt_to_winsock_result(zt_result);
   }
-  return wsock_closesocket(ws);
+  return imports->closesocket(ws);
 }
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
@@ -1074,12 +1016,12 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
       }
       return count;
     }
-    return wsock_select(value, read, write, except, timeout);
+    return imports->select(value, read, write, except, timeout);
   }
   catch (...)
   {
     get_log() << "Exception occurred in siege_select" << std::endl;
-    wsock_WSASetLastError(exception_to_error_code());
+    imports->WSASetLastError(exception_to_error_code());
     return SOCKET_ERROR;
   }
 }
@@ -1091,7 +1033,7 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
     if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
       get_log() << "Non zero tier socket passed in" << std::endl;
-      wsock_WSASetLastError(WSAENOTSOCK);
+      imports->WSASetLastError(WSAENOTSOCK);
       return SOCKET_ERROR;
     }
 
@@ -1112,22 +1054,22 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
     return 0;
   }
 
-  return wsock___WSAFDIsSet(ws, set);
+  return imports->__WSAFDIsSet(ws, set);
 }
 
 
 hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
 {
-  load_system_wsock();
+  ensure_imports();
 
   get_log() << "siege_gethostbyaddr\n";
 
-  return wsock_gethostbyaddr(addr, len, type);
+  return imports->gethostbyaddr(addr, len, type);
 }
 
 hostent* __stdcall siege_gethostbyname(const char* name)
 {
-  load_system_wsock();
+  ensure_imports();
   if (name)
   {
     get_log() << "siege_gethostbyname: " << name << "\n";
@@ -1154,7 +1096,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
     }
     else if (name)
     {
-      auto result = wsock_gethostbyname(name);
+      auto result = imports->gethostbyname(name);
 
       if (!result)
       {
@@ -1163,7 +1105,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 
       std::array<char, 255> temp{};
 
-      if (wsock_gethostname(temp.data(), temp.size()) == 0 && std::string_view(name) == temp.data())
+      if (imports->gethostname(temp.data(), temp.size()) == 0 && std::string_view(name) == temp.data())
       {
         host_cache[name] = *result;
 
@@ -1173,7 +1115,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
           zt_addr_get_str(*get_zero_tier_network_id(), ZTS_AF_INET, ipstr, ZTS_IP_MAX_STR_LEN);
 
           static std::array<char, sizeof(in_addr)> raw_ip{};
-          auto ip_int = wsock_inet_addr(ipstr);
+          auto ip_int = imports->inet_addr(ipstr);
           std::memcpy(raw_ip.data(), &ip_int, raw_ip.size());
           host_cache[name].h_addr_list[0] = raw_ip.data();
           host_cache[name].h_addr_list[1] = nullptr;
@@ -1185,7 +1127,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
     }
   }
 
-  return wsock_gethostbyname(name);
+  return imports->gethostbyname(name);
 }
 
 auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
@@ -1197,7 +1139,7 @@ auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const cha
     ::ExitProcess(-1);
   }
 
-  return wsock_WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
+  return imports->WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
 }
 
 auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
@@ -1209,7 +1151,7 @@ auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
     ::ExitProcess(-1);
   }
 
-  return wsock_WSACancelAsyncRequest(request);
+  return imports->WSACancelAsyncRequest(request);
 }
 
 auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
@@ -1257,7 +1199,7 @@ auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, l
     ::ExitProcess(-1);
   }
 
-  return wsock_WSAAsyncSelect(socket, window, message, flags);
+  return imports->WSAAsyncSelect(socket, window, message, flags);
 }
 
 #ifdef USE_WINSOCK2
@@ -1270,7 +1212,7 @@ auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlappe
     ::ExitProcess(-1);
     // cancel get host by name task
   }
-  return wsock_WSAGetOverlappedResult(socket, overlapped, transfer, wait, flags);
+  return imports->WSAGetOverlappedResult(socket, overlapped, transfer, wait, flags);
 }
 
 auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
@@ -1311,7 +1253,7 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
     ::ExitProcess(-1);
   }
 
-  return wsock_WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
+  return imports->WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
 }
 
 auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD flags, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
@@ -1322,7 +1264,7 @@ auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count,
     ::ExitProcess(-1);
   }
 
-  return wsock_WSASend(socket, buffers, buffer_count, bytes_received, flags, overlapped, completion_handler);
+  return imports->WSASend(socket, buffers, buffer_count, bytes_received, flags, overlapped, completion_handler);
 }
 
 auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
@@ -1360,7 +1302,7 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
     ::MessageBoxW(nullptr, L"The game tried to use WSASendTo, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
-  return wsock_WSASendTo(socket, buffers, buffer_count, bytes_received, flags, to, len, overlapped, completion_handler);
+  return imports->WSASendTo(socket, buffers, buffer_count, bytes_received, flags, to, len, overlapped, completion_handler);
 }
 
 auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents)
@@ -1371,7 +1313,7 @@ auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetwo
     ::ExitProcess(-1);
   }
 
-  return wsock_WSAEventSelect(s, hEventObject, lNetworkEvents);
+  return imports->WSAEventSelect(s, hEventObject, lNetworkEvents);
 }
 
 auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents)
@@ -1381,242 +1323,151 @@ auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSA
     ::MessageBoxW(nullptr, L"The game tried to use WSAEnumNetworkEvents, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
-  return wsock_WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
+  return imports->WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
 }
 
 auto __stdcall siege_WSACreateEvent()
 {
-  load_system_wsock();
-  return wsock_WSACreateEvent();
+  ensure_imports();
+  return imports->WSACreateEvent();
 }
 
 auto __stdcall siege_WSAResetEvent(HANDLE event)
 {
-  return wsock_WSAResetEvent(event);
+  return imports->WSAResetEvent(event);
 }
 
 auto __stdcall siege_WSACloseEvent(HANDLE event)
 {
-  return wsock_WSACloseEvent(event);
+  return imports->WSACloseEvent(event);
 }
 
 auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* events, BOOL wait_all, DWORD timeout, BOOL alertable)
 {
-  return wsock_WSAWaitForMultipleEvents(event_count, events, wait_all, timeout, alertable);
+  return imports->WSAWaitForMultipleEvents(event_count, events, wait_all, timeout, alertable);
 }
 #endif
 
 auto __stdcall siege_gethostname(char* name, int namelen)
 {
-  load_system_wsock();
-  return wsock_gethostname(name, namelen);
+  ensure_imports();
+  return imports->gethostname(name, namelen);
 }
 
 auto __stdcall siege_WSAGetLastError()
 {
-  load_system_wsock();
-  return wsock_WSAGetLastError();
+  ensure_imports();
+  return imports->WSAGetLastError();
 }
 
 auto __stdcall siege_htonl(u_long value)
 {
-  load_system_wsock();
-  return wsock_htonl(value);
+  ensure_imports();
+  return imports->htonl(value);
 }
 
 auto __stdcall siege_htons(u_short value)
 {
-  load_system_wsock();
-  return wsock_htons(value);
+  ensure_imports();
+  return imports->htons(value);
 }
 
 auto __stdcall siege_ntohl(u_long value)
 {
-  load_system_wsock();
-  return wsock_ntohl(value);
+  ensure_imports();
+  return imports->ntohl(value);
 }
 
 auto __stdcall siege_ntohs(u_short value)
 {
-  load_system_wsock();
-  return wsock_ntohs(value);
+  ensure_imports();
+  return imports->ntohs(value);
 }
 
 auto __stdcall siege_inet_addr(const char* addr)
 {
-  load_system_wsock();
-  return wsock_inet_addr(addr);
+  ensure_imports();
+  return imports->inet_addr(addr);
 }
 
 auto __stdcall siege_inet_ntoa(in_addr in)
 {
-  load_system_wsock();
-  return wsock_inet_ntoa(in);
+  ensure_imports();
+  return imports->inet_ntoa(in);
 }
 
 #ifdef USE_WINSOCK2
 auto __stdcall siege_WSAStringToAddressA(LPSTR address_str, INT family, LPWSAPROTOCOL_INFOA info, LPSOCKADDR out_address, LPINT out_len)
 {
-  load_system_wsock();
-  return wsock_WSAStringToAddressA(address_str, family, info, out_address, out_len);
+  ensure_imports();
+  return imports->WSAStringToAddressA(address_str, family, info, out_address, out_len);
 }
 
 // This and freeaddrinfo needed by AMD's open GL driver for the RPC case
 auto __stdcall siege_getaddrinfo(const char* node_name, const char* service_name, const addrinfo* hints, addrinfo** results)
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_getaddrinfo " << '\n';
-  return wsock_getaddrinfo(node_name, service_name, hints, results);
+  return imports->getaddrinfo(node_name, service_name, hints, results);
 }
 
 auto __stdcall siege_freeaddrinfo(addrinfo* results)
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_freeaddrinfo " << '\n';
-  return wsock_freeaddrinfo(results);
+  return imports->freeaddrinfo(results);
 }
 
 auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::size_t buf_size)
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_inet_ntop " << '\n';
-  return wsock_inet_ntop(family, addr, buf, buf_size);
+  return imports->inet_ntop(family, addr, buf, buf_size);
 }
 
 #endif
 
 auto __stdcall siege_WSASetLastError(int error)
 {
-  load_system_wsock();
-  return wsock_WSASetLastError(error);
+  ensure_imports();
+  return imports->WSASetLastError(error);
 }
 
 auto __stdcall siege_WSASetBlockingHook(FARPROC proc)
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_WSASetBlockingHook " << '\n';
-  return wsock_WSASetBlockingHook(proc);
+  return imports->WSASetBlockingHook(proc);
 }
 
 auto __stdcall siege_WSAUnhookBlockingHook()
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_WSAUnhookBlockingHook " << '\n';
-  return wsock_WSAUnhookBlockingHook();
+  return imports->WSAUnhookBlockingHook();
 }
 
 auto __stdcall siege_WSACancelBlockingCall()
 {
-  load_system_wsock();
+  ensure_imports();
   get_log() << "siege_WSACancelBlockingCall " << '\n';
-  return wsock_WSACancelBlockingCall();
+  return imports->WSACancelBlockingCall();
 }
 }
 
-void load_system_wsock()
+void ensure_imports()
 {
-  if (wsock_module)
+  if (imports)
   {
     return;
   }
 
-  get_log() << "load_system_wsock " << '\n';
-  auto module_path = win32::module_ref::current_module().GetModuleFileName();
+  imports = load_system_wsock();
 
-  auto dll_name = fs::path(module_path).filename().wstring();
-
-  get_log() << "current module name: " << fs::path(module_path).filename().string() << '\n';
-
-  if (dll_name.contains(L"-"))
-  {
-    dll_name = dll_name.substr(0, dll_name.find(L"-"));
-  }
-
-  std::wstring temp(1024, L'\0');
-  if (auto size = ::GetSystemDirectoryW(temp.data(), temp.size()); size == 0)
+  if (!imports)
   {
     ::ExitProcess(-1);
   }
-  else
-  {
-    temp.resize(size);
-  }
-
-  auto final_path = fs::path(temp) / dll_name;
-
-  if (!final_path.has_extension())
-  {
-    final_path.replace_extension(".dll");
-  }
-
-  get_log() << "final dll path: " << final_path << '\n';
-
-  wsock_module = LoadLibraryExW(final_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-
-  if (!wsock_module)
-  {
-    return;
-  }
-
-  get_log() << "System module loaded. Getting proc addresses" << '\n';
-
-  wsock_WSAStartup = (decltype(wsock_WSAStartup))::GetProcAddress(wsock_module, "WSAStartup");
-  wsock_WSACleanup = (decltype(wsock_WSACleanup))::GetProcAddress(wsock_module, "WSACleanup");
-  wsock_socket = (decltype(wsock_socket))::GetProcAddress(wsock_module, "socket");
-  wsock_setsockopt = (decltype(wsock_setsockopt))::GetProcAddress(wsock_module, "setsockopt");
-  wsock_getsockname = (decltype(wsock_getsockname))::GetProcAddress(wsock_module, "getsockname");
-  wsock_getpeername = (decltype(wsock_getpeername))::GetProcAddress(wsock_module, "getpeername");
-  wsock_getsockopt = (decltype(wsock_getsockopt))::GetProcAddress(wsock_module, "getsockopt");
-  wsock_gethostbyaddr = (decltype(wsock_gethostbyaddr))::GetProcAddress(wsock_module, "gethostbyaddr");
-  wsock_gethostname = (decltype(wsock_gethostname))::GetProcAddress(wsock_module, "gethostname");
-  wsock_gethostbyname = (decltype(wsock_gethostbyname))::GetProcAddress(wsock_module, "gethostbyname");
-  wsock_htons = (decltype(wsock_htons))::GetProcAddress(wsock_module, "htons");
-  wsock_htonl = (decltype(wsock_htonl))::GetProcAddress(wsock_module, "htonl");
-  wsock_ntohl = (decltype(wsock_ntohl))::GetProcAddress(wsock_module, "ntohl");
-  wsock_ntohs = (decltype(wsock_ntohs))::GetProcAddress(wsock_module, "ntohs");
-  wsock_inet_addr = (decltype(wsock_inet_addr))::GetProcAddress(wsock_module, "inet_addr");
-  wsock_inet_ntoa = (decltype(wsock_inet_ntoa))::GetProcAddress(wsock_module, "inet_ntoa");
-  wsock_recv = (decltype(wsock_recv))::GetProcAddress(wsock_module, "recv");
-  wsock_recvfrom = (decltype(wsock_recvfrom))::GetProcAddress(wsock_module, "recvfrom");
-  wsock_send = (decltype(wsock_send))::GetProcAddress(wsock_module, "send");
-  wsock_sendto = (decltype(wsock_sendto))::GetProcAddress(wsock_module, "sendto");
-  wsock_ioctlsocket = (decltype(wsock_ioctlsocket))::GetProcAddress(wsock_module, "ioctlsocket");
-  wsock_bind = (decltype(wsock_connect))::GetProcAddress(wsock_module, "bind");
-  wsock_connect = (decltype(wsock_connect))::GetProcAddress(wsock_module, "connect");
-  wsock_accept = (decltype(wsock_accept))::GetProcAddress(wsock_module, "accept");
-  wsock_listen = (decltype(wsock_listen))::GetProcAddress(wsock_module, "listen");
-  wsock_shutdown = (decltype(wsock_shutdown))::GetProcAddress(wsock_module, "shutdown");
-  wsock_select = (decltype(wsock_select))::GetProcAddress(wsock_module, "select");
-  wsock_closesocket = (decltype(wsock_closesocket))::GetProcAddress(wsock_module, "closesocket");
-  wsock_WSAGetLastError = (decltype(wsock_WSAGetLastError))::GetProcAddress(wsock_module, "WSAGetLastError");
-  wsock_WSASetLastError = (decltype(wsock_WSASetLastError))::GetProcAddress(wsock_module, "WSASetLastError");
-  wsock___WSAFDIsSet = (decltype(wsock___WSAFDIsSet))::GetProcAddress(wsock_module, "__WSAFDIsSet");
-  wsock_WSAAsyncGetHostByName = (decltype(wsock_WSAAsyncGetHostByName))::GetProcAddress(wsock_module, "WSAAsyncGetHostByName");
-  wsock_WSACancelAsyncRequest = (decltype(wsock_WSACancelAsyncRequest))::GetProcAddress(wsock_module, "WSACancelAsyncRequest");
-  wsock_WSASetBlockingHook = (decltype(wsock_WSASetBlockingHook))::GetProcAddress(wsock_module, "WSASetBlockingHook");
-  wsock_WSAUnhookBlockingHook = (decltype(wsock_WSAUnhookBlockingHook))::GetProcAddress(wsock_module, "WSAUnhookBlockingHook");
-  wsock_WSACancelBlockingCall = (decltype(wsock_WSACancelBlockingCall))::GetProcAddress(wsock_module, "WSACancelBlockingCall");
-  wsock_WSAAsyncSelect = (decltype(wsock_WSAAsyncSelect))::GetProcAddress(wsock_module, "WSAAsyncSelect");
-
-#ifdef USE_WINSOCK2
-  wsock_WSAStringToAddressA = (decltype(wsock_WSAStringToAddressA))::GetProcAddress(wsock_module, "WSAStringToAddressA");
-  wsock_WSAGetOverlappedResult = (decltype(wsock_WSAGetOverlappedResult))::GetProcAddress(wsock_module, "WSAGetOverlappedResult");
-  wsock_WSACreateEvent = (decltype(wsock_WSACreateEvent))::GetProcAddress(wsock_module, "WSACreateEvent");
-  wsock_WSAResetEvent = (decltype(wsock_WSAResetEvent))::GetProcAddress(wsock_module, "WSAResetEvent");
-  wsock_WSACloseEvent = (decltype(wsock_WSACloseEvent))::GetProcAddress(wsock_module, "WSACloseEvent");
-  wsock_WSAWaitForMultipleEvents = (decltype(wsock_WSAWaitForMultipleEvents))::GetProcAddress(wsock_module, "WSAWaitForMultipleEvents");
-  wsock_WSASendTo = (decltype(wsock_WSASendTo))::GetProcAddress(wsock_module, "WSASendTo");
-  wsock_WSASend = (decltype(wsock_WSASend))::GetProcAddress(wsock_module, "WSASend");
-  wsock_WSARecvFrom = (decltype(wsock_WSARecvFrom))::GetProcAddress(wsock_module, "WSARecvFrom");
-  wsock_WSARecv = (decltype(wsock_WSARecv))::GetProcAddress(wsock_module, "WSARecv");
-  wsock_WSAEventSelect = (decltype(wsock_WSAEventSelect))::GetProcAddress(wsock_module, "WSAEventSelect");
-  wsock_WSAEnumNetworkEvents = (decltype(wsock_WSAEnumNetworkEvents))::GetProcAddress(wsock_module, "WSAEnumNetworkEvents");
-  wsock_WSASocketW = (decltype(wsock_WSASocketW))::GetProcAddress(wsock_module, "WSASocketW");
-  wsock_WSAIoctl = (decltype(wsock_WSAIoctl))::GetProcAddress(wsock_module, "WSAIoctl");
-  wsock_getaddrinfo = (decltype(wsock_getaddrinfo))::GetProcAddress(wsock_module, "getaddrinfo");
-  wsock_freeaddrinfo = (decltype(wsock_freeaddrinfo))::GetProcAddress(wsock_module, "freeaddrinfo");
-  wsock_inet_ntop = (decltype(wsock_inet_ntop))::GetProcAddress(wsock_module, "inet_ntop");
-#endif
 }
 
 int zt_to_winsock_result(int code)
@@ -1627,17 +1478,17 @@ int zt_to_winsock_result(int code)
     return 0;
   case ZTS_ERR_SOCKET: {
     get_log() << "Received ZTS_ERR_SOCKET\n";
-    wsock_WSASetLastError(zt_to_winsock_error(get_zts_errno()));
+    imports->WSASetLastError(zt_to_winsock_error(get_zts_errno()));
     return SOCKET_ERROR;
   }
   case ZTS_ERR_SERVICE: {
     get_log() << "Received ZTS_ERR_SERVICE\n";
-    wsock_WSASetLastError(WSANOTINITIALISED);
+    imports->WSASetLastError(WSANOTINITIALISED);
     return SOCKET_ERROR;
   }
   case ZTS_ERR_ARG: {
     get_log() << "Received ZTS_ERR_ARG\n";
-    wsock_WSASetLastError(WSAEINVAL);
+    imports->WSASetLastError(WSAEINVAL);
     return SOCKET_ERROR;
   }
   case ZTS_ERR_NO_RESULT: {
@@ -1646,7 +1497,7 @@ int zt_to_winsock_result(int code)
   }
   case ZTS_ERR_GENERAL: {
     get_log() << "Received ZTS_ERR_GENERAL\n";
-    wsock_WSASetLastError(WSASYSNOTREADY);
+    imports->WSASetLastError(WSASYSNOTREADY);
     return 0;
   }
   }
@@ -1713,7 +1564,7 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
 
       get_log() << "Zero Tier fallback broadcast IP is " << network_ip << '\n';
       in_addr result{};
-      result.S_un.S_addr = wsock_inet_addr(network_ip.c_str());
+      result.S_un.S_addr = imports->inet_addr(network_ip.c_str());
 
       if (!result.S_un.S_addr)
       {

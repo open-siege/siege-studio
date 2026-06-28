@@ -4,7 +4,7 @@ project(wsock-over-zero-tier)
 if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     find_package(Catch2 REQUIRED)
 
-    add_library(wsock32-on-zero-tier SHARED src/wsock32-on-zero-tier.cpp src/wsock32.def)
+    add_library(wsock32-on-zero-tier SHARED src/wsock32-client-shared.cpp src/wsock32-on-zero-tier.cpp src/wsock32.def)
     target_include_directories(wsock32-on-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
     set_target_properties(wsock32-on-zero-tier PROPERTIES         
         CXX_STANDARD 23
@@ -13,7 +13,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     )
     target_link_libraries(wsock32-on-zero-tier PRIVATE siege-win-core)
 
-    add_library(ws2_32-on-zero-tier SHARED src/wsock32-on-zero-tier.cpp src/ws2_32.def)
+    add_library(ws2_32-on-zero-tier SHARED src/wsock32-client-shared.cpp src/wsock32-on-zero-tier.cpp src/ws2_32.def)
     target_compile_definitions(ws2_32-on-zero-tier PRIVATE USE_WINSOCK2=TRUE)
     target_include_directories(ws2_32-on-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
     set_target_properties(ws2_32-on-zero-tier PROPERTIES
@@ -23,37 +23,30 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     )
     target_link_libraries(ws2_32-on-zero-tier PRIVATE siege-win-core)
 
-    add_library(rpc-shared src/wsock32-rpc.cpp)
-    set_target_properties(rpc-shared PROPERTIES
-        CXX_STANDARD 23
-        CXX_STANDARD_REQUIRED ON
-        CXX_SCAN_FOR_MODULES ON
-    )
-    target_link_libraries(rpc-shared PUBLIC ws2_32)
-
-    add_library(wsock32-rpc-client SHARED src/wsock32-rpc-client.cpp src/dll-main.cpp src/wsock32.def)
+    add_library(wsock32-rpc-client SHARED src/wsock32-rpc.cpp src/wsock32-client-shared.cpp src/wsock32-rpc-client.cpp src/dll-main.cpp src/wsock32.def)
     set_target_properties(wsock32-rpc-client PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_SCAN_FOR_MODULES ON
     )
-    target_link_libraries(wsock32-rpc-client PRIVATE rpc-shared siege-win-core siege-extension ws2_32)
+    target_link_libraries(wsock32-rpc-client PRIVATE siege-win-core siege-extension ws2_32)
 
-    add_library(ws2_32-rpc-client SHARED src/wsock32-rpc-client.cpp src/dll-main.cpp src/ws2_32.def)
+    add_library(ws2_32-rpc-client SHARED src/wsock32-rpc.cpp src/wsock32-client-shared.cpp src/wsock32-rpc-client.cpp src/dll-main.cpp src/ws2_32.def)
     set_target_properties(ws2_32-rpc-client PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_SCAN_FOR_MODULES ON
     )
-    target_link_libraries(ws2_32-rpc-client PRIVATE rpc-shared siege-win-core siege-extension ws2_32)
+    target_compile_definitions(ws2_32-rpc-client PRIVATE USE_WINSOCK2=TRUE)
+    target_link_libraries(ws2_32-rpc-client PRIVATE siege-win-core siege-extension ws2_32)
 
-    add_executable(wsock32-rpc-server WIN32 src/wsock32-rpc-server.cpp)
+    add_executable(wsock32-rpc-server WIN32 src/wsock32-rpc.cpp src/wsock32-rpc-server.cpp)
     set_target_properties(wsock32-rpc-server PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_SCAN_FOR_MODULES ON
     )
-    target_link_libraries(wsock32-rpc-server PRIVATE rpc-shared siege-win-core ws2_32)
+    target_link_libraries(wsock32-rpc-server PRIVATE siege-win-core ws2_32)
 
     add_executable(wsock32-rpc-tests src/wsock32-rpc.test.cpp)
     set_property(TARGET wsock32-rpc-tests PROPERTY CXX_STANDARD 23)
