@@ -1,17 +1,19 @@
-#ifndef WS2_RPC_HPP
-#define WS2_RPC_HPP
+module;
 
 #include <WinSock2.h>
-#include <siege/platform/win/file.hpp>
-#include <array>
+#include <Windows.h>
 
-struct general_params
+export module wsock32.rpc;
+
+import std;
+
+export struct general_params
 {
   constexpr static auto shutdown_message_id = WM_APP + 1;
   constexpr static auto close_message_id = shutdown_message_id + 1;
 };
 
-struct socket_params
+export struct socket_params
 {
   constexpr static auto message_id = general_params::close_message_id + 1;
 
@@ -21,7 +23,7 @@ struct socket_params
 };
 static_assert(std::is_trivially_copyable_v<socket_params>);
 
-struct ioctl_params
+export struct ioctl_params
 {
   constexpr static auto message_id = socket_params::message_id + 1;
 
@@ -30,7 +32,7 @@ struct ioctl_params
 };
 static_assert(std::is_trivially_copyable_v<ioctl_params>);
 
-struct sockopt_params
+export struct sockopt_params
 {
   constexpr static auto get_message_id = ioctl_params::message_id + 1;
   constexpr static auto set_message_id = get_message_id + 1;
@@ -42,7 +44,7 @@ struct sockopt_params
 };
 static_assert(std::is_trivially_copyable_v<sockopt_params>);
 
-struct bind_params
+export struct bind_params
 {
   constexpr static auto message_id = sockopt_params::set_message_id + 1;
 
@@ -51,8 +53,7 @@ struct bind_params
 };
 static_assert(std::is_trivially_copyable_v<bind_params>);
 
-
-struct sendto_params
+export struct sendto_params
 {
   constexpr static auto message_id = bind_params::message_id + 1;
 
@@ -64,7 +65,7 @@ struct sendto_params
 };
 static_assert(std::is_trivially_copyable_v<sendto_params>);
 
-struct recvfrom_params
+export struct recvfrom_params
 {
   constexpr static auto message_id = sendto_params::message_id + 1;
 
@@ -76,7 +77,7 @@ struct recvfrom_params
 };
 static_assert(std::is_trivially_copyable_v<recvfrom_params>);
 
-struct select_params
+export struct select_params
 {
   constexpr static auto message_id = recvfrom_params::message_id + 1;
 
@@ -88,8 +89,7 @@ struct select_params
 };
 static_assert(std::is_trivially_copyable_v<select_params>);
 
-
-struct isset_params
+export struct isset_params
 {
   constexpr static auto message_id = select_params::message_id + 1;
   fd_set set_to_check;
@@ -97,7 +97,7 @@ struct isset_params
 
 static_assert(std::is_trivially_copyable_v<recvfrom_params>);
 
-struct sockname_params
+export struct sockname_params
 {
   constexpr static auto sock_name_message_id = isset_params::message_id + 1;
   constexpr static auto peer_name_message_id = sock_name_message_id + 1;
@@ -107,7 +107,7 @@ struct sockname_params
 };
 static_assert(std::is_trivially_copyable_v<sockname_params>);
 
-struct hostbyname_params
+export struct hostbyname_params
 {
   constexpr static auto message_id = sockname_params::peer_name_message_id + 1;
 
@@ -124,5 +124,3 @@ struct hostbyname_params
   } result;
 };
 static_assert(std::is_trivially_copyable_v<hostbyname_params>);
-
-#endif

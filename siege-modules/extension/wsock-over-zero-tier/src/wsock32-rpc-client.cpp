@@ -1,23 +1,11 @@
-#include "wsock32-rpc.hpp"
 #include <WinSock2.h>
-#include <optional>
-#include <string>
-#include <map>
-#include <iomanip>
-#include <set>
-#include <array>
-#include <vector>
-#include <filesystem>
-#include <functional>
 
-#ifdef _DEBUG
-#include <fstream>
-#else
-#include <sstream>
-#endif
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/process.hpp>
 #include <siege/platform/shared.hpp>
+
+import std;
+import wsock32.rpc;
 
 namespace fs = std::filesystem;
 
