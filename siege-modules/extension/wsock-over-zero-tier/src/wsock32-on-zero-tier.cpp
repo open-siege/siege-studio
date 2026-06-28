@@ -4,7 +4,6 @@
 // It should be greatly simplified (as we wouldn't need dynamic wsock loading in that particular case nor fallback).
 // Then, the complex wrapping is only done at this level and not at the backend level.
 // This is also needed for future backend support such as web sockets and game networking sockets.
-
 #include <ZeroTierSockets.h>
 
 #ifdef USE_WINSOCK2
@@ -39,8 +38,6 @@ socket_handle_info& get_zero_tier_handles()
   return info;
 }
 
-void ensure_imports();
-std::ostream& get_log();
 HMODULE get_ztlib();
 std::optional<std::uint64_t> get_zero_tier_network_id();
 std::optional<std::string> get_zero_tier_peer_id_and_public_key();
@@ -68,8 +65,6 @@ std::pair<zts_sockaddr_in, zts_socklen_t> copy_address(const sockaddr* name, int
 
 SOCKET from_zts(int);
 int to_zts(SOCKET);
-
-std::optional<wsock_imports> imports{};
 
 extern "C" {
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
@@ -278,42 +273,6 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   get_log() << "Created winsock socket successfully (" << (int)result << ")" << '\n';
   return result;
 }
-
-#ifdef USE_WINSOCK2
-SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
-{
-  get_log() << "siege_WSASocketW " << '\n';
-  if (use_zero_tier())
-  {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_WSASocketW, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
-}
-
-int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
-{
-  if (use_zero_tier())
-  {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_WSAIoctl, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
-}
-
-int __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPDWORD numberOfBytesRecvd, LPDWORD flags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
-{
-  if (use_zero_tier())
-  {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_WSARecv, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSARecv(ws, buffers, bufferCount, numberOfBytesRecvd, flags, lpOverlapped, completionRoutine);
-}
-#endif
 
 int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
 {
@@ -1057,16 +1016,6 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
   return imports->__WSAFDIsSet(ws, set);
 }
 
-
-hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
-{
-  ensure_imports();
-
-  get_log() << "siege_gethostbyaddr\n";
-
-  return imports->gethostbyaddr(addr, len, type);
-}
-
 hostent* __stdcall siege_gethostbyname(const char* name)
 {
   ensure_imports();
@@ -1129,345 +1078,6 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 
   return imports->gethostbyname(name);
 }
-
-auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
-{
-  if (use_zero_tier())
-  {
-    get_log() << "siege_WSAAsyncGetHostByName.\n";
-    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncGetHostByName, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
-}
-
-auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
-{
-  if (use_zero_tier())
-  {
-    get_log() << "siege_WSACancelAsyncRequest.\n";
-    ::MessageBoxW(nullptr, L"The game tried to use WSACancelAsyncRequest, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSACancelAsyncRequest(request);
-}
-
-auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
-{
-  if (use_zero_tier())
-  {
-    bool notify_read = flags & FD_READ;
-    bool notify_write = flags & FD_WRITE;
-    bool notify_oob = flags & FD_OOB;
-
-    if (flags & FD_ACCEPT)
-    {
-      get_log() << "FD_ACCEPT not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_CONNECT)
-    {
-      get_log() << "FD_CONNECT not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_CLOSE)
-    {
-      get_log() << "FD_CLOSE not supported for siege_WSAAsyncSelect.\n";
-    }
-
-#ifdef USE_WINSOCK2
-    if (flags & FD_QOS)
-    {
-      get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_ROUTING_INTERFACE_CHANGE)
-    {
-      get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_ADDRESS_LIST_CHANGE)
-    {
-      get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
-    }
-#endif
-
-    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSAAsyncSelect(socket, window, message, flags);
-}
-
-#ifdef USE_WINSOCK2
-
-auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlapped, DWORD* transfer, BOOL wait, DWORD* flags)
-{
-  if (use_zero_tier())
-  {
-    get_log() << "siege_WSAGetOverlappedResult called. quitting.\n";
-    ::ExitProcess(-1);
-    // cancel get host by name task
-  }
-  return imports->WSAGetOverlappedResult(socket, overlapped, transfer, wait, flags);
-}
-
-auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
-{
-  if (use_zero_tier())
-  {
-    get_log() << "siege_WSARecvFrom called.\n";
-    if (overlapped || completion_handler)
-    {
-      get_log() << "siege_WSARecvFrom is overlapped.\n";
-
-      if (overlapped)
-      {
-        get_log() << "overlapped structure is available";
-      }
-      else
-      {
-        get_log() << "overlapped structure is not available";
-      }
-
-      if (completion_handler)
-      {
-        get_log() << "completion handler is available";
-      }
-      else
-      {
-        get_log() << "completion handler is not available";
-      }
-      // async version
-    }
-    else
-    {
-      get_log() << "siege_WSARecvFrom is blocking.\n";
-      // blocking version
-    }
-
-    ::MessageBoxW(nullptr, L"The game tried to use WSARecvFrom, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
-}
-
-auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD flags, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
-{
-  if (use_zero_tier())
-  {
-    ::MessageBoxW(nullptr, L"The game tried to use WSASend, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSASend(socket, buffers, buffer_count, bytes_received, flags, overlapped, completion_handler);
-}
-
-auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
-{
-  if (use_zero_tier())
-  {
-    if (overlapped || completion_handler)
-    {
-      get_log() << "siege_WSASendTo is overlapped.\n";
-
-      if (overlapped)
-      {
-        get_log() << "overlapped structure is available";
-      }
-      else
-      {
-        get_log() << "overlapped structure is not available";
-      }
-
-      if (completion_handler)
-      {
-        get_log() << "completion handler is available";
-      }
-      else
-      {
-        get_log() << "completion handler is not available";
-      }
-      // async version
-    }
-    else
-    {
-      get_log() << "siege_WSASendTo is blocking.\n";
-      // blocking version
-    }
-    ::MessageBoxW(nullptr, L"The game tried to use WSASendTo, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-  return imports->WSASendTo(socket, buffers, buffer_count, bytes_received, flags, to, len, overlapped, completion_handler);
-}
-
-auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents)
-{
-  if (use_zero_tier())
-  {
-    ::MessageBoxW(nullptr, L"The game tried to use WSAEventSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-
-  return imports->WSAEventSelect(s, hEventObject, lNetworkEvents);
-}
-
-auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents)
-{
-  if (use_zero_tier())
-  {
-    ::MessageBoxW(nullptr, L"The game tried to use WSAEnumNetworkEvents, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-  return imports->WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
-}
-
-auto __stdcall siege_WSACreateEvent()
-{
-  ensure_imports();
-  return imports->WSACreateEvent();
-}
-
-auto __stdcall siege_WSAResetEvent(HANDLE event)
-{
-  return imports->WSAResetEvent(event);
-}
-
-auto __stdcall siege_WSACloseEvent(HANDLE event)
-{
-  return imports->WSACloseEvent(event);
-}
-
-auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* events, BOOL wait_all, DWORD timeout, BOOL alertable)
-{
-  return imports->WSAWaitForMultipleEvents(event_count, events, wait_all, timeout, alertable);
-}
-#endif
-
-auto __stdcall siege_gethostname(char* name, int namelen)
-{
-  ensure_imports();
-  return imports->gethostname(name, namelen);
-}
-
-auto __stdcall siege_WSAGetLastError()
-{
-  ensure_imports();
-  return imports->WSAGetLastError();
-}
-
-auto __stdcall siege_htonl(u_long value)
-{
-  ensure_imports();
-  return imports->htonl(value);
-}
-
-auto __stdcall siege_htons(u_short value)
-{
-  ensure_imports();
-  return imports->htons(value);
-}
-
-auto __stdcall siege_ntohl(u_long value)
-{
-  ensure_imports();
-  return imports->ntohl(value);
-}
-
-auto __stdcall siege_ntohs(u_short value)
-{
-  ensure_imports();
-  return imports->ntohs(value);
-}
-
-auto __stdcall siege_inet_addr(const char* addr)
-{
-  ensure_imports();
-  return imports->inet_addr(addr);
-}
-
-auto __stdcall siege_inet_ntoa(in_addr in)
-{
-  ensure_imports();
-  return imports->inet_ntoa(in);
-}
-
-#ifdef USE_WINSOCK2
-auto __stdcall siege_WSAStringToAddressA(LPSTR address_str, INT family, LPWSAPROTOCOL_INFOA info, LPSOCKADDR out_address, LPINT out_len)
-{
-  ensure_imports();
-  return imports->WSAStringToAddressA(address_str, family, info, out_address, out_len);
-}
-
-// This and freeaddrinfo needed by AMD's open GL driver for the RPC case
-auto __stdcall siege_getaddrinfo(const char* node_name, const char* service_name, const addrinfo* hints, addrinfo** results)
-{
-  ensure_imports();
-  get_log() << "siege_getaddrinfo " << '\n';
-  return imports->getaddrinfo(node_name, service_name, hints, results);
-}
-
-auto __stdcall siege_freeaddrinfo(addrinfo* results)
-{
-  ensure_imports();
-  get_log() << "siege_freeaddrinfo " << '\n';
-  return imports->freeaddrinfo(results);
-}
-
-auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::size_t buf_size)
-{
-  ensure_imports();
-  get_log() << "siege_inet_ntop " << '\n';
-  return imports->inet_ntop(family, addr, buf, buf_size);
-}
-
-#endif
-
-auto __stdcall siege_WSASetLastError(int error)
-{
-  ensure_imports();
-  return imports->WSASetLastError(error);
-}
-
-auto __stdcall siege_WSASetBlockingHook(FARPROC proc)
-{
-  ensure_imports();
-  get_log() << "siege_WSASetBlockingHook " << '\n';
-  return imports->WSASetBlockingHook(proc);
-}
-
-auto __stdcall siege_WSAUnhookBlockingHook()
-{
-  ensure_imports();
-  get_log() << "siege_WSAUnhookBlockingHook " << '\n';
-  return imports->WSAUnhookBlockingHook();
-}
-
-auto __stdcall siege_WSACancelBlockingCall()
-{
-  ensure_imports();
-  get_log() << "siege_WSACancelBlockingCall " << '\n';
-  return imports->WSACancelBlockingCall();
-}
-}
-
-void ensure_imports()
-{
-  if (imports)
-  {
-    return;
-  }
-
-  imports = load_system_wsock();
-
-  if (!imports)
-  {
-    ::ExitProcess(-1);
-  }
 }
 
 int zt_to_winsock_result(int code)
@@ -1598,18 +1208,6 @@ std::set<std::uint32_t>& get_fallback_broadcast_addresses()
 
   return addresses;
 }
-
-std::ostream& get_log()
-{
-#ifdef _DEBUG
-  static std::ofstream file_log("networking.log", std::ios::trunc);
-#else
-  static std::stringstream file_log;
-  file_log.str("");
-#endif
-  return file_log;
-}
-
 
 HMODULE get_ztlib()
 {
