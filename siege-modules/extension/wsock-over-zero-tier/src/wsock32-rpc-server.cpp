@@ -13,6 +13,8 @@ HMODULE wsock_module = nullptr;
 decltype(::WSAStartup)* wsock_WSAStartup = nullptr;
 decltype(::WSACleanup)* wsock_WSACleanup = nullptr;
 decltype(::socket)* wsock_socket = nullptr;
+decltype(::closesocket)* wsock_closesocket = nullptr;
+decltype(::shutdown)* wsock_shutdown = nullptr;
 decltype(::setsockopt)* wsock_setsockopt = nullptr;
 decltype(::getsockopt)* wsock_getsockopt = nullptr;
 decltype(::getsockname)* wsock_getsockname = nullptr;
@@ -277,6 +279,20 @@ struct wsock_window : win32::basic_window<wsock_window>
       return result;
     }
 
+    if (message == general_params::close_message_id)
+    {
+      auto result = wsock_closesocket((SOCKET)wparam);
+      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      return result;
+    }
+
+    if (message == general_params::shutdown_message_id)
+    {
+      auto result = wsock_shutdown((SOCKET)wparam, (int)lparam);
+      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      return result;
+    }
+
     if (message == isset_params::message_id)
     {
       auto value = get_value<isset_params>(*this, lparam);
@@ -471,6 +487,8 @@ void load_local_wsock()
   wsock_WSAStartup = (decltype(wsock_WSAStartup))::GetProcAddress(wsock_module, "WSAStartup");
   wsock_WSACleanup = (decltype(wsock_WSACleanup))::GetProcAddress(wsock_module, "WSACleanup");
   wsock_socket = (decltype(wsock_socket))::GetProcAddress(wsock_module, "socket");
+  wsock_closesocket = (decltype(wsock_closesocket))::GetProcAddress(wsock_module, "closesocket");
+  wsock_shutdown = (decltype(wsock_shutdown))::GetProcAddress(wsock_module, "shutdown");
   wsock_setsockopt = (decltype(wsock_setsockopt))::GetProcAddress(wsock_module, "setsockopt");
   wsock_getsockname = (decltype(wsock_getsockname))::GetProcAddress(wsock_module, "getsockname");
   wsock_getpeername = (decltype(wsock_getpeername))::GetProcAddress(wsock_module, "getpeername");
