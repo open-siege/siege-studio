@@ -124,3 +124,4 @@ export struct hostbyname_params
   } result;
 };
 static_assert(std::is_trivially_copyable_v<hostbyname_params>);
+

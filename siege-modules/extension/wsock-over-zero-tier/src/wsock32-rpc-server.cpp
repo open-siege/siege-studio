@@ -1,4 +1,5 @@
 #include <WinSock2.h>
+#include <Ws2ipdef.h>
 
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/window_module.hpp>
@@ -19,8 +20,6 @@ decltype(::setsockopt)* wsock_setsockopt = nullptr;
 decltype(::getsockopt)* wsock_getsockopt = nullptr;
 decltype(::getsockname)* wsock_getsockname = nullptr;
 decltype(::getpeername)* wsock_getpeername = nullptr;
-decltype(::gethostbyaddr)* wsock_gethostbyaddr = nullptr;
-decltype(::gethostname)* wsock_gethostname = nullptr;
 decltype(::gethostbyname)* wsock_gethostbyname = nullptr;
 decltype(::recvfrom)* wsock_recvfrom = nullptr;
 decltype(::sendto)* wsock_sendto = nullptr;
@@ -263,6 +262,58 @@ struct wsock_window : win32::basic_window<wsock_window>
       return result;
     }
 
+    if (message == hostbyname_params::message_id)
+    {
+      auto value = get_value<hostbyname_params>(*this, lparam);
+
+      if (!value)
+      {
+        return value.error();
+      }
+
+      auto& params = *value.value();
+
+      params.host_name.back() = '\0';
+
+      auto result = wsock_gethostbyname(params.host_name.data());
+      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+
+      if (result && result->h_name)
+      {
+        params.has_result = true;
+        auto len = std::min(params.result.host_name.size(), std::strlen(result->h_name));
+        std::memcpy(params.result.host_name.data(), result->h_name, len);
+
+        if (result->h_addr_list)
+        {
+          params.result.address_type = result->h_addrtype;
+          params.result.address_length = result->h_length;
+
+          for (auto i = 0; i < result->h_length; ++i)
+          {
+            if (!result->h_addr_list[i])
+            {
+              continue;
+            }
+
+            if (result->h_addrtype == AF_INET)
+            {
+              std::memcpy(params.result.addresses[i].data(), result->h_addr_list[i], sizeof(in_addr));
+            }
+            else if (result->h_addrtype == AF_INET6)
+            {
+              std::memcpy(params.result.addresses[i].data(), result->h_addr_list[i], sizeof(IN6_ADDR));
+            }
+          }
+        }
+
+        return 1;
+      }
+      params.has_result = false;
+      return 0;
+    }
+
+
     if (message == select_params::message_id)
     {
       auto value = get_value<select_params>(*this, lparam);
@@ -493,8 +544,6 @@ void load_local_wsock()
   wsock_getsockname = (decltype(wsock_getsockname))::GetProcAddress(wsock_module, "getsockname");
   wsock_getpeername = (decltype(wsock_getpeername))::GetProcAddress(wsock_module, "getpeername");
   wsock_getsockopt = (decltype(wsock_getsockopt))::GetProcAddress(wsock_module, "getsockopt");
-  wsock_gethostbyaddr = (decltype(wsock_gethostbyaddr))::GetProcAddress(wsock_module, "gethostbyaddr");
-  wsock_gethostname = (decltype(wsock_gethostname))::GetProcAddress(wsock_module, "gethostname");
   wsock_gethostbyname = (decltype(wsock_gethostbyname))::GetProcAddress(wsock_module, "gethostbyname");
   wsock_recvfrom = (decltype(wsock_recvfrom))::GetProcAddress(wsock_module, "recvfrom");
   wsock_sendto = (decltype(wsock_sendto))::GetProcAddress(wsock_module, "sendto");

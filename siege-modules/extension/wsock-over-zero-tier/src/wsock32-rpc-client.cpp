@@ -744,8 +744,52 @@ hostent* __stdcall siege_gethostbyname(const char* name)
   if (use_zero_tier())
   {
     get_log() << "siege_gethostbyname.\n";
-    ::MessageBoxW(nullptr, L"The game tried to use siege_gethostbyname, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+
+    thread_local hostent result{};
+    thread_local hostbyname_params::hostinfo storage{};
+    thread_local std::vector<char*> addresses;
+
+    auto has_result = send_message_to_server<hostbyname_params, hostbyname_params::message_id>(INVALID_SOCKET, [=](void* raw) {
+      auto* params = new (raw) hostbyname_params{};
+
+      if (name)
+      {
+        auto size = std::min(params->host_name.size(), std::strlen(name));
+        std::memcpy(params->host_name.data(), name, size);
+      }
+      return params; }, [=](hostbyname_params* params) 
+      {
+          if (!params->has_result)
+          {
+            return;
+          }
+
+          storage = params->result;
+
+          storage.host_name.back() = '\0';
+
+          result.h_name = storage.host_name.data();
+          result.h_aliases = nullptr;
+          result.h_addrtype = storage.address_type;
+          result.h_length = storage.address_length;
+          addresses.reserve(storage.address_length);
+
+          for (auto i = 0; i < storage.address_length; i++) 
+          { 
+              addresses.emplace_back(storage.addresses[i].data()); 
+          }
+
+          result.h_addr_list = addresses.data(); 
+     }
+    );
+
+    if (!has_result)
+    {
+      imports->WSASetLastError(WSAHOST_NOT_FOUND);
+      return nullptr;
+    }
+
+    return &result;
   }
 
   return imports->gethostbyname(name);

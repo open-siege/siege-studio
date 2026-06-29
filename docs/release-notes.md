@@ -1,5 +1,6 @@
 # Siege Studio + Siege Launcher 26.27 Development Release
 * Fixed SiN launching with Zero Tier enabled on AMD GPUs.
+* Host name look-up implemented for games using WinSock2, which enables more games to work with the Zero Tier wrapper.
 
 # Siege Studio + Siege Launcher 26.23 Development Release
 * Various fixes and improvements for Medal of Honor - Allied Assault and it's expansions.
