@@ -2814,6 +2814,7 @@ namespace siege::views
         return temp;
       };
 
+
       std::wstring current_path = get_env(L"Path");
 
       std::array<fs::path, 3> search_paths{ {
@@ -2929,7 +2930,10 @@ namespace siege::views
 
       ::SetEnvironmentVariableW(L"Path", current_path.c_str());
 
-      get_extension(state).change_working_directory(get_exe_path(state));
+      if (has_extension_module(state))
+      {
+        get_extension(state).change_working_directory(get_exe_path(state));
+      }
 
       return std::shared_ptr<void>(nullptr, [path = fs::current_path()](...) { ::SetDllDirectoryW(nullptr); fs::current_path(path); });
     };

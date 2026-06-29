@@ -270,11 +270,11 @@ namespace siege::views
             auto context = bound_actions[item->lParam].context;
             auto action_index = bound_actions[item->lParam].action_index;
 
-           
+
             auto [caps, binding] = get_full_info_for_binding(state, context, virtual_key, action_index);
-            
+
             if (extension.is_input_mapping_valid({ .context = context,
-                                                    .button_count = context == hardware_context::keypad ? 64u : 256u },
+                                                   .button_count = context == hardware_context::keypad ? 64u : 256u },
                   binding))
             {
               action_bindings.emplace_back(binding);
@@ -388,7 +388,7 @@ namespace siege::views
             {
               continue;
             }
-            
+
             for (auto& bound_action : controller_actions)
             {
               auto preference = actions[bound_action.action_index].type == actions[bound_action.action_index].analog ? controller_info::prefer_axis : controller_info::prefer_button;
