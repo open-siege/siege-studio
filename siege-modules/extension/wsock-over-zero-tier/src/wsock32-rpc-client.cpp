@@ -447,7 +447,7 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
   return imports->recv(ws, buf, len, flags);
 }
 
-int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen)
+int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
   if (use_zero_tier())
   {
@@ -577,7 +577,7 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
   return imports->send(ws, buf, len, flags);
 }
 
-int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen)
+int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
   if (use_zero_tier())
   {
