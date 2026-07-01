@@ -1,9 +1,12 @@
-// TODO the time has well and truly come for us to separate things out.
-// We should separate the wsock wrapper over zero tier into it's own backend dll
-// with the most minimal API set required.
-// It should be greatly simplified (as we wouldn't need dynamic wsock loading in that particular case nor fallback).
-// Then, the complex wrapping is only done at this level and not at the backend level.
-// This is also needed for future backend support such as web sockets and game networking sockets.
+// TODO Separate the zero tier wrapper part into its own backend dll.
+// The API used will be the same as future wrappers.
+// The main properties of a backend DLL:
+// * Implements the minimal required API set and not everything possible - though still in terms of ws2_32.
+// * Sockets are created non-blocking and broadcast capable by default. 
+//      * The client layer should deal with blocking as it is a special case.
+// * WSAStartup handles all needed start-up with the help of environment variables.
+// * No passthrough to system ws2_32 - this should be handled by the client layer fully.
+
 #include <ZeroTierSockets.h>
 
 #ifdef USE_WINSOCK2
