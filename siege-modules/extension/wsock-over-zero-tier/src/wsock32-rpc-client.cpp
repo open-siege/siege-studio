@@ -437,16 +437,6 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
   return result;
 }
 
-int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
-{
-  if (use_zero_tier())
-  {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_recv, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
-  }
-  return imports->recv(ws, buf, len, flags);
-}
-
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
   if (use_zero_tier())
@@ -545,6 +535,8 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
   get_log() << "siege_listen\n";
   if (use_zero_tier())
   {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_listen, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
   }
   return imports->listen(ws, backlog);
 }
@@ -554,6 +546,8 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
   get_log() << "siege_accept\n";
   if (use_zero_tier())
   {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_accept, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
   }
 
   return imports->accept(ws, name, namelen);
@@ -565,16 +559,10 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
   if (use_zero_tier())
   {
+    ::MessageBoxW(nullptr, L"The game tried to use siege_connect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
+    ::ExitProcess(-1);
   }
   return imports->connect(ws, name, namelen);
-}
-
-int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags)
-{
-  if (use_zero_tier())
-  {
-  }
-  return imports->send(ws, buf, len, flags);
 }
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept

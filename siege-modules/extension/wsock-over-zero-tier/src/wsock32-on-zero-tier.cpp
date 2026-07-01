@@ -274,35 +274,6 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   return result;
 }
 
-int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags)
-{
-  try
-  {
-    if (use_zero_tier())
-    {
-      if (!get_zero_tier_handles().contains(to_zts(ws)))
-      {
-        get_log() << "Non zero tier socket passed in" << std::endl;
-        imports->WSASetLastError(WSAENOTSOCK);
-        return SOCKET_ERROR;
-      }
-
-      static auto* zt_recv = (std::add_pointer_t<decltype(zts_bsd_recv)>)::GetProcAddress(get_ztlib(), "zts_bsd_recv");
-
-      auto zt_result = (int)zt_recv(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
-
-      return zt_to_winsock_result(zt_result);
-    }
-    return imports->recv(ws, buf, len, flags);
-  }
-  catch (...)
-  {
-    get_log() << "Exception occurred in siege_recv" << std::endl;
-    imports->WSASetLastError(exception_to_error_code());
-    return SOCKET_ERROR;
-  }
-}
-
 static_assert(SO_DEBUG == ZTS_SO_DEBUG);
 static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
 static_assert(SO_REUSEADDR == ZTS_SO_REUSEADDR);
@@ -448,65 +419,65 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
-  try
+  if (use_zero_tier())
   {
-    if (use_zero_tier())
+    if (!get_zero_tier_handles().contains(to_zts(ws)))
     {
-      if (!get_zero_tier_handles().contains(to_zts(ws)))
-      {
-        get_log() << "Non zero tier socket passed in" << std::endl;
-        imports->WSASetLastError(WSAENOTSOCK);
-        return SOCKET_ERROR;
-      }
+      get_log() << "Non zero tier socket passed in" << std::endl;
+      imports->WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
 
-      static auto* zt_recvfrom = (std::add_pointer_t<decltype(zts_bsd_recvfrom)>)::GetProcAddress(get_ztlib(), "zts_bsd_recvfrom");
-      static auto* zt_addr_get_str = (std::add_pointer_t<decltype(zts_addr_get_str)>)::GetProcAddress(get_ztlib(), "zts_addr_get_str");
-      static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
+    static auto* zt_recvfrom = (std::add_pointer_t<decltype(zts_bsd_recvfrom)>)::GetProcAddress(get_ztlib(), "zts_bsd_recvfrom");
+    static auto* zt_addr_get_str = (std::add_pointer_t<decltype(zts_addr_get_str)>)::GetProcAddress(get_ztlib(), "zts_addr_get_str");
+    static auto* zt_select = (std::add_pointer_t<decltype(zts_bsd_select)>)::GetProcAddress(get_ztlib(), "zts_bsd_select");
 
-      zts_sockaddr_in zt_addr{
-        .sin_len = sizeof(zts_sockaddr_in)
-      };
+    zts_sockaddr_in zt_addr{
+      .sin_len = sizeof(zts_sockaddr_in)
+    };
 
-      zts_socklen_t zt_size = sizeof(zt_addr);
+    zts_socklen_t zt_size = sizeof(zt_addr);
 
-      auto zt_result = (int)zt_recvfrom(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, &zt_size);
+    int zt_result = 0;
+    
+    if (from)
+    {
+      zt_result = (int)zt_recvfrom(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&zt_addr, &zt_size);
+    }
+    else
+    {
+      zt_result = (int)zt_recvfrom(to_zts(ws), buf, len, to_zt_msg_flags(flags), nullptr, nullptr);
+    }
+  
+    if (zt_result == ZTS_ERR_SOCKET || zt_result == ZTS_ERR_SERVICE || zt_result == ZTS_ERR_ARG)
+    {
+      get_log() << "zts_bsd_recvfrom had an error\n";
 
-      if (zt_result == ZTS_ERR_SOCKET || zt_result == ZTS_ERR_SERVICE || zt_result == ZTS_ERR_ARG)
-      {
-        get_log() << "zts_bsd_recvfrom had an error\n";
+      return zt_to_winsock_result(zt_result);
+    }
 
-        return zt_to_winsock_result(zt_result);
-      }
-
-      if (zt_addr.sin_addr.S_addr)
-      {
-        get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
-      }
-
-
-      get_log() << "zts_bsd_recvfrom successful\n";
-
-      copy_address(zt_addr, from, fromLen);
-
-      return (int)zt_result;
+    if (zt_addr.sin_addr.S_addr)
+    {
+      get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
     }
 
 
-    auto result = imports->recvfrom(ws, buf, len, flags, from, fromLen);
+    get_log() << "zts_bsd_recvfrom successful\n";
 
-    if (result < 0)
-    {
-      get_log() << "recvfrom WSAGetLastError " << imports->WSAGetLastError() << '\n';
-    }
+    copy_address(zt_addr, from, fromLen);
 
-    return result;
+    return (int)zt_result;
   }
-  catch (...)
+
+
+  auto result = imports->recvfrom(ws, buf, len, flags, from, fromLen);
+
+  if (result < 0)
   {
-    get_log() << "Exception occurred in siege_recvfrom" << std::endl;
-    imports->WSASetLastError(exception_to_error_code());
-    return SOCKET_ERROR;
+    get_log() << "recvfrom WSAGetLastError " << imports->WSAGetLastError() << '\n';
   }
+
+  return result;
 }
 
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
@@ -749,36 +720,6 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
   return result;
 }
 
-int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcept
-{
-  try
-  {
-    if (use_zero_tier())
-    {
-      if (!get_zero_tier_handles().contains(to_zts(ws)))
-      {
-        get_log() << "Non zero tier socket passed in" << std::endl;
-        imports->WSASetLastError(WSAENOTSOCK);
-        return SOCKET_ERROR;
-      }
-
-      get_log() << "zts_bsd_send\n";
-      static auto* zt_send = (std::add_pointer_t<decltype(zts_bsd_send)>)::GetProcAddress(get_ztlib(), "zts_bsd_send");
-
-      auto zt_result = zt_send(to_zts(ws), buf, (std::size_t)len, to_zt_msg_flags(flags));
-
-      return zt_to_winsock_result(zt_result);
-    }
-    return imports->send(ws, buf, len, flags);
-  }
-  catch (...)
-  {
-    get_log() << "Exception occurred in siege_send" << std::endl;
-    imports->WSASetLastError(exception_to_error_code());
-    return SOCKET_ERROR;
-  }
-}
-
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
   try
@@ -841,7 +782,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
         return zt_to_winsock_result(zt_result);
       }
 
-      get_log() << "Somehow doing a bad send to\n";
+      get_log() << "Doing a sendto of a supposedly already bound socket\n";
       auto zt_result = zt_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), nullptr, 0);
 
       return zt_to_winsock_result(zt_result);

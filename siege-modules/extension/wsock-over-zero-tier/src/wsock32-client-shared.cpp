@@ -292,6 +292,28 @@ auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, l
   return imports->WSAAsyncSelect(socket, window, message, flags);
 }
 
+
+int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags) noexcept
+{
+  if (use_zero_tier())
+  {
+    return siege_recvfrom(ws, buf, len, flags, nullptr, nullptr);
+  }
+
+  return imports->recv(ws, buf, len, flags);
+}
+
+
+int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcept
+{
+  if (use_zero_tier())
+  {
+    return siege_sendto(ws, buf, len, flags, nullptr, 0);
+  }
+
+  return imports->send(ws, buf, len, flags);
+}
+
 #ifdef USE_WINSOCK2
 
 SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
@@ -505,7 +527,7 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
   return imports->WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, to, len, overlapped, completion_handler);
 }
 
-auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
+auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler) noexcept
 {
   if (use_zero_tier())
   {
@@ -515,7 +537,7 @@ auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count,
   return imports->WSASend(socket, buffers, buffer_count, bytes_sent, flags, overlapped, completion_handler);
 }
 
-auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents)
+auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents) noexcept
 {
   if (use_zero_tier())
   {
@@ -526,7 +548,7 @@ auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetwo
   return imports->WSAEventSelect(s, hEventObject, lNetworkEvents);
 }
 
-auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents)
+auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents) noexcept
 {
   if (use_zero_tier())
   {
@@ -536,72 +558,72 @@ auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSA
   return imports->WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
 }
 
-auto __stdcall siege_WSACreateEvent()
+auto __stdcall siege_WSACreateEvent() noexcept
 {
   ensure_imports();
   return imports->WSACreateEvent();
 }
 
-auto __stdcall siege_WSAResetEvent(HANDLE event)
+auto __stdcall siege_WSAResetEvent(HANDLE event) noexcept
 {
   return imports->WSAResetEvent(event);
 }
 
-auto __stdcall siege_WSACloseEvent(HANDLE event)
+auto __stdcall siege_WSACloseEvent(HANDLE event) noexcept
 {
   return imports->WSACloseEvent(event);
 }
 
-auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* events, BOOL wait_all, DWORD timeout, BOOL alertable)
+auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* events, BOOL wait_all, DWORD timeout, BOOL alertable) noexcept
 {
   return imports->WSAWaitForMultipleEvents(event_count, events, wait_all, timeout, alertable);
 }
 #endif
 
 
-auto __stdcall siege_gethostname(char* name, int namelen)
+auto __stdcall siege_gethostname(char* name, int namelen) noexcept
 {
   ensure_imports();
   return imports->gethostname(name, namelen);
 }
 
-auto __stdcall siege_WSAGetLastError()
+auto __stdcall siege_WSAGetLastError() noexcept
 {
   ensure_imports();
   return imports->WSAGetLastError();
 }
 
-auto __stdcall siege_htonl(u_long value)
+auto __stdcall siege_htonl(u_long value) noexcept
 {
   ensure_imports();
   return imports->htonl(value);
 }
 
-auto __stdcall siege_htons(u_short value)
+auto __stdcall siege_htons(u_short value) noexcept
 {
   ensure_imports();
   return imports->htons(value);
 }
 
-auto __stdcall siege_ntohl(u_long value)
+auto __stdcall siege_ntohl(u_long value) noexcept
 {
   ensure_imports();
   return imports->ntohl(value);
 }
 
-auto __stdcall siege_ntohs(u_short value)
+auto __stdcall siege_ntohs(u_short value) noexcept
 {
   ensure_imports();
   return imports->ntohs(value);
 }
 
-auto __stdcall siege_inet_addr(const char* addr)
+auto __stdcall siege_inet_addr(const char* addr) noexcept
 {
   ensure_imports();
   return imports->inet_addr(addr);
 }
 
-auto __stdcall siege_inet_ntoa(in_addr in)
+auto __stdcall siege_inet_ntoa(in_addr in) noexcept
 {
   ensure_imports();
   return imports->inet_ntoa(in);
