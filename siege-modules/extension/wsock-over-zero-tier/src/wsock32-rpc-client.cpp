@@ -163,7 +163,7 @@ extern "C" {
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
   ensure_imports();
-  get_log("rpc-client.log") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version) << '\n';
+  get_log("rpc-client") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
   auto result = imports->WSAStartup(version, data);
 
   if (auto network_id = get_zero_tier_network_id(); network_id)
@@ -176,19 +176,19 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     // preallocate some memory
     try
     {
-      get_log() << "Preallocating shared memory\n";
+      get_log() << "Preallocating shared memory";
       auto temp1 = get_global_memory(1024);
       auto temp2 = get_global_memory(1024);
     }
     catch (...)
     {
-      get_log() << "Could not preallocate memory\n";
+      get_log() << "Could not preallocate memory";
       return WSASYSNOTREADY;
     }
 
     HWND server_window = nullptr;
 
-    get_log() << "Finding existing server window\n";
+    get_log() << "Finding existing server window";
     for (auto i = 0; i < 3; ++i)
     {
       server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
@@ -202,7 +202,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       ::Sleep(50);
     }
 
-    get_log() << "No server found. Launching new server\n";
+    get_log() << "No server found. Launching new server";
 
     auto exe_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / L"wsock32-rpc-server.exe";
     auto process_info = win32::CreateProcessW({
@@ -211,7 +211,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
     if (!process_info)
     {
-      get_log() << "Could not launch server\n";
+      get_log() << "Could not launch server";
       return WSASYSNOTREADY;
     }
 
@@ -237,7 +237,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
     if (!server_window)
     {
-      get_log() << "Could not find server window\n";
+      get_log() << "Could not find server window";
       cleanup.reset();
       return WSASYSNOTREADY;
     }
@@ -270,7 +270,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 int __stdcall siege_WSACleanup()
 {
   ensure_imports();
-  get_log() << "siege_WSACleanup" << '\n';
+  get_log() << "siege_WSACleanup";
 
   if (use_zero_tier())
   {
@@ -288,7 +288,7 @@ int __stdcall siege_WSACleanup()
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
   ensure_imports();
-  get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId() << '\n';
+  get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
   if (use_zero_tier())
   {
@@ -302,14 +302,14 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
     if (!result)
     {
-      get_log() << "Did not receive a successful result\n";
+      get_log() << "Did not receive a successful result";
       imports->WSASetLastError(WSAESOCKTNOSUPPORT);
       return INVALID_SOCKET;
     }
 
     if ((SOCKET)new_socket == INVALID_SOCKET)
     {
-      get_log() << "Received invalid socket\n";
+      get_log() << "Received invalid socket";
       int last_error = WSAESOCKTNOSUPPORT;
       if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
       {
@@ -320,19 +320,19 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
     }
 
     imports->WSASetLastError(0);
-    get_log() << "Returning new socket " << (std::size_t)new_socket << '\n';
+    get_log() << "Returning new socket " << (std::size_t)new_socket;
     return (SOCKET)new_socket;
   }
 
 
   auto result = imports->socket(af, type, protocol);
-  get_log() << "Created winsock socket successfully (" << (int)result << ")" << '\n';
+  get_log() << "Created winsock socket successfully (" << (int)result << ")";
   return result;
 }
 
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
-  get_log() << "siege_setsockopt " << '\n';
+  get_log() << "siege_setsockopt ";
   if (use_zero_tier())
   {
     return send_message_to_server<sockopt_params, sockopt_params::set_message_id>(ws, [=](void* raw) {
@@ -354,7 +354,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
-  get_log() << "siege_getsockopt " << '\n';
+  get_log() << "siege_getsockopt ";
   if (use_zero_tier())
   {
     return send_message_to_server<sockopt_params, sockopt_params::get_message_id>(ws, [=](void* raw) {
@@ -379,7 +379,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 
   if (result != 0)
   {
-    get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError() << '\n';
+    get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError();
   }
 
   return result;
@@ -388,7 +388,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
-  get_log() << "siege_bind " << '\n';
+  get_log() << "siege_bind ";
 
   if (use_zero_tier())
   {
@@ -406,14 +406,14 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
   }
   auto result = imports->bind(ws, addr, namelen);
 
-  get_log() << "Bind call has error " << imports->WSAGetLastError() << "\n";
+  get_log() << "Bind call has error " << imports->WSAGetLastError() << "";
 
   return result;
 }
 
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd) << '\n';
+  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
 
   if (use_zero_tier())
   {
@@ -432,7 +432,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 
   auto result = imports->ioctlsocket(ws, cmd, argp);
 
-  get_log() << "siege_ioctlsocket finished" << '\n';
+  get_log() << "siege_ioctlsocket finished";
 
   return result;
 }
@@ -480,7 +480,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
-  get_log() << "siege_getsockname" << '\n';
+  get_log() << "siege_getsockname";
   if (use_zero_tier())
   {
     return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
@@ -506,7 +506,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
-  get_log() << "siege_getpeername" << '\n';
+  get_log() << "siege_getpeername";
   if (use_zero_tier())
   {
     return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
@@ -532,7 +532,7 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 
 int __stdcall siege_listen(SOCKET ws, int backlog)
 {
-  get_log() << "siege_listen\n";
+  get_log() << "siege_listen";
   if (use_zero_tier())
   {
     ::MessageBoxW(nullptr, L"The game tried to use siege_listen, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
@@ -543,7 +543,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
 
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
-  get_log() << "siege_accept\n";
+  get_log() << "siege_accept";
   if (use_zero_tier())
   {
     ::MessageBoxW(nullptr, L"The game tried to use siege_accept, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
@@ -555,7 +555,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
-  get_log() << "siege_connect" << '\n';
+  get_log() << "siege_connect";
 
   if (use_zero_tier())
   {
@@ -596,7 +596,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 
 int __stdcall siege_shutdown(SOCKET ws, int how)
 {
-  get_log() << "siege_shutdown\n";
+  get_log() << "siege_shutdown";
   if (use_zero_tier())
   {
     DWORD_PTR return_value{};
@@ -626,7 +626,7 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
 
 int __stdcall siege_closesocket(SOCKET ws)
 {
-  get_log() << "siege_closesocket\n";
+  get_log() << "siege_closesocket";
   if (use_zero_tier())
   {
     DWORD_PTR return_value{};
@@ -731,7 +731,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 
   if (use_zero_tier())
   {
-    get_log() << "siege_gethostbyname.\n";
+    get_log() << "siege_gethostbyname.";
 
     thread_local hostent result{};
     thread_local hostbyname_params::hostinfo storage{};
@@ -789,7 +789,7 @@ std::optional<std::uint64_t> get_zero_tier_network_id()
   static std::optional<std::uint64_t> result = []() -> std::optional<std::uint64_t> {
     try
     {
-      get_log() << "get_zero_tier_network_id\n";
+      get_log() << "get_zero_tier_network_id";
 
 
       if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
@@ -797,11 +797,11 @@ std::optional<std::uint64_t> get_zero_tier_network_id()
         std::string network_id(env_size - 1, '\0');
         ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", network_id.data(), network_id.size() + 1);
 
-        get_log() << "Zero Tier Network ID is " << network_id << '\n';
+        get_log() << "Zero Tier Network ID is " << network_id;
         return std::strtoull(network_id.data(), 0, 16);
       }
 
-      get_log() << "No zero tier network ID\n";
+      get_log() << "No zero tier network ID";
       return std::nullopt;
     }
     catch (...)

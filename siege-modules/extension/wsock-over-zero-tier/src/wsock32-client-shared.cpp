@@ -197,15 +197,35 @@ export void ensure_imports()
   }
 }
 
-export std::ostream& get_log(std::filesystem::path log_path = "networking.log")
+export std::ostream& get_log(std::string_view log_prefix = "networking")
 {
-#ifdef _DEBUG
-  static std::ofstream file_log(log_path, std::ios::trunc);
-#else
-  static std::stringstream file_log;
-  file_log.str("");
-#endif
-  return file_log;
+  static const std::string stored_log_prefix = std::string{ log_prefix } + ":";
+
+  struct debug_string_buf : public std::stringbuf
+  {
+  protected:
+    int sync() override
+    {
+      sputc('\0');
+      
+      ::OutputDebugStringA(view().data());
+
+      str("");
+
+      return 0;
+    }
+  };
+
+  static debug_string_buf buffer{};
+  static std::ostream debug_log{ &buffer };
+
+  if (!buffer.view().empty() && buffer.view().back() != '\n')
+  {
+    buffer.sputc('\n');
+  }
+
+  debug_log << stored_log_prefix;
+  return debug_log;
 }
 
 extern "C" {

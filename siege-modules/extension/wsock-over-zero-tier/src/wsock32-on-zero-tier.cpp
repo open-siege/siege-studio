@@ -73,7 +73,7 @@ extern "C" {
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
   ensure_imports();
-  get_log() << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version) << '\n';
+  get_log() << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
   auto result = imports->WSAStartup(version, data);
 
   if (auto network_id = get_zero_tier_network_id(); network_id && get_ztlib())
@@ -105,7 +105,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
         }
         else
         {
-          get_log() << "Could not init from memory with code" << get_zts_errno() << '\n';
+          get_log() << "Could not init from memory with code" << get_zts_errno();
         }
       }
       else
@@ -132,7 +132,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
         {
           auto id = node_get_id();
 
-          get_log() << "Node is online with ID: " << std::to_string(id) << '\n';
+          get_log() << "Node is online with ID: " << std::to_string(id);
 
           is_online = true;
           break;
@@ -188,7 +188,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 int __stdcall siege_WSACleanup()
 {
   ensure_imports();
-  get_log() << "siege_WSACleanup" << '\n';
+  get_log() << "siege_WSACleanup";
 
   if (use_zero_tier())
   {
@@ -220,7 +220,7 @@ static_assert(AF_INET == ZTS_AF_INET);
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
   ensure_imports();
-  get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId() << '\n';
+  get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
   if (use_zero_tier())
   {
@@ -237,12 +237,12 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
             || protocol == ZTS_IPPROTO_UDP
             || protocol == ZTS_IPPROTO_RAW))
       {
-        get_log() << "Unsupported protocol for zero tier: " << protocol << '\n';
+        get_log() << "Unsupported protocol for zero tier: " << protocol;
       }
 
       if (socket == ZTS_ERR_SOCKET || socket == ZTS_ERR_SERVICE || socket == ZTS_ERR_ARG)
       {
-        get_log() << "Could not create zero tier socket with error code: " << get_zts_errno() << '\n';
+        get_log() << "Could not create zero tier socket with error code: " << get_zts_errno();
 
         if (socket == ZTS_ERR_ARG)
         {
@@ -256,7 +256,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
         return INVALID_SOCKET;
       }
 
-      get_log() << "Created zero tier socket successfully (" << socket << ")" << '\n';
+      get_log() << "Created zero tier socket successfully (" << socket << ")";
       get_zero_tier_handles().created_handles.emplace(socket);
 
 
@@ -273,7 +273,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 
 
   auto result = imports->socket(af, type, protocol);
-  get_log() << "Created winsock socket successfully (" << (int)result << ")" << '\n';
+  get_log() << "Created winsock socket successfully (" << (int)result << ")";
   return result;
 }
 
@@ -294,7 +294,7 @@ static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
 static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
-  get_log() << "siege_setsockopt: " << ws << " " << optname << '\n';
+  get_log() << "siege_setsockopt: " << ws << " " << optname;
   if (use_zero_tier())
   {
     if (!get_zero_tier_handles().contains(to_zts(ws)))
@@ -304,11 +304,11 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
       return SOCKET_ERROR;
     }
 
-    get_log() << "zts_bsd_setsockopt, socket: " << to_zts(ws) << " level: " << level_to_string(level) << " optname: " << option_to_string(optname) << '\n';
+    get_log() << "zts_bsd_setsockopt, socket: " << to_zts(ws) << " level: " << level_to_string(level) << " optname: " << option_to_string(optname);
 
     if (level != SOL_SOCKET)
     {
-      get_log() << "Potentially unsupported socket level " << level << "\n";
+      get_log() << "Potentially unsupported socket level " << level;
     }
 
     BOOL some_flag = -1;
@@ -326,7 +326,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
     }
     else
     {
-      get_log() << "Setting a regular socket setting " << optname << "\n";
+      get_log() << "Setting a regular socket setting " << optname;
     }
 
     static auto* zt_setsockopt = (std::add_pointer_t<decltype(zts_bsd_setsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_setsockopt");
@@ -354,7 +354,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 
   if (result != 0)
   {
-    get_log() << "setsockopt WSAGetLastError " << imports->WSAGetLastError() << '\n';
+    get_log() << "setsockopt WSAGetLastError " << imports->WSAGetLastError();
   }
 
   return result;
@@ -362,7 +362,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
-  get_log() << "siege_getsockopt" << to_zts(ws) << " " << optname << '\n';
+  get_log() << "siege_getsockopt" << to_zts(ws) << " " << optname;
   if (use_zero_tier())
   {
     if (!get_zero_tier_handles().contains(to_zts(ws)))
@@ -372,11 +372,11 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
       return SOCKET_ERROR;
     }
 
-    get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname << '\n';
+    get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname;
 
     if (level != SOL_SOCKET)
     {
-      get_log() << "Potentially unsupported socket level " << level << "\n";
+      get_log() << "Potentially unsupported socket level " << level;
     }
 
     BOOL some_flag = -1;
@@ -396,7 +396,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
     }
     else
     {
-      get_log() << "Getting a regular socket setting " << optname << "\n";
+      get_log() << "Getting a regular socket setting " << optname;
     }
 
     static auto* zt_getsockopt = (std::add_pointer_t<decltype(zts_bsd_getsockopt)>)::GetProcAddress(get_ztlib(), "zts_bsd_getsockopt");
@@ -414,7 +414,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 
   if (result != 0)
   {
-    get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError() << '\n';
+    get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError();
   }
 
   return result;
@@ -477,7 +477,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
   if (result < 0)
   {
-    get_log() << "recvfrom WSAGetLastError " << imports->WSAGetLastError() << '\n';
+    get_log() << "recvfrom WSAGetLastError " << imports->WSAGetLastError();
   }
 
   return result;
@@ -564,7 +564,7 @@ static_assert(IOC_IN == ZTS_IOC_IN);
 static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd) << '\n';
+  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
   if (use_zero_tier())
   {
     if (!get_zero_tier_handles().contains(to_zts(ws)))
@@ -588,7 +588,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
   }
   auto result = imports->ioctlsocket(ws, cmd, argp);
 
-  get_log() << "siege_ioctlsocket finished" << '\n';
+  get_log() << "siege_ioctlsocket finished";
 
   return result;
 }
@@ -658,7 +658,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
-  get_log() << "siege_connect " << to_zts(ws) << '\n';
+  get_log() << "siege_connect " << to_zts(ws);
 
   if (use_zero_tier())
   {
@@ -718,7 +718,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
   }
   auto result = imports->bind(ws, addr, namelen);
 
-  get_log() << "Bind call has error " << imports->WSAGetLastError() << "\n";
+  get_log() << "Bind call has error " << imports->WSAGetLastError();
 
   return result;
 }
@@ -870,7 +870,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
           }
           else
           {
-            get_log() << "Non Zero Tier handle detected " << zts << '\n';
+            get_log() << "Non Zero Tier handle detected " << zts;
           }
         }
       };
@@ -965,7 +965,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
   ensure_imports();
   if (name)
   {
-    get_log() << "siege_gethostbyname: " << name << "\n";
+    get_log() << "siege_gethostbyname: " << name;
   }
   else
   {
@@ -1081,14 +1081,14 @@ std::shared_ptr<char> get_shared_current_ip_address_storage()
       {
         return nullptr;
       }
-      get_log() << "HANDLE is " << (std::size_t)global << '\n';
+      get_log() << "HANDLE is " << (std::size_t)global;
 
 
       auto result = ::MapViewOfFile(global, FILE_MAP_ALL_ACCESS, 0, 0, ZTS_IP_MAX_STR_LEN);
 
       if (!result)
       {
-        get_log() << "Could not map file handle" << '\n';
+        get_log() << "Could not map file handle";
         return nullptr;
       }
 
@@ -1116,7 +1116,7 @@ std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
       std::string network_ip(env_size - 1, '\0');
       ::GetEnvironmentVariableA("ZERO_TIER_FALLBACK_BROADCAST_IP_V4", network_ip.data(), network_ip.size() + 1);
 
-      get_log() << "Zero Tier fallback broadcast IP is " << network_ip << '\n';
+      get_log() << "Zero Tier fallback broadcast IP is " << network_ip;
       in_addr result{};
       result.S_un.S_addr = imports->inet_addr(network_ip.c_str());
 
@@ -1161,7 +1161,7 @@ HMODULE get_ztlib()
     auto zt_path = fs::path(module_path).parent_path() / "zt-shared.dll";
 
 
-    get_log() << "Loading zero tier library: " << zt_path << '\n';
+    get_log() << "Loading zero tier library: " << zt_path;
 
     auto result = LoadLibraryExW(zt_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
@@ -1184,7 +1184,7 @@ std::optional<std::uint64_t> get_zero_tier_network_id()
         std::string network_id(env_size - 1, '\0');
         ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", network_id.data(), network_id.size() + 1);
 
-        get_log() << "Zero Tier Network ID is " << network_id << '\n';
+        get_log() << "Zero Tier Network ID is " << network_id;
         return std::strtoull(network_id.data(), 0, 16);
       }
 
@@ -1446,11 +1446,11 @@ int zt_to_winsock_error(int error)
     return WSAEINPROGRESS;
   }
   case 140: {
-    get_log() << "Received error 140 " << "\n";
+    get_log() << "Received error 140 ";
     return WSAEWOULDBLOCK;
   }
   default: {
-    get_log() << "Received unknown error: " << error << "\n";
+    get_log() << "Received unknown error: " << error;
 #ifdef WSA_INVALID_PARAMETER
     return WSA_INVALID_PARAMETER;
 #else
@@ -1458,7 +1458,7 @@ int zt_to_winsock_error(int error)
 #endif
   }
   }
-  get_log() << "Received unknown error: " << error << "\n";
+  get_log() << "Received unknown error: " << error;
   return error;
 }
 
