@@ -59,11 +59,14 @@ foreach(EXT_PROJECT IN ITEMS ${EXTENSION_PROJECTS})
     list(APPEND EXT_TARGETS ${PROJECT_TARGETS}) 
 endforeach()
 
-list(APPEND EXT_TARGETS siege-input-filtration ws2_32-on-zero-tier wsock32-on-zero-tier wsock32-rpc-server wsock32-rpc-client ws2_32-rpc-client)
+list(APPEND EXT_TARGETS 
+                siege-input-filtration 
+                wsock32-in-proc-client 
+                ws2_32-on-zero-tier 
+                wsock32-rpc-server 
+                wsock32-rpc-client 
+                ws2_32-rpc-client)
 
-if(TARGET zt-shared)
-    list(APPEND EXT_TARGETS zt-shared)
-endif()
 
 foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
     get_target_property(TARGET_TYPE ${EXT_TARGET} TYPE)

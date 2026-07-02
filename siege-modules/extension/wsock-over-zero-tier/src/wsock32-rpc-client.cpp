@@ -6,6 +6,7 @@
 #include <siege/platform/shared.hpp>
 
 import std;
+import wsock32.shared.client;
 import wsock32.shared;
 import wsock32.rpc;
 
@@ -13,10 +14,6 @@ namespace fs = std::filesystem;
 
 std::optional<std::uint64_t> get_zero_tier_network_id();
 bool use_zero_tier();
-std::string ioctl_cmd_to_string(long cmd);
-std::string protocol_to_string(int protocol);
-std::string type_to_string(int type);
-std::string af_to_string(int af);
 
 static struct rpc_process_info : ::PROCESS_INFORMATION
 {
@@ -816,81 +813,4 @@ std::optional<std::uint64_t> get_zero_tier_network_id()
 bool use_zero_tier()
 {
   return get_zero_tier_network_id().has_value();
-}
-
-std::string af_to_string(int af)
-{
-  switch (af)
-  {
-  case AF_UNSPEC:
-    return "AF_UNSPEC";
-  case AF_INET:
-    return "AF_INET";
-  case AF_IPX:
-    return "AF_IPX";
-  default:
-    return std::to_string(af);
-  }
-}
-
-std::string type_to_string(int type)
-{
-  switch (type)
-  {
-  case SOCK_STREAM:
-    return "SOCK_STREAM";
-  case SOCK_DGRAM:
-    return "SOCK_DGRAM";
-  case SOCK_RAW:
-    return "SOCK_RAW";
-  case SOCK_SEQPACKET:
-    return "SOCK_SEQPACKET";
-  default:
-    return std::to_string(type);
-  }
-}
-
-std::string protocol_to_string(int protocol)
-{
-  switch (protocol)
-  {
-  case IPPROTO_IP:
-    return "IPPROTO_IP";
-  case IPPROTO_TCP:
-    return "IPPROTO_TCP";
-  case IPPROTO_UDP:
-    return "IPPROTO_UDP";
-  case IPPROTO_ICMP:
-    return "IPPROTO_ICMP";
-  case IPPROTO_RAW:
-    return "IPPROTO_RAW";
-  default: {
-    if (protocol >= 1000 && protocol <= 1255)
-    {
-      return "NSPROTO_IPX";
-    }
-
-    if (protocol == 1256)
-    {
-      return "NSPROTO_SPX";
-    }
-
-    return std::to_string(protocol);
-  }
-  }
-}
-
-std::string ioctl_cmd_to_string(long cmd)
-{
-  switch (cmd)
-  {
-  case FIONREAD:
-    return "FIONREAD";
-  case FIONBIO:
-    return "FIONBIO";
-  case SIOCATMARK:
-    return "SIOCATMARK";
-  default:
-    return std::to_string(cmd);
-  }
 }

@@ -2361,14 +2361,14 @@ namespace siege::views
     else if (has_extension_module(state))
     {
       std::string extension_path = get_extension(state).GetModuleFileName<char>();
-      auto zt_path = fs::path(extension_path).parent_path() / "zt-shared.dll";
+      auto zt_path = fs::path(extension_path).parent_path() / "ws2_32-on-zero-tier.dll";
       self.registry_data.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
       ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_node_id_and_private_key.data());
     }
     else
     {
       std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
-      auto zt_path = fs::path(extension_path).parent_path() / "zt-shared.dll";
+      auto zt_path = fs::path(extension_path).parent_path() / "ws2_32-on-zero-tier.dll";
       self.registry_data.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
       ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_node_id_and_private_key.data());
     }
@@ -2625,11 +2625,11 @@ namespace siege::views
 
     for (auto& parent_path : paths_to_check)
     {
-      auto wsock_path = parent_path / "wsock32-on-zero-tier.dll";
+      auto wsock_path = parent_path / "wsock32-in-proc-client.dll";
       auto wsock_rpc_path = parent_path / "wsock32-rpc-client.dll";
       auto ws2_rpc_path = parent_path / "ws2_32-rpc-client.dll";
       auto wsock_rpc_server_path = parent_path / "wsock32-rpc-server.exe";
-      auto zt_path = parent_path / "zt-shared.dll";
+      auto zt_path = parent_path / "ws2_32-on-zero-tier.dll";
       std::error_code last_errorc;
 
       if (fs::exists(wsock_path, last_errorc) && fs::exists(zt_path, last_errorc) && fs::exists(wsock_rpc_server_path, last_errorc) && fs::exists(wsock_rpc_path, last_errorc) && fs::exists(ws2_rpc_path, last_errorc))
@@ -2852,8 +2852,8 @@ namespace siege::views
         fs::remove_all(ext_path, last_errorc);
         fs::create_directories(ext_path, last_errorc);
 
-        auto zt_path = *zt_ext_path / "zt-shared.dll";
-        fs::copy_file(zt_path, ext_path / "zt-shared.dll", fs::copy_options::overwrite_existing, last_errorc);
+        auto zt_path = *zt_ext_path / "ws2_32-on-zero-tier.dll";
+        fs::copy_file(zt_path, ext_path / "ws2_32-on-zero-tier.dll", fs::copy_options::overwrite_existing, last_errorc);
 
 
         if (links_to_networking_libraries(self) && uses_ws2_32(self))
@@ -2871,14 +2871,10 @@ namespace siege::views
 
           auto wsock_rpc_server_path = *zt_ext_path / "wsock32-rpc-server.exe";
           fs::copy_file(wsock_rpc_server_path, ext_path / "wsock32-rpc-server.exe", fs::copy_options::overwrite_existing, last_errorc);
-
-          auto wsock_path = *zt_ext_path / "ws2_32-on-zero-tier.dll";
-
-          fs::copy_file(wsock_path, ext_path / "ws2_32-on-zero-tier.dll", fs::copy_options::overwrite_existing, last_errorc);
         }
         else if (links_to_networking_libraries(self) && uses_wsock32(self))
         {
-          auto wsock_path = *zt_ext_path / "wsock32-on-zero-tier.dll";
+          auto wsock_path = *zt_ext_path / "wsock32-in-proc-client.dll";
 
           fs::copy_file(wsock_path, ext_path / "wsock32.dll", fs::copy_options::overwrite_existing, last_errorc);
         }
