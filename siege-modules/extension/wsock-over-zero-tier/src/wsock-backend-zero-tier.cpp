@@ -1148,6 +1148,11 @@ int zt_to_winsock_error(int error)
   case ZTS_EBADF: {
     return WSAEBADF;
   }
+  // not documented but probably an implementation
+  // detail leaking through
+  case EWOULDBLOCK: {
+    return WSAEWOULDBLOCK;
+  }
   case ZTS_EWOULDBLOCK: {
     return WSAEWOULDBLOCK;
   }
@@ -1194,6 +1199,9 @@ int zt_to_winsock_error(int error)
   case ZTS_EMSGSIZE: {
     return WSAEMSGSIZE;
   }
+  case EPROTOTYPE: {
+    return WSAEPROTOTYPE;
+  }
   case ZTS_EPROTOTYPE: {
     return WSAEPROTOTYPE;
   }
@@ -1205,6 +1213,9 @@ int zt_to_winsock_error(int error)
   }
   case ZTS_ESOCKTNOSUPPORT: {
     return WSAESOCKTNOSUPPORT;
+  }
+  case EOPNOTSUPP: {
+    return WSAEOPNOTSUPP;
   }
   case ZTS_EOPNOTSUPP: {
     return WSAEOPNOTSUPP;
@@ -1221,8 +1232,14 @@ int zt_to_winsock_error(int error)
   case ZTS_EADDRNOTAVAIL: {
     return WSAEADDRNOTAVAIL;
   }
+  case ENETDOWN: {
+    return WSAENETDOWN;
+  }
   case ZTS_ENETDOWN: {
     return WSAENETDOWN;
+  }
+  case ENETUNREACH: {
+    return WSAENETUNREACH;
   }
   case ZTS_ENETUNREACH: {
     return WSAENETUNREACH;
@@ -1239,8 +1256,14 @@ int zt_to_winsock_error(int error)
   case ZTS_EISCONN: {
     return WSAEISCONN;
   }
+  case ENOTCONN: {
+    return WSAENOTCONN;
+  }
   case ZTS_ENOTCONN: {
     return WSAENOTCONN;
+  }
+  case ETIMEDOUT: {
+    return WSAETIMEDOUT;
   }
   case ZTS_ETIMEDOUT: {
     return WSAETIMEDOUT;
@@ -1257,9 +1280,6 @@ int zt_to_winsock_error(int error)
   case ZTS_EINPROGRESS: {
 
     return WSAEINPROGRESS;
-  }
-  case 140: {
-    return WSAEWOULDBLOCK;
   }
   default: {
 #ifdef WSA_INVALID_PARAMETER
