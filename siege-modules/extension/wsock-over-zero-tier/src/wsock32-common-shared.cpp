@@ -81,7 +81,11 @@ export std::optional<wsock_imports> load_system_wsock()
 
   auto dll_name = fs::path(module_path).filename().wstring();
 
-  if (dll_name.contains(L"-"))
+  if (dll_name.contains(L"-backend-"))
+  {
+    dll_name = L"ws2_32";
+  }
+  else if (dll_name.contains(L"-"))
   {
     dll_name = dll_name.substr(0, dll_name.find(L"-"));
   }

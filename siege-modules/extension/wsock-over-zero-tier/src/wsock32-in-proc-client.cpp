@@ -452,7 +452,7 @@ HMODULE get_ztlib()
   static HMODULE ztlib = [] {
     auto module_path = win32::module_ref::current_module().GetModuleFileName();
 
-    auto zt_path = fs::path(module_path).parent_path() / "ws2_32-on-zero-tier.dll";
+    auto zt_path = fs::path(module_path).parent_path() / "wsock-backend-zero-tier.dll";
 
     get_log() << "Loading zero tier library: " << zt_path;
 

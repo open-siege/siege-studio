@@ -14,15 +14,15 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     target_link_libraries(wsock32-in-proc-client PRIVATE siege-win-core)
 
     if(TARGET zt-static)
-        add_library(ws2_32-on-zero-tier SHARED src/wsock32-common-shared.cpp src/wsock32-on-zero-tier.cpp src/backend.def)
-        target_compile_definitions(ws2_32-on-zero-tier PRIVATE USE_WINSOCK2=TRUE)
-        target_include_directories(ws2_32-on-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
-        set_target_properties(ws2_32-on-zero-tier PROPERTIES
+        add_library(wsock-backend-zero-tier SHARED src/wsock32-common-shared.cpp src/wsock-backend-zero-tier.cpp src/backend.def)
+        target_compile_definitions(wsock-backend-zero-tier PRIVATE USE_WINSOCK2=TRUE)
+        target_include_directories(wsock-backend-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
+        set_target_properties(wsock-backend-zero-tier PROPERTIES
             CXX_STANDARD 23
             CXX_STANDARD_REQUIRED ON
             CXX_SCAN_FOR_MODULES ON
         )
-        target_link_libraries(ws2_32-on-zero-tier PRIVATE siege-win-core zt-static)
+        target_link_libraries(wsock-backend-zero-tier PRIVATE siege-win-core zt-static)
     endif()
 
 
@@ -69,10 +69,10 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     target_include_directories(wsock32-e2e-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(wsock32-e2e-tests PRIVATE siege-platform)
 
-    add_dependencies(wsock32-e2e-tests wsock32-in-proc-client ws2_32-on-zero-tier)
+    add_dependencies(wsock32-e2e-tests wsock32-in-proc-client wsock-backend-zero-tier)
     add_custom_command(TARGET wsock32-e2e-tests POST_BUILD
        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-in-proc-client> $<TARGET_FILE_DIR:wsock32-e2e-tests>
-       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ws2_32-on-zero-tier> $<TARGET_FILE_DIR:ws2_32-on-zero-tier>)
+       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock-backend-zero-tier> $<TARGET_FILE_DIR:wsock-backend-zero-tier>)
 
     include(CTest)
     include(Catch)
