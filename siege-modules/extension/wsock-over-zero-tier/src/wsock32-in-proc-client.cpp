@@ -466,11 +466,10 @@ HMODULE get_ztlib()
 
 std::optional<std::uint64_t> get_zero_tier_network_id()
 {
-  auto load_network_id = []() -> std::optional<std::uint64_t> {
+  static std::optional<std::uint64_t> result = []() -> std::optional<std::uint64_t> {
     try
     {
       get_log() << "get_zero_tier_network_id\n";
-
 
       if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
       {
@@ -488,13 +487,7 @@ std::optional<std::uint64_t> get_zero_tier_network_id()
     {
       return std::nullopt;
     }
-  };
-
-#ifdef _DEBUG
-  std::optional<std::uint64_t> result = load_network_id();
-#else
-  static std::optional<std::uint64_t> result = load_network_id();
-#endif
+  }();
 
   return result;
 }

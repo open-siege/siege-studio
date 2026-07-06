@@ -82,7 +82,7 @@ extern "C" {
 int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
 {
   ensure_imports();
-  get_log() << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
+  get_log("backend.zero-tier") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
   auto result = imports->WSAStartup(version, data);
 
   if (auto network_id = get_zero_tier_network_id())
