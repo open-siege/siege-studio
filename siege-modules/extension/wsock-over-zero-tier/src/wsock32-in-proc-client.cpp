@@ -135,12 +135,12 @@ int __stdcall siege_WSACleanup()
   ensure_imports();
   get_log() << "siege_WSACleanup";
 
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->WSACleanup();
+    return imports->WSACleanup();
   }
 
-  return imports->WSACleanup();
+  return backend->WSACleanup();
 }
 
 static_assert(SOCK_STREAM == ZTS_SOCK_STREAM);
@@ -159,18 +159,19 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   ensure_imports();
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    auto socket = backend->socket(af, type, protocol);
-
-    if (socket != SOCKET_ERROR)
-    {
-      get_socket_handles().insert(socket);
-    }
-
-    return socket;
+    return imports->socket(af, type, protocol);
   }
-  return imports->socket(af, type, protocol);
+
+  auto socket = backend->socket(af, type, protocol);
+
+  if (socket != SOCKET_ERROR)
+  {
+    get_socket_handles().insert(socket);
+  }
+
+  return socket;
 }
 
 static_assert(SO_DEBUG == ZTS_SO_DEBUG);
@@ -192,44 +193,31 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 {
   get_log() << "siege_setsockopt: " << ws << " " << optname;
 
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->setsockopt(ws, level, optname, optval, optlen);
+    return imports->setsockopt(ws, level, optname, optval, optlen);
   }
 
-  return imports->setsockopt(ws, level, optname, optval, optlen);
+  return backend->setsockopt(ws, level, optname, optval, optlen);
 }
 
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
   get_log() << "siege_getsockopt" << ws << " " << optname;
-  if (use_zero_tier())
+
+  if (!use_zero_tier())
   {
-    return backend->getsockopt(ws, level, optname, optval, optlen);
+    return imports->getsockopt(ws, level, optname, optval, optlen);
   }
 
-  auto result = imports->getsockopt(ws, level, optname, optval, optlen);
-
-  if (result != 0)
-  {
-    get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError();
-  }
-
-  return result;
+  return backend->getsockopt(ws, level, optname, optval, optlen);
 }
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
   if (!use_zero_tier())
   {
-    auto result = imports->recvfrom(ws, buf, len, flags, from, fromLen);
-
-    if (result < 0)
-    {
-      get_log() << "recvfrom WSAGetLastError " << imports->WSAGetLastError();
-    }
-
-    return result;
+    return imports->recvfrom(ws, buf, len, flags, from, fromLen);
   }
 
 try_again:
@@ -246,7 +234,7 @@ try_again:
     FD_SET(ws, &read_set);
 
     timeval wait_time{
-        .tv_usec = static_cast<long>(timeout * 1000u)
+      .tv_usec = static_cast<long>(timeout * 1000u)
     };
 
     result = backend->select(1, &read_set, nullptr, nullptr, timeout ? &wait_time : nullptr);
@@ -294,22 +282,23 @@ try_again:
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getsockname\n";
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->getsockname(ws, name, length);
+    return imports->getsockname(ws, name, length);
   }
-  return imports->getsockname(ws, name, length);
+
+  return backend->getsockname(ws, name, length);
 }
 
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getpeername\n";
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->getpeername(ws, name, length);
+    return imports->getpeername(ws, name, length);
   }
 
-  return imports->getpeername(ws, name, length);
+  return backend->getpeername(ws, name, length);
 }
 
 static_assert(FIONREAD == ZTS_FIONREAD);
@@ -322,11 +311,12 @@ static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
   get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->ioctlsocket(ws, cmd, argp);
+    return imports->ioctlsocket(ws, cmd, argp);
   }
-  auto result = imports->ioctlsocket(ws, cmd, argp);
+
+  auto result = backend->ioctlsocket(ws, cmd, argp);
 
   if (result == 0 && cmd == FIONBIO && argp)
   {
@@ -341,50 +331,46 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 int __stdcall siege_listen(SOCKET ws, int backlog)
 {
   get_log() << "siege_listen\n";
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->listen(ws, backlog);
+    return imports->listen(ws, backlog);
   }
-  return imports->listen(ws, backlog);
+
+  return backend->listen(ws, backlog);
 }
 
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
   get_log() << "siege_accept\n";
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->accept(ws, name, namelen);
+    return imports->accept(ws, name, namelen);
   }
-
-  return imports->accept(ws, name, namelen);
+  return backend->accept(ws, name, namelen);
 }
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
   get_log() << "siege_connect " << ws;
 
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->connect(ws, name, namelen);
+    return imports->connect(ws, name, namelen);
   }
 
-  return imports->connect(ws, name, namelen);
+  return backend->connect(ws, name, namelen);
 }
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
   get_log() << "siege_bind " << ws << std::endl;
 
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->bind(ws, addr, namelen);
+    return imports->bind(ws, addr, namelen);
   }
 
-  auto result = imports->bind(ws, addr, namelen);
-
-  get_log() << "Bind call has error " << imports->WSAGetLastError();
-
-  return result;
+  return backend->bind(ws, addr, namelen);
 }
 
 #ifdef SD_RECEIVE
@@ -395,48 +381,50 @@ static_assert(SD_BOTH == ZTS_SHUT_RDWR);
 int __stdcall siege_shutdown(SOCKET ws, int how)
 {
   get_log() << "siege_shutdown\n";
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->shutdown(ws, how);
+    return imports->shutdown(ws, how);
   }
-  return imports->shutdown(ws, how);
+
+  return backend->shutdown(ws, how);
 }
 
 int __stdcall siege_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket\n";
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    auto result = backend->closesocket(ws);
-
-    if (result != SOCKET_ERROR)
-    {
-      get_socket_handles().erase(ws);
-    }
-
-    return result;
+    return imports->closesocket(ws);
   }
-  return imports->closesocket(ws);
+
+  auto result = backend->closesocket(ws);
+
+  if (result != SOCKET_ERROR)
+  {
+    get_socket_handles().erase(ws);
+  }
+
+  return result;
 }
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->select(value, read, write, except, timeout);
+    return imports->select(value, read, write, except, timeout);
   }
 
-  return imports->select(value, read, write, except, timeout);
+  return backend->select(value, read, write, except, timeout);
 }
 
 int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
-    return backend->__WSAFDIsSet(ws, set);
+    return imports->__WSAFDIsSet(ws, set);
   }
 
-  return imports->__WSAFDIsSet(ws, set);
+  return backend->__WSAFDIsSet(ws, set);
 }
 
 hostent* __stdcall siege_gethostbyname(const char* name)
@@ -451,12 +439,12 @@ hostent* __stdcall siege_gethostbyname(const char* name)
     get_log() << "siege_gethostbyname with no name \n";
   }
 
-  if (use_zero_tier())
+  if (!use_zero_tier())
   {
     return imports->gethostbyname(name);
   }
 
-  return imports->gethostbyname(name);
+  return backend->gethostbyname(name);
 }
 }
 HMODULE get_ztlib()
