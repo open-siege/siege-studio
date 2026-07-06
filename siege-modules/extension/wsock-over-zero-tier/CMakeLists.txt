@@ -52,9 +52,27 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     target_link_libraries(wsock32-rpc-server PRIVATE siege-win-core ws2_32)
 
     add_executable(wsock32-rpc-tests src/wsock32-rpc.test.cpp)
-    set_property(TARGET wsock32-rpc-tests PROPERTY CXX_STANDARD 23)
+    set_target_properties(wsock32-rpc-tests PROPERTIES
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON
+    )
     target_include_directories(wsock32-rpc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     target_link_libraries(wsock32-rpc-tests PRIVATE Catch2::Catch2WithMain siege-platform ws2_32)
+
+    add_executable(wsock32-e2e-tests src/wsock32-common-shared.cpp src/wsock32-e2e.test.cpp)
+        set_target_properties(wsock32-e2e-tests PROPERTIES
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON
+    )
+    target_include_directories(wsock32-e2e-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(wsock32-e2e-tests PRIVATE siege-platform)
+
+    add_dependencies(wsock32-e2e-tests wsock32-in-proc-client ws2_32-on-zero-tier)
+    add_custom_command(TARGET wsock32-e2e-tests POST_BUILD
+       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-in-proc-client> $<TARGET_FILE_DIR:wsock32-e2e-tests>
+       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ws2_32-on-zero-tier> $<TARGET_FILE_DIR:ws2_32-on-zero-tier>)
 
     include(CTest)
     include(Catch)
