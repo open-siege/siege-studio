@@ -94,7 +94,7 @@ extern "C" {
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
   ensure_imports();
-  get_log() << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
+  get_log("in-proc-client") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
 
 
   if (auto network_id = get_zero_tier_network_id(); network_id && get_ztlib())

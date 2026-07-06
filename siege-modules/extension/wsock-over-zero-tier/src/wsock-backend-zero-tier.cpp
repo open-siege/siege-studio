@@ -304,16 +304,9 @@ int __stdcall backend_setsockopt(SOCKET ws, int level, int optname, const char* 
 
   zts_socklen_t size = sizeof(some_flag);
 
-
-  static std::set<int> optnames = { SO_RCVTIMEO, SO_SNDTIMEO, SO_SNDBUF, SO_RCVBUF };
-
   if (level == SOL_SOCKET)
   {
     level = ZTS_SOL_SOCKET;
-  }
-  else
-  {
-    get_log() << "Setting a regular socket setting " << optname;
   }
 
   int zt_result;
@@ -438,8 +431,6 @@ int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockadd
 
   if (zt_result == ZTS_ERR_SOCKET || zt_result == ZTS_ERR_SERVICE || zt_result == ZTS_ERR_ARG)
   {
-    get_log() << "zts_bsd_recvfrom had an error\n";
-
     return zt_to_winsock_result(zt_result);
   }
 
@@ -448,13 +439,9 @@ int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockadd
     get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
   }
 
-
-  get_log() << "zts_bsd_recvfrom successful\n";
-
   copy_address(zt_addr, from, fromLen);
 
   return (int)zt_result;
-}
 }
 
 int __stdcall backend_getsockname(SOCKET ws, sockaddr* name, int* length)
@@ -656,8 +643,6 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
     return SOCKET_ERROR;
   }
 
-  get_log() << "zts_bsd_sendto\n";
-
   if (to)
   {
     auto address_and_size = copy_address(to, tolen);
@@ -703,7 +688,6 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
       return sent;
     }
 
-    get_log() << "Doing a regular sendto\n";
     auto zt_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
     if (zt_result < 0)
@@ -714,7 +698,6 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
     return zt_result;
   }
 
-  get_log() << "Doing a sendto of a supposedly already bound socket\n";
   auto zt_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), nullptr, 0);
 
   if (zt_result < 0)
@@ -767,7 +750,6 @@ int __stdcall backend_closesocket(SOCKET ws)
 
 int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  get_log() << "siege_select\n";
   zts_fd_set zt_read{};
   zts_fd_set* final_read = nullptr;
 
@@ -919,6 +901,8 @@ hostent* __stdcall backend_gethostbyname(const char* name)
   return imports->gethostbyname(name);
 }
 
+}
+
 int zt_to_winsock_result(int code)
 {
   switch (code)
@@ -926,26 +910,21 @@ int zt_to_winsock_result(int code)
   case ZTS_ERR_OK:
     return 0;
   case ZTS_ERR_SOCKET: {
-    get_log() << "Received ZTS_ERR_SOCKET\n";
     imports->WSASetLastError(zt_to_winsock_error(get_zts_errno()));
     return SOCKET_ERROR;
   }
   case ZTS_ERR_SERVICE: {
-    get_log() << "Received ZTS_ERR_SERVICE\n";
     imports->WSASetLastError(WSANOTINITIALISED);
     return SOCKET_ERROR;
   }
   case ZTS_ERR_ARG: {
-    get_log() << "Received ZTS_ERR_ARG\n";
     imports->WSASetLastError(WSAEINVAL);
     return SOCKET_ERROR;
   }
   case ZTS_ERR_NO_RESULT: {
-    get_log() << "Received ZTS_ERR_NO_RESULT\n";
     return 0;
   }
   case ZTS_ERR_GENERAL: {
-    get_log() << "Received ZTS_ERR_GENERAL\n";
     imports->WSASetLastError(WSASYSNOTREADY);
     return 0;
   }
@@ -1137,11 +1116,9 @@ int zt_to_winsock_error(int error)
   switch (error)
   {
   case ZTS_EPERM: {
-    get_log() << "Received ZTS_EPERM\n";
     return WSAEACCES;
   }
   case ZTS_ENOENT: {
-    get_log() << "Received ZTS_ENOENT\n";
 #ifdef WSA_INVALID_HANDLE
     return WSA_INVALID_HANDLE;
 #else
@@ -1149,7 +1126,6 @@ int zt_to_winsock_error(int error)
 #endif
   }
   case ZTS_ESRCH: {
-    get_log() << "Received ZTS_ESRCH\n";
 #ifdef WSA_INVALID_HANDLE
     return WSA_INVALID_HANDLE;
 #else
@@ -1157,11 +1133,9 @@ int zt_to_winsock_error(int error)
 #endif
   }
   case ZTS_EINTR: {
-    get_log() << "Received ZTS_EINTR\n";
     return WSAEINTR;
   }
   case ZTS_EIO: {
-    get_log() << "Received ZTS_EIO\n";
 #if WSA_IO_INCOMPLETE
     return WSA_IO_INCOMPLETE;
 #else
@@ -1169,19 +1143,15 @@ int zt_to_winsock_error(int error)
 #endif
   }
   case ZTS_ENXIO: {
-    get_log() << "Received ZTS_ENXIO\n";
     return WSAEFAULT;
   }
   case ZTS_EBADF: {
-    get_log() << "Received ZTS_EBADF\n";
     return WSAEBADF;
   }
   case ZTS_EWOULDBLOCK: {
-    get_log() << "Received ZTS_EWOULDBLOCK\n";
     return WSAEWOULDBLOCK;
   }
   case ZTS_ENOMEM: {
-    get_log() << "Received ZTS_ENOMEM\n";
 #ifdef WSA_NOT_ENOUGH_MEMORY
     return WSA_NOT_ENOUGH_MEMORY;
 #else
@@ -1189,132 +1159,99 @@ int zt_to_winsock_error(int error)
 #endif
   }
   case ZTS_EACCES: {
-    get_log() << "Received ZTS_EACCES\n";
     return WSAEACCES;
   }
   case ZTS_EFAULT: {
-    get_log() << "Received ZTS_EFAULT\n";
     return WSAEFAULT;
   }
   case ZTS_EBUSY: {
-    get_log() << "Received ZTS_EBUSY\n";
     return WSAEACCES;
   }
   case ZTS_EEXIST: {
-    get_log() << "Received ZTS_EEXIST\n";
     return WSAEACCES;
   }
   case ZTS_ENODEV: {
-    get_log() << "Received ZTS_ENODEV\n";
     return WSAEACCES;
   }
   case ZTS_EINVAL: {
-    get_log() << "Received ZTS_EINVAL\n";
     return WSAEINVAL;
   }
   case ZTS_ENFILE: {
-    get_log() << "Received ZTS_ENFILE\n";
     return WSAEMFILE;
   }
   case ZTS_EMFILE: {
-    get_log() << "Received ZTS_EMFILE\n";
     return WSAEMFILE;
   }
   case ZTS_ENOSYS: {
-    get_log() << "Received ZTS_ENOSYS\n";
     return WSAEACCES;
   }
   case ZTS_ENOTSOCK: {
-    get_log() << "Received ZTS_EDESTADDRREQ\n";
     return WSAENOTSOCK;
   }
   case ZTS_EDESTADDRREQ: {
-    get_log() << "Received ZTS_EDESTADDRREQ\n";
     return WSAEDESTADDRREQ;
   }
   case ZTS_EMSGSIZE: {
-    get_log() << "Received ZTS_EMSGSIZE\n";
     return WSAEMSGSIZE;
   }
   case ZTS_EPROTOTYPE: {
-    get_log() << "Received ZTS_EPROTOTYPE\n";
     return WSAEPROTOTYPE;
   }
   case ZTS_ENOPROTOOPT: {
-    get_log() << "Received ZTS_ENOPROTOOPT\n";
     return WSAENOPROTOOPT;
   }
   case ZTS_EPROTONOSUPPORT: {
-    get_log() << "Received ZTS_EPROTONOSUPPORT\n";
     return WSAEPROTONOSUPPORT;
   }
   case ZTS_ESOCKTNOSUPPORT: {
-    get_log() << "Received ZTS_ESOCKTNOSUPPORT\n";
     return WSAESOCKTNOSUPPORT;
   }
   case ZTS_EOPNOTSUPP: {
-    get_log() << "Received ZTS_EOPNOTSUPP\n";
     return WSAEOPNOTSUPP;
   }
   case ZTS_EPFNOSUPPORT: {
-    get_log() << "Received ZTS_EPFNOSUPPORT\n";
     return WSAEPFNOSUPPORT;
   }
   case ZTS_EAFNOSUPPORT: {
-    get_log() << "Received ZTS_EAFNOSUPPORT\n";
     return WSAEAFNOSUPPORT;
   }
   case ZTS_EADDRINUSE: {
-    get_log() << "Received ZTS_EADDRINUSE\n";
     return WSAEADDRINUSE;
   }
   case ZTS_EADDRNOTAVAIL: {
-    get_log() << "Received ZTS_EADDRNOTAVAIL\n";
     return WSAEADDRNOTAVAIL;
   }
   case ZTS_ENETDOWN: {
-    get_log() << "Received ZTS_ENETDOWN\n";
     return WSAENETDOWN;
   }
   case ZTS_ENETUNREACH: {
-    get_log() << "Received ZTS_ENETUNREACH\n";
     return WSAENETUNREACH;
   }
   case ZTS_ECONNABORTED: {
-    get_log() << "Received ZTS_ECONNABORTED\n";
     return WSAECONNABORTED;
   }
   case ZTS_ECONNRESET: {
-    get_log() << "Received ZTS_ECONNRESET\n";
     return WSAECONNRESET;
   }
   case ZTS_ENOBUFS: {
-    get_log() << "Received ZTS_ENOBUFS\n";
     return WSAENOBUFS;
   }
   case ZTS_EISCONN: {
-    get_log() << "Received ZTS_EISCONN\n";
     return WSAEISCONN;
   }
   case ZTS_ENOTCONN: {
-    get_log() << "Received ZTS_ENOTCONN\n";
     return WSAENOTCONN;
   }
   case ZTS_ETIMEDOUT: {
-    get_log() << "Received ZTS_ETIMEDOUT\n";
     return WSAETIMEDOUT;
   }
   case ZTS_ECONNREFUSED: {
-    get_log() << "Received ZTS_ECONNREFUSED\n";
     return WSAECONNREFUSED;
   }
   case ZTS_EHOSTUNREACH: {
-
-    get_log() << "Received ZTS_EHOSTUNREACH\n";
     return WSAEHOSTUNREACH;
   }
   case ZTS_EALREADY: {
-    get_log() << "Received ZTS_EALREADY\n";
     return WSAEALREADY;
   }
   case ZTS_EINPROGRESS: {
@@ -1322,11 +1259,9 @@ int zt_to_winsock_error(int error)
     return WSAEINPROGRESS;
   }
   case 140: {
-    get_log() << "Received error 140 ";
     return WSAEWOULDBLOCK;
   }
   default: {
-    get_log() << "Received unknown error: " << error;
 #ifdef WSA_INVALID_PARAMETER
     return WSA_INVALID_PARAMETER;
 #else
@@ -1334,7 +1269,6 @@ int zt_to_winsock_error(int error)
 #endif
   }
   }
-  get_log() << "Received unknown error: " << error;
   return error;
 }
 

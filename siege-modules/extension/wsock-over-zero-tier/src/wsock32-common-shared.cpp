@@ -203,12 +203,24 @@ export std::ostream& get_log(std::string_view log_prefix = "networking")
   protected:
     int sync() override
     {
-      sputc('\0');
-      
-      ::OutputDebugStringA(view().data());
+      constexpr auto small_string_size = std::string{}.capacity();
 
-      str("");
+      auto current_view = view();
 
+      if (!current_view.empty() && current_view.size() <= small_string_size)
+      {
+        std::string temp(current_view.data(), current_view.size());
+        ::OutputDebugStringA(temp.c_str());
+        str("");
+      }
+      else if (!current_view.empty())
+      {
+        thread_local std::string temp;
+        temp.reserve(current_view.size());
+        temp.assign(current_view);
+        ::OutputDebugStringA(temp.c_str());
+        str("");
+      }
       return 0;
     }
   };
@@ -218,7 +230,13 @@ export std::ostream& get_log(std::string_view log_prefix = "networking")
 
   if (!buffer.view().empty() && buffer.view().back() != '\n')
   {
-    buffer.sputc('\n');
+    debug_log << '\n';
+  }
+
+
+  if (buffer.view().size() > 64)
+  {
+    debug_log.flush();
   }
 
   debug_log << stored_log_prefix;
