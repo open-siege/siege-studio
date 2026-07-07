@@ -880,7 +880,6 @@ hostent* __stdcall backend_gethostbyname(const char* name)
           static std::array<char, sizeof(in_addr)> raw_ip{};
           auto ip_int = imports->inet_addr(ipstr);
           std::memcpy(raw_ip.data(), &ip_int, raw_ip.size());
-          host_cache[name].h_length = 1;
           host_cache[name].h_addr_list[0] = raw_ip.data();
           host_cache[name].h_addr_list[1] = nullptr;
         }
