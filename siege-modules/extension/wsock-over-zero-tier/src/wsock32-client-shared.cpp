@@ -10,7 +10,7 @@ export module wsock32.shared.client;
 import wsock32.shared;
 import std;
 
-extern "C++" bool use_zero_tier();
+extern "C++" bool use_custom_backend();
 
 extern "C" {
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept;
@@ -55,7 +55,7 @@ hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
 
 auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     get_log() << "siege_WSAAsyncGetHostByName.\n";
     ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncGetHostByName, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
@@ -67,7 +67,7 @@ auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const cha
 
 auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     get_log() << "siege_WSACancelAsyncRequest.\n";
     ::MessageBoxW(nullptr, L"The game tried to use WSACancelAsyncRequest, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
@@ -79,7 +79,7 @@ auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
 
 auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     bool notify_read = flags & FD_READ;
     bool notify_write = flags & FD_WRITE;
@@ -128,7 +128,7 @@ auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, l
 
 int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags) noexcept
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return siege_recvfrom(ws, buf, len, flags, nullptr, nullptr);
   }
@@ -139,7 +139,7 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags) noexcept
 
 int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcept
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return siege_sendto(ws, buf, len, flags, nullptr, 0);
   }
@@ -152,7 +152,7 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcep
 SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
 {
   get_log() << "siege_WSASocketW " << '\n';
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     ::MessageBoxW(nullptr, L"The game tried to use siege_WSASocketW, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
@@ -163,7 +163,7 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
 
 int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     ::MessageBoxW(nullptr, L"The game tried to use siege_WSAIoctl, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
@@ -197,7 +197,7 @@ auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::siz
 
 auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlapped, DWORD* transfer, BOOL wait, DWORD* flags)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     get_log() << "siege_WSAGetOverlappedResult called. quitting.\n";
     ::ExitProcess(-1);
@@ -210,7 +210,7 @@ auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlappe
 // This is for our first candidate using this API, Alien vs Predator
 auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     get_log() << "siege_WSARecvFrom called.\n";
     if (overlapped || completion_handler)
@@ -296,7 +296,7 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
 
 auto __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPDWORD numberOfBytesRecvd, LPDWORD flags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return siege_WSARecvFrom(ws, buffers, bufferCount, numberOfBytesRecvd, flags, nullptr, 0, lpOverlapped, completionRoutine);
   }
@@ -308,7 +308,7 @@ auto __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPD
 // This is for our first candidate using this API, Alien vs Predator
 auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     if (overlapped || completion_handler)
     {
@@ -362,7 +362,7 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
 
 auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler) noexcept
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return siege_WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, nullptr, 0, overlapped, completion_handler);
   }
@@ -372,7 +372,7 @@ auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count,
 
 auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents) noexcept
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     ::MessageBoxW(nullptr, L"The game tried to use WSAEventSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
@@ -383,7 +383,7 @@ auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetwo
 
 auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents) noexcept
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     ::MessageBoxW(nullptr, L"The game tried to use WSAEnumNetworkEvents, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);

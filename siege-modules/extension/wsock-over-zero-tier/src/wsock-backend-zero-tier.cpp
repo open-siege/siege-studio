@@ -1,12 +1,3 @@
-// TODO Separate the zero tier wrapper part into its own backend dll.
-// The API used will be the same as future wrappers.
-// The main properties of a backend DLL:
-// * Implements the minimal required API set and not everything possible - though still in terms of ws2_32.
-// * Sockets are created non-blocking and broadcast capable by default.
-//      * The client layer should deal with blocking as it is a special case.
-// * WSAStartup handles all needed start-up with the help of environment variables.
-// * No passthrough to system ws2_32 - this should be handled by the client layer fully.
-
 #include <ZeroTierSockets.h>
 
 #ifdef USE_WINSOCK2
@@ -513,15 +504,17 @@ static_assert(IOC_IN == ZTS_IOC_IN);
 static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall backend_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
+  if (cmd != FIONREAD)
+  {
+    get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
+  }
+
   if (!get_zero_tier_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
     return SOCKET_ERROR;
   }
-
-  get_log() << "zts_bsd_ioctl\n";
 
   auto zt_result = zts_bsd_ioctl(to_zts(ws), cmd, argp);
 
@@ -900,7 +893,6 @@ hostent* __stdcall backend_gethostbyname(const char* name)
 
   return imports->gethostbyname(name);
 }
-
 }
 
 int zt_to_winsock_result(int code)

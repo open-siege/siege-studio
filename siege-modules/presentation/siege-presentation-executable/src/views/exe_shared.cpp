@@ -2878,7 +2878,7 @@ namespace siege::views
 
           fs::copy_file(wsock_path, ext_path / "wsock32.dll", fs::copy_options::overwrite_existing, last_errorc);
         }
-
+        ::SetEnvironmentVariableW(L"SIEGE_WSOCK_BACKEND", L"wsock-backend-zero-tier.dll");
         ::SetDllDirectoryW(ext_path.c_str());
 
         if (has_extension_module(state))

@@ -13,8 +13,18 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
      )
     target_link_libraries(wsock32-in-proc-client PRIVATE siege-win-core)
 
+    add_library(wsock-backend-ws2_32 SHARED src/wsock32-common-shared.cpp src/wsock-backend-ws2_32.cpp src/wsock-backend.def)
+    target_compile_definitions(wsock-backend-ws2_32 PRIVATE USE_WINSOCK2=TRUE)
+    target_include_directories(wsock-backend-ws2_32 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
+    set_target_properties(wsock-backend-ws2_32 PROPERTIES
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON
+    )
+    target_link_libraries(wsock-backend-ws2_32 PRIVATE siege-win-core zt-static)
+
     if(TARGET zt-static)
-        add_library(wsock-backend-zero-tier SHARED src/wsock32-common-shared.cpp src/wsock-backend-zero-tier.cpp src/backend.def)
+        add_library(wsock-backend-zero-tier SHARED src/wsock32-common-shared.cpp src/wsock-backend-zero-tier.cpp src/wsock-backend-zero-tier.def)
         target_compile_definitions(wsock-backend-zero-tier PRIVATE USE_WINSOCK2=TRUE)
         target_include_directories(wsock-backend-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
         set_target_properties(wsock-backend-zero-tier PROPERTIES
@@ -72,7 +82,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     add_dependencies(wsock32-e2e-tests wsock32-in-proc-client wsock-backend-zero-tier)
     add_custom_command(TARGET wsock32-e2e-tests POST_BUILD
        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-in-proc-client> $<TARGET_FILE_DIR:wsock32-e2e-tests>
-       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock-backend-zero-tier> $<TARGET_FILE_DIR:wsock-backend-zero-tier>)
+       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock-backend-ws2_32> $<TARGET_FILE_DIR:wsock32-e2e-tests>)
 
     include(CTest)
     include(Catch)

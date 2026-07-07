@@ -46,7 +46,10 @@ int main()
 
   test_blocking_udp();
 
-  // test_blocking_udp();
+  ::SetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", "wsock-backend-ws2_32.dll");
+  test_blocking_udp();
+
+  std::cout << "Tests finished\n";
   //  TODO set zero tier env variables again
   //  test_udp();
 
@@ -107,6 +110,7 @@ void test_blocking_udp()
     .sin_family = AF_INET,
     .sin_port = wsock_htons(9090)
   };
+//  server_addr.sin_addr.s_addr = INADDR_LOOPBACK;
 
   result = wsock_bind(server_socket, reinterpret_cast<const sockaddr*>(&server_addr), static_cast<int>(sizeof(server_addr)));
   assert(result != SOCKET_ERROR);

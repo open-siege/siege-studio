@@ -7,8 +7,6 @@
 // * WSAStartup handles all needed start-up with the help of environment variables.
 // * No passthrough to system ws2_32 - this should be handled by the client layer fully.
 
-#include <ZeroTierSockets.h>
-
 #ifdef USE_WINSOCK2
 #include <WinSock2.h>
 #include <ws2tcpip.h>
@@ -26,10 +24,7 @@ namespace fs = std::filesystem;
 
 std::optional<backend_imports> backend;
 
-HMODULE get_ztlib();
-std::optional<std::uint64_t> get_zero_tier_network_id();
-
-bool use_zero_tier();
+bool use_custom_backend();
 
 struct socket_handle_info
 {
@@ -97,37 +92,60 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
   get_log("in-proc-client") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
 
 
-  if (auto network_id = get_zero_tier_network_id(); network_id && get_ztlib())
-  {
-    auto module = get_ztlib();
-    backend = std::make_optional(backend_imports{
-      .module = module,
-      .WSAStartup = (decltype(backend_imports::WSAStartup))::GetProcAddress(module, "backend_WSAStartup"),
-      .WSACleanup = (decltype(backend_imports::WSACleanup))::GetProcAddress(module, "backend_WSACleanup"),
-      .socket = (decltype(backend_imports::socket))::GetProcAddress(module, "backend_socket"),
-      .closesocket = (decltype(backend_imports::closesocket))::GetProcAddress(module, "backend_closesocket"),
-      .shutdown = (decltype(backend_imports::shutdown))::GetProcAddress(module, "backend_shutdown"),
-      .setsockopt = (decltype(backend_imports::setsockopt))::GetProcAddress(module, "backend_setsockopt"),
-      .getsockopt = (decltype(backend_imports::getsockopt))::GetProcAddress(module, "backend_getsockopt"),
-      .getsockname = (decltype(backend_imports::getsockname))::GetProcAddress(module, "backend_getsockname"),
-      .getpeername = (decltype(backend_imports::getpeername))::GetProcAddress(module, "backend_getpeername"),
-      .gethostbyname = (decltype(backend_imports::gethostbyname))::GetProcAddress(module, "backend_gethostbyname"),
-      .recvfrom = (decltype(backend_imports::recvfrom))::GetProcAddress(module, "backend_recvfrom"),
-      .sendto = (decltype(backend_imports::sendto))::GetProcAddress(module, "backend_sendto"),
-      .ioctlsocket = (decltype(backend_imports::ioctlsocket))::GetProcAddress(module, "backend_ioctlsocket"),
-      .bind = (decltype(backend_imports::bind))::GetProcAddress(module, "backend_bind"),
-      .connect = (decltype(backend_imports::connect))::GetProcAddress(module, "backend_connect"),
-      .accept = (decltype(backend_imports::accept))::GetProcAddress(module, "backend_accept"),
-      .listen = (decltype(backend_imports::listen))::GetProcAddress(module, "backend_listen"),
-      .select = (decltype(backend_imports::select))::GetProcAddress(module, "backend_select"),
-      .__WSAFDIsSet = (decltype(backend_imports::__WSAFDIsSet))::GetProcAddress(module, "backend___WSAFDIsSet"),
-    });
+  auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", nullptr, 0);
 
-    return backend->WSAStartup(version, data);
+  if (env_size <= 1)
+  {
+    return imports->WSAStartup(version, data);
   }
 
-  get_log().flush();
-  return imports->WSAStartup(version, data);
+  if (backend)
+  {
+    return 0;
+  }
+
+  auto module_path = win32::module_ref::current_module().GetModuleFileName();
+
+  std::string backend_name;
+
+  backend_name.resize(env_size - 1);
+  ::GetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", backend_name.data(), backend_name.size() + 1);
+
+  auto zt_path = fs::path(module_path).parent_path() / backend_name;
+
+  get_log() << "Loading backend library: " << zt_path;
+
+  auto module = ::LoadLibraryExW(zt_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+  if (!module)
+  {
+    return WSASYSNOTREADY;
+  }
+
+  backend = std::make_optional(backend_imports{
+    .module = module,
+    .WSAStartup = (decltype(backend_imports::WSAStartup))::GetProcAddress(module, "backend_WSAStartup"),
+    .WSACleanup = (decltype(backend_imports::WSACleanup))::GetProcAddress(module, "backend_WSACleanup"),
+    .socket = (decltype(backend_imports::socket))::GetProcAddress(module, "backend_socket"),
+    .closesocket = (decltype(backend_imports::closesocket))::GetProcAddress(module, "backend_closesocket"),
+    .shutdown = (decltype(backend_imports::shutdown))::GetProcAddress(module, "backend_shutdown"),
+    .setsockopt = (decltype(backend_imports::setsockopt))::GetProcAddress(module, "backend_setsockopt"),
+    .getsockopt = (decltype(backend_imports::getsockopt))::GetProcAddress(module, "backend_getsockopt"),
+    .getsockname = (decltype(backend_imports::getsockname))::GetProcAddress(module, "backend_getsockname"),
+    .getpeername = (decltype(backend_imports::getpeername))::GetProcAddress(module, "backend_getpeername"),
+    .gethostbyname = (decltype(backend_imports::gethostbyname))::GetProcAddress(module, "backend_gethostbyname"),
+    .recvfrom = (decltype(backend_imports::recvfrom))::GetProcAddress(module, "backend_recvfrom"),
+    .sendto = (decltype(backend_imports::sendto))::GetProcAddress(module, "backend_sendto"),
+    .ioctlsocket = (decltype(backend_imports::ioctlsocket))::GetProcAddress(module, "backend_ioctlsocket"),
+    .bind = (decltype(backend_imports::bind))::GetProcAddress(module, "backend_bind"),
+    .connect = (decltype(backend_imports::connect))::GetProcAddress(module, "backend_connect"),
+    .accept = (decltype(backend_imports::accept))::GetProcAddress(module, "backend_accept"),
+    .listen = (decltype(backend_imports::listen))::GetProcAddress(module, "backend_listen"),
+    .select = (decltype(backend_imports::select))::GetProcAddress(module, "backend_select"),
+    .__WSAFDIsSet = (decltype(backend_imports::__WSAFDIsSet))::GetProcAddress(module, "backend___WSAFDIsSet"),
+  });
+
+  return backend->WSAStartup(version, data);
 }
 
 int __stdcall siege_WSACleanup()
@@ -135,31 +153,36 @@ int __stdcall siege_WSACleanup()
   ensure_imports();
   get_log() << "siege_WSACleanup";
 
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->WSACleanup();
   }
 
+  if (!backend)
+  {
+    imports->WSASetLastError(WSANOTINITIALISED);
+    return SOCKET_ERROR;
+  }
+
+  // Ideally, we would want to free the backend
+  // but this has issues with zero tier.
+  // for now, we don't really support dynamic
+  // changing of backends nor multiple backends,
+  // so it is probably fine.
+  // However, we may end up keeping modules loaded anyway
+  // and just let the 
+  /*::FreeLibrary(backend->module);
+  backend = std::nullopt;*/
+
   return backend->WSACleanup();
 }
 
-static_assert(SOCK_STREAM == ZTS_SOCK_STREAM);
-static_assert(SOCK_DGRAM == ZTS_SOCK_DGRAM);
-static_assert(SOCK_RAW == ZTS_SOCK_RAW);
-static_assert(AF_UNSPEC == ZTS_AF_UNSPEC);
-static_assert(AF_INET == ZTS_AF_INET);
-static_assert(IPPROTO_IP == ZTS_IPPROTO_IP);
-static_assert(IPPROTO_TCP == ZTS_IPPROTO_TCP);
-static_assert(IPPROTO_UDP == ZTS_IPPROTO_UDP);
-static_assert(IPPROTO_ICMP == ZTS_IPPROTO_ICMP);
-static_assert(IPPROTO_RAW == ZTS_IPPROTO_RAW);
-static_assert(AF_INET == ZTS_AF_INET);
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
   ensure_imports();
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->socket(af, type, protocol);
   }
@@ -174,26 +197,11 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   return socket;
 }
 
-static_assert(SO_DEBUG == ZTS_SO_DEBUG);
-static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
-static_assert(SO_REUSEADDR == ZTS_SO_REUSEADDR);
-static_assert(SO_KEEPALIVE == ZTS_SO_KEEPALIVE);
-static_assert(SO_DONTROUTE == ZTS_SO_DONTROUTE);
-static_assert(SO_BROADCAST == ZTS_SO_BROADCAST);
-static_assert(SO_USELOOPBACK == ZTS_SO_USELOOPBACK);
-static_assert(SO_SNDTIMEO == ZTS_SO_SNDTIMEO);
-static_assert(SO_RCVTIMEO == ZTS_SO_RCVTIMEO);
-static_assert(SO_RCVBUF == ZTS_SO_RCVBUF);
-static_assert(SO_SNDBUF == ZTS_SO_SNDBUF);
-static_assert(SO_ERROR == ZTS_SO_ERROR);
-static_assert(SO_LINGER == ZTS_SO_LINGER);
-static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
-static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
   get_log() << "siege_setsockopt: " << ws << " " << optname;
 
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->setsockopt(ws, level, optname, optval, optlen);
   }
@@ -205,7 +213,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 {
   get_log() << "siege_getsockopt" << ws << " " << optname;
 
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->getsockopt(ws, level, optname, optval, optlen);
   }
@@ -215,7 +223,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->recvfrom(ws, buf, len, flags, from, fromLen);
   }
@@ -252,7 +260,7 @@ try_again:
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->sendto(ws, buf, len, flags, to, tolen);
   }
@@ -282,7 +290,7 @@ try_again:
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getsockname\n";
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->getsockname(ws, name, length);
   }
@@ -293,7 +301,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getpeername\n";
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->getpeername(ws, name, length);
   }
@@ -301,17 +309,9 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
   return backend->getpeername(ws, name, length);
 }
 
-static_assert(FIONREAD == ZTS_FIONREAD);
-static_assert(FIONBIO == ZTS_FIONBIO);
-static_assert(IOCPARM_MASK == ZTS_IOCPARM_MASK);
-static_assert(IOC_VOID == ZTS_IOC_VOID);
-static_assert(IOC_OUT == ZTS_IOC_OUT);
-static_assert(IOC_IN == ZTS_IOC_IN);
-static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->ioctlsocket(ws, cmd, argp);
   }
@@ -323,15 +323,13 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
     get_socket_handles().set_virtual_blocking(ws, *argp == 0);
   }
 
-  get_log() << "siege_ioctlsocket finished";
-
   return result;
 }
 
 int __stdcall siege_listen(SOCKET ws, int backlog)
 {
   get_log() << "siege_listen\n";
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->listen(ws, backlog);
   }
@@ -342,7 +340,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
   get_log() << "siege_accept\n";
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->accept(ws, name, namelen);
   }
@@ -353,7 +351,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
   get_log() << "siege_connect " << ws;
 
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->connect(ws, name, namelen);
   }
@@ -365,7 +363,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
   get_log() << "siege_bind " << ws << std::endl;
 
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->bind(ws, addr, namelen);
   }
@@ -373,15 +371,10 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
   return backend->bind(ws, addr, namelen);
 }
 
-#ifdef SD_RECEIVE
-static_assert(SD_RECEIVE == ZTS_SHUT_RD);
-static_assert(SD_SEND == ZTS_SHUT_WR);
-static_assert(SD_BOTH == ZTS_SHUT_RDWR);
-#endif
 int __stdcall siege_shutdown(SOCKET ws, int how)
 {
   get_log() << "siege_shutdown\n";
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->shutdown(ws, how);
   }
@@ -392,7 +385,7 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
 int __stdcall siege_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket\n";
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->closesocket(ws);
   }
@@ -409,7 +402,7 @@ int __stdcall siege_closesocket(SOCKET ws)
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->select(value, read, write, except, timeout);
   }
@@ -419,7 +412,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
 
 int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->__WSAFDIsSet(ws, set);
   }
@@ -439,7 +432,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
     get_log() << "siege_gethostbyname with no name \n";
   }
 
-  if (!use_zero_tier())
+  if (!use_custom_backend())
   {
     return imports->gethostbyname(name);
   }
@@ -447,52 +440,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
   return backend->gethostbyname(name);
 }
 }
-HMODULE get_ztlib()
+bool use_custom_backend()
 {
-  static HMODULE ztlib = [] {
-    auto module_path = win32::module_ref::current_module().GetModuleFileName();
-
-    auto zt_path = fs::path(module_path).parent_path() / "wsock-backend-zero-tier.dll";
-
-    get_log() << "Loading zero tier library: " << zt_path;
-
-    auto result = ::LoadLibraryExW(zt_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-
-    return result;
-  }();
-
-  return ztlib;
-}
-
-std::optional<std::uint64_t> get_zero_tier_network_id()
-{
-  static std::optional<std::uint64_t> result = []() -> std::optional<std::uint64_t> {
-    try
-    {
-      get_log() << "get_zero_tier_network_id\n";
-
-      if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
-      {
-        std::string network_id(env_size - 1, '\0');
-        ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", network_id.data(), network_id.size() + 1);
-
-        get_log() << "Zero Tier Network ID is " << network_id;
-        return std::strtoull(network_id.data(), 0, 16);
-      }
-
-      get_log() << "No zero tier network ID\n";
-      return std::nullopt;
-    }
-    catch (...)
-    {
-      return std::nullopt;
-    }
-  }();
-
-  return result;
-}
-
-bool use_zero_tier()
-{
-  return get_zero_tier_network_id() && backend;
+  return backend.has_value();
 }

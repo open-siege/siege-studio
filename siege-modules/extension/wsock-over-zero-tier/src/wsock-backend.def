@@ -1,0 +1,20 @@
+EXPORTS
+	backend_WSAStartup
+	backend_WSACleanup
+	backend_socket
+	backend_setsockopt
+	backend_getsockopt
+	backend_recvfrom
+	backend_getsockname
+	backend_getpeername
+	backend_ioctlsocket
+	backend_listen
+	backend_accept
+	backend_connect
+	backend_bind
+	backend_sendto
+	backend_shutdown
+	backend_closesocket
+	backend_select
+	backend___WSAFDIsSet
+	backend_gethostbyname

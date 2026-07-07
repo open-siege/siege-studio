@@ -13,7 +13,7 @@ import wsock32.rpc;
 namespace fs = std::filesystem;
 
 std::optional<std::uint64_t> get_zero_tier_network_id();
-bool use_zero_tier();
+bool use_custom_backend();
 
 static struct rpc_process_info : ::PROCESS_INFORMATION
 {
@@ -269,7 +269,7 @@ int __stdcall siege_WSACleanup()
   ensure_imports();
   get_log() << "siege_WSACleanup";
 
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     if (server_info.owning && server_info.server && cleanup)
     {
@@ -287,7 +287,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
   ensure_imports();
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     socket_params params{ .address_family = af, .type = type, .protocol = protocol };
 
@@ -330,7 +330,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol)
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
   get_log() << "siege_setsockopt ";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<sockopt_params, sockopt_params::set_message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sockopt_params{ .level = level, .optname = optname };
@@ -352,7 +352,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
   get_log() << "siege_getsockopt ";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<sockopt_params, sockopt_params::get_message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sockopt_params{ .level = level, .optname = optname };
@@ -387,7 +387,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
   get_log() << "siege_bind ";
 
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<bind_params, bind_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) bind_params{};
@@ -412,7 +412,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
   get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
 
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<ioctl_params, ioctl_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) ioctl_params{ .command = cmd };
@@ -436,7 +436,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     // TODO the server is always non-blocking.
     // However, if we want to have blocking sockets we should block on the client side.
@@ -478,7 +478,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getsockname";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sockname_params{};
@@ -504,7 +504,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getpeername";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sockname_params{};
@@ -530,7 +530,7 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 int __stdcall siege_listen(SOCKET ws, int backlog)
 {
   get_log() << "siege_listen";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     ::MessageBoxW(nullptr, L"The game tried to use siege_listen, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
@@ -541,7 +541,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
   get_log() << "siege_accept";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     ::MessageBoxW(nullptr, L"The game tried to use siege_accept, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
@@ -554,7 +554,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
   get_log() << "siege_connect";
 
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     ::MessageBoxW(nullptr, L"The game tried to use siege_connect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
@@ -564,7 +564,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sendto_params{ .flags = flags };
@@ -594,7 +594,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 int __stdcall siege_shutdown(SOCKET ws, int how)
 {
   get_log() << "siege_shutdown";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     DWORD_PTR return_value{};
     auto result = ::SendMessageTimeoutW(server_info.server, general_params::shutdown_message_id, (WPARAM)ws, (LPARAM)how, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
@@ -624,7 +624,7 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
 int __stdcall siege_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket";
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     DWORD_PTR return_value{};
     auto result = ::SendMessageTimeoutW(server_info.server, general_params::close_message_id, (WPARAM)ws, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
@@ -653,7 +653,7 @@ int __stdcall siege_closesocket(SOCKET ws)
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     // TODO If the timeout is too long
     // then the client will ignore the response from the server.
@@ -705,7 +705,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
 
 int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     return send_message_to_server<isset_params, isset_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) isset_params{};
@@ -726,7 +726,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 {
   ensure_imports();
 
-  if (use_zero_tier())
+  if (use_custom_backend())
   {
     get_log() << "siege_gethostbyname.";
 
@@ -810,7 +810,7 @@ std::optional<std::uint64_t> get_zero_tier_network_id()
   return result;
 }
 
-bool use_zero_tier()
+bool use_custom_backend()
 {
   return get_zero_tier_network_id().has_value();
 }

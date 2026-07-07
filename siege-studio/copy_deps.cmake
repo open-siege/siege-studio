@@ -63,6 +63,7 @@ list(APPEND EXT_TARGETS
                 siege-input-filtration 
                 wsock32-in-proc-client 
                 wsock-backend-zero-tier 
+                wsock-backend-ws2_32 
                 wsock32-rpc-server 
                 wsock32-rpc-client 
                 ws2_32-rpc-client)
