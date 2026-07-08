@@ -30,6 +30,7 @@ EXPORTS
 	recv=siege_recv
 	siege_recvfrom @17
 	recvfrom=siege_recvfrom
+	siege_listen @13
 	listen=siege_listen
 	siege_select @18
 	select=siege_select

@@ -372,8 +372,11 @@ auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count,
 
 auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents) noexcept
 {
+  get_log() << "siege_WSAEventSelect";
   if (use_custom_backend())
   {
+    get_log() << "siege_WSAEventSelect not supported. Showing message and closing app.";
+    get_log().flush();
     ::MessageBoxW(nullptr, L"The game tried to use WSAEventSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }
@@ -383,8 +386,11 @@ auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetwo
 
 auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents) noexcept
 {
+  get_log() << "siege_WSAEnumNetworkEvents";
   if (use_custom_backend())
   {
+    get_log() << "siege_WSAEnumNetworkEvents not supported. Showing message and closing app.";
+    get_log().flush();
     ::MessageBoxW(nullptr, L"The game tried to use WSAEnumNetworkEvents, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
     ::ExitProcess(-1);
   }

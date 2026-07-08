@@ -170,7 +170,7 @@ int __stdcall siege_WSACleanup()
   // changing of backends nor multiple backends,
   // so it is probably fine.
   // However, we may end up keeping modules loaded anyway
-  // and just let the 
+  // and just let the
   /*::FreeLibrary(backend->module);
   backend = std::nullopt;*/
 
@@ -233,19 +233,23 @@ try_again:
   auto last_error = imports->WSAGetLastError();
   if (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && last_error == WSAEWOULDBLOCK)
   {
-    DWORD timeout = 0;
-    int param_size = sizeof(timeout);
-    result = backend->getsockopt(ws, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
-
     fd_set read_set;
     FD_ZERO(&read_set);
     FD_SET(ws, &read_set);
 
-    timeval wait_time{
-      .tv_usec = static_cast<long>(timeout * 1000u)
-    };
+    auto wait_time = [ws]() -> std::optional<timeval> {
+      DWORD timeout = 0;
+      int param_size = sizeof(timeout);
+      auto result = backend->getsockopt(ws, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
 
-    result = backend->select(1, &read_set, nullptr, nullptr, timeout ? &wait_time : nullptr);
+      if (result == SOCKET_ERROR || timeout == 0)
+      {
+        return std::nullopt;
+      }
+      return ms_to_timeval(timeout);
+    }();
+
+    result = backend->select(1, &read_set, nullptr, nullptr, wait_time ? &*wait_time : nullptr);
 
     if (result == SOCKET_ERROR)
     {
@@ -275,7 +279,19 @@ try_again:
     FD_ZERO(&write_set);
     FD_SET(ws, &write_set);
 
-    result = backend->select(1, nullptr, &write_set, nullptr, nullptr);
+    auto wait_time = [ws]() -> std::optional<timeval> {
+      DWORD timeout = 0;
+      int param_size = sizeof(timeout);
+      auto result = backend->getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
+
+      if (result == SOCKET_ERROR || timeout == 0)
+      {
+        return std::nullopt;
+      }
+      return ms_to_timeval(timeout);
+    }();
+
+    result = backend->select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
 
     if (result == SOCKET_ERROR)
     {
@@ -356,7 +372,53 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
     return imports->connect(ws, name, namelen);
   }
 
-  return backend->connect(ws, name, namelen);
+  auto result = backend->connect(ws, name, namelen);
+  auto last_error = imports->WSAGetLastError();
+  auto is_pending = last_error == WSAEWOULDBLOCK || last_error == WSAEINPROGRESS || last_error == WSAEALREADY;
+
+  if (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && is_pending)
+  {
+    fd_set write_set;
+    FD_ZERO(&write_set);
+    FD_SET(ws, &write_set);
+
+    auto wait_time = [ws]() -> std::optional<timeval> {
+      DWORD timeout = 0;
+      int param_size = sizeof(timeout);
+      auto result = backend->getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
+
+      if (result == SOCKET_ERROR || timeout == 0)
+      {
+        return std::nullopt;
+      }
+      return ms_to_timeval(timeout);
+    }();
+
+    result = backend->select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
+
+    if (result == SOCKET_ERROR)
+    {
+      return result;
+    }
+
+    int socket_error = 0;
+    int socket_size = sizeof(socket_error);
+    result = backend->getsockopt(ws, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&socket_error), &socket_size);
+
+    if (result != 0)
+    {
+      return result;
+    }
+
+    if (socket_error != 0)
+    {
+      imports->WSASetLastError(socket_error);
+      return SOCKET_ERROR;
+    }
+
+    return 0;
+  }
+  return result;
 }
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)

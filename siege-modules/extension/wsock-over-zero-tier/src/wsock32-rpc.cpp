@@ -119,7 +119,8 @@ export struct hostbyname_params
   {
     std::array<char, 256> host_name;
     short address_type;
-    short address_length;
+    short address_size;
+    short addresses_length;
     std::array<std::array<char, 64>, 16> addresses;
   } result;
 };

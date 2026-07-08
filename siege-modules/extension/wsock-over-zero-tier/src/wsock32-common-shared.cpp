@@ -404,3 +404,16 @@ export int exception_to_error_code() noexcept
     return WSAENETDOWN;
   }
 }
+
+export timeval ms_to_timeval(DWORD ms)
+{
+  auto total = std::chrono::milliseconds{ ms };
+
+  auto secs = std::chrono::duration_cast<std::chrono::seconds>(total);
+  auto usecs = std::chrono::duration_cast<std::chrono::microseconds>(total - secs);
+
+  return timeval{
+    .tv_sec = static_cast<long>(secs.count()),
+    .tv_usec = static_cast<long>(usecs.count())
+  };
+}

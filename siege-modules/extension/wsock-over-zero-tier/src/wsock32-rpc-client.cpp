@@ -352,9 +352,87 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
   get_log() << "siege_getsockopt ";
-  if (use_custom_backend())
+
+
+  if (!use_custom_backend())
   {
-    return send_message_to_server<sockopt_params, sockopt_params::get_message_id>(ws, [=](void* raw) {
+    auto result = imports->getsockopt(ws, level, optname, optval, optlen);
+
+    if (result != 0)
+    {
+      get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError();
+    }
+
+    return result;
+  }
+
+  if (level == SOL_SOCKET && optname == SO_MAX_MSG_SIZE && optval && optlen && *optlen)
+  {
+    DWORD sock_type{};
+    int sock_size = sizeof(sock_type);
+
+    auto inner_result = siege_getsockopt(ws, level, SO_TYPE, reinterpret_cast<char*>(&sock_type), &sock_size);
+
+    if (inner_result == SOCKET_ERROR)
+    {
+      return inner_result;
+    }
+
+    int value = 0;
+
+    if (sock_type == SOCK_DGRAM)
+    {
+      value = 65507;
+    }
+
+    auto new_size = std::clamp(*optlen, 0, (int)sizeof(value));
+
+    std::memcpy(optval, &value, new_size);
+    *optlen = new_size;
+    return 0;
+  }
+
+  if (level == SOL_SOCKET && optname == SO_PROTOCOL_INFOA && optval && optlen && *optlen)
+  {
+    DWORD sock_type{};
+    int sock_size = sizeof(sock_type);
+
+    auto inner_result = siege_getsockopt(ws, level, SO_TYPE, reinterpret_cast<char*>(&sock_type), &sock_size);
+
+    if (inner_result == SOCKET_ERROR)
+    {
+      return inner_result;
+    }
+
+    WSAPROTOCOL_INFOA info{};
+
+    info.iVersion = 2;
+    info.iSocketType = sock_type;
+    info.iAddressFamily = AF_INET;
+    info.iMinSockAddr = sizeof(sockaddr_in);
+    info.iMaxSockAddr = sizeof(sockaddr_in);
+    info.ProtocolChain.ChainLen = 1;
+
+    if (sock_type == SOCK_DGRAM)
+    {
+      info.dwServiceFlags1 = XP1_CONNECTIONLESS | XP1_MESSAGE_ORIENTED | XP1_SUPPORT_BROADCAST;
+      info.iProtocol = IPPROTO_UDP;
+    }
+    else if (sock_type == SOCK_STREAM)
+    {
+      info.dwServiceFlags1 = XP1_GUARANTEED_DELIVERY | XP1_GUARANTEED_ORDER | XP1_GRACEFUL_CLOSE;
+      info.iProtocol = IPPROTO_TCP;
+    }
+
+    auto new_size = std::clamp(*optlen, 0, (int)sizeof(info));
+
+    std::memcpy(optval, &info, new_size);
+    *optlen = new_size;
+    return 0;
+  }
+
+
+  return send_message_to_server<sockopt_params, sockopt_params::get_message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sockopt_params{ .level = level, .optname = optname };
 
       if (optval && optlen)
@@ -370,16 +448,6 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
             *optlen = len;
             std::memcpy(optval, params->option_data.data(), len);
           } });
-  }
-
-  auto result = imports->getsockopt(ws, level, optname, optval, optlen);
-
-  if (result != 0)
-  {
-    get_log() << "getsockopt WSAGetLastError " << imports->WSAGetLastError();
-  }
-
-  return result;
 }
 
 
@@ -506,7 +574,7 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
   get_log() << "siege_getpeername";
   if (use_custom_backend())
   {
-    return send_message_to_server<sockname_params, sockname_params::sock_name_message_id>(ws, [=](void* raw) {
+    return send_message_to_server<sockname_params, sockname_params::peer_name_message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sockname_params{};
 
       if (name && length)
@@ -742,31 +810,31 @@ hostent* __stdcall siege_gethostbyname(const char* name)
         auto size = std::min(params->host_name.size(), std::strlen(name));
         std::memcpy(params->host_name.data(), name, size);
       }
-      return params; }, [=](hostbyname_params* params) 
+      return params; }, [=](hostbyname_params* params) {
+      if (!params->has_result)
       {
-          if (!params->has_result)
-          {
-            return;
-          }
+        return;
+      }
 
-          storage = params->result;
+      storage = params->result;
 
-          storage.host_name.back() = '\0';
+      storage.host_name.back() = '\0';
 
-          result.h_name = storage.host_name.data();
-          result.h_aliases = nullptr;
-          result.h_addrtype = storage.address_type;
-          result.h_length = storage.address_length;
-          addresses.reserve(storage.address_length);
+      result.h_name = storage.host_name.data();
+      result.h_aliases = nullptr;
+      result.h_addrtype = storage.address_type;
+      result.h_length = storage.address_size;
+      
+      addresses.reserve(storage.addresses_length);
 
-          for (auto i = 0; i < storage.address_length; i++) 
-          { 
-              addresses.emplace_back(storage.addresses[i].data()); 
-          }
+      for (auto i = 0; i < storage.addresses_length; i++)
+      {
+        addresses.emplace_back(storage.addresses[i].data());
+      }
+      addresses.emplace_back(nullptr);
 
-          result.h_addr_list = addresses.data(); 
-     }
-    );
+      result.h_addr_list = addresses.data();
+    });
 
     if (!has_result)
     {

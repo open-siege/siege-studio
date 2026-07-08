@@ -8,6 +8,7 @@
 #endif
 #include <wsnwlink.h>
 #include <siege/platform/win/module.hpp>
+#include <cassert>
 
 import std;
 import wsock32.shared;
@@ -339,7 +340,7 @@ int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval
   }
 
 
-  get_log() << "zts_bsd_setsockopt, level: " << level << " optname: " << optname;
+  get_log() << "zts_bsd_getsockopt, level: " << level << " optname: " << optname;
 
   if (level != SOL_SOCKET)
   {
@@ -382,7 +383,7 @@ int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval
   }
   else
   {
-    zt_result = zts_bsd_getsockopt(to_zts(ws), level, optname, &optval, &size);
+    zt_result = zts_bsd_getsockopt(to_zts(ws), level, optname, optval, &size);
   }
 
   if (optlen)
@@ -746,25 +747,23 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
   zts_fd_set zt_read{};
   zts_fd_set* final_read = nullptr;
 
-  auto transfer_set = [](auto& source, auto& dest) {
+  auto transfer_set_zts = [](auto& source, auto& dest) {
     ZTS_FD_ZERO(&dest);
     for (auto i = 0; i < source.fd_count; ++i)
     {
       auto zts = to_zts(source.fd_array[i]);
-      if (get_zero_tier_handles().contains(zts))
-      {
-        ZTS_FD_SET(zts, &dest);
-      }
-      else
+      if (!get_zero_tier_handles().contains(zts))
       {
         get_log() << "Non Zero Tier handle detected " << zts;
+        continue;
       }
+      ZTS_FD_SET(zts, &dest);
     }
   };
 
   if (read && read->fd_count)
   {
-    transfer_set(*read, zt_read);
+    transfer_set_zts(*read, zt_read);
     final_read = &zt_read;
   }
 
@@ -773,7 +772,7 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
 
   if (write && write->fd_count)
   {
-    transfer_set(*write, zt_write);
+    transfer_set_zts(*write, zt_write);
     final_write = &zt_write;
   }
 
@@ -782,7 +781,7 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
 
   if (except && except->fd_count)
   {
-    transfer_set(*except, zt_except);
+    transfer_set_zts(*except, zt_except);
     final_except = &zt_except;
   }
 
@@ -804,6 +803,45 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
   {
     return zt_to_winsock_result(count);
   }
+
+  auto transfer_set_win32 = [](zts_fd_set& source, fd_set& dest) {
+    fd_set temp{};
+    for (auto i = 0; i < dest.fd_count; ++i)
+    {
+      auto zts = to_zts(dest.fd_array[i]);
+      if (!get_zero_tier_handles().contains(zts))
+      {
+        get_log() << "Non Zero Tier handle detected " << zts;
+        continue;
+      }
+
+      if (ZTS_FD_ISSET(zts, &source))
+      {
+        FD_SET(dest.fd_array[i], &temp);
+      }
+    }
+
+    std::memcpy(&dest, &temp, sizeof(dest));
+  };
+
+  if (final_read)
+  {
+    assert(read != nullptr);
+    transfer_set_win32(*final_read, *read);
+  }
+
+  if (final_write)
+  {
+    assert(write != nullptr);
+    transfer_set_win32(*final_write, *write);
+  }
+
+  if (final_except)
+  {
+    assert(except != nullptr);
+    transfer_set_win32(*final_except, *except);
+  }
+
   return count;
 }
 
@@ -1094,7 +1132,7 @@ int to_zt_msg_flags(int flags)
     zt_flags |= ZTS_MSG_OOB;
   }
 
-  return flags;
+  return zt_flags;
 }
 
 int get_zts_errno()
