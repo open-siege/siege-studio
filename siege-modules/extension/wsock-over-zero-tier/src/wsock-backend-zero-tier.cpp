@@ -152,12 +152,12 @@ int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
       {
         get_log() << "Node is online but could not join network. Stopping node.\n";
         zts_node_stop();
-        ::ExitProcess(-1);
+        return WSASYSNOTREADY;
       }
       else if (!is_online && !is_connected)
       {
         get_log() << "Node could not be started and could not join network.\n";
-        ::ExitProcess(-1);
+        return WSASYSNOTREADY;
       }
 
       if (auto storage = get_shared_current_ip_address_storage(); storage)

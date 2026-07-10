@@ -53,76 +53,83 @@ hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
   return imports->gethostbyaddr(addr, len, type);
 }
 
-auto __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
+HANDLE __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
 {
-  if (use_custom_backend())
+  get_log() << "siege_WSAAsyncGetHostByName.\n";
+  if (!use_custom_backend())
   {
-    get_log() << "siege_WSAAsyncGetHostByName.\n";
-    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncGetHostByName, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
   }
 
-  return imports->WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
+  get_log() << "siege_WSAAsyncGetHostByName not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+
+  return nullptr;
 }
 
 auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
 {
-  if (use_custom_backend())
+  get_log() << "siege_WSACancelAsyncRequest";
+  if (!use_custom_backend())
   {
-    get_log() << "siege_WSACancelAsyncRequest.\n";
-    ::MessageBoxW(nullptr, L"The game tried to use WSACancelAsyncRequest, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->WSACancelAsyncRequest(request);
   }
 
-  return imports->WSACancelAsyncRequest(request);
+  get_log() << "siege_WSACancelAsyncRequest not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+
+  return SOCKET_ERROR;
 }
 
 auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    bool notify_read = flags & FD_READ;
-    bool notify_write = flags & FD_WRITE;
-    bool notify_oob = flags & FD_OOB;
-
-    if (flags & FD_ACCEPT)
-    {
-      get_log() << "FD_ACCEPT not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_CONNECT)
-    {
-      get_log() << "FD_CONNECT not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_CLOSE)
-    {
-      get_log() << "FD_CLOSE not supported for siege_WSAAsyncSelect.\n";
-    }
-
-#ifdef USE_WINSOCK2
-    if (flags & FD_QOS)
-    {
-      get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_ROUTING_INTERFACE_CHANGE)
-    {
-      get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
-    }
-
-    if (flags & FD_ADDRESS_LIST_CHANGE)
-    {
-      get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
-    }
-#endif
-
-    ::MessageBoxW(nullptr, L"The game tried to use WSAAsyncSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-
-    ::ExitProcess(-1);
+    return imports->WSAAsyncSelect(socket, window, message, flags);
   }
 
-  return imports->WSAAsyncSelect(socket, window, message, flags);
+  bool notify_read = flags & FD_READ;
+  bool notify_write = flags & FD_WRITE;
+  bool notify_oob = flags & FD_OOB;
+
+  if (flags & FD_ACCEPT)
+  {
+    get_log() << "FD_ACCEPT not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_CONNECT)
+  {
+    get_log() << "FD_CONNECT not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_CLOSE)
+  {
+    get_log() << "FD_CLOSE not supported for siege_WSAAsyncSelect.\n";
+  }
+
+#ifdef USE_WINSOCK2
+  if (flags & FD_QOS)
+  {
+    get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_ROUTING_INTERFACE_CHANGE)
+  {
+    get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_ADDRESS_LIST_CHANGE)
+  {
+    get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
+  }
+#endif
+
+  get_log() << "siege_WSAAsyncSelect not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+  return SOCKET_ERROR;
 }
 
 
@@ -152,24 +159,28 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcep
 SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
 {
   get_log() << "siege_WSASocketW " << '\n';
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_WSASocketW, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
   }
 
-  return imports->WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
+  get_log() << "siege_WSASocketW not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+  return INVALID_SOCKET;
 }
 
 int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_WSAIoctl, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
   }
 
-  return imports->WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
+  get_log() << "siege_WSAIoctl not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+  return SOCKET_ERROR;
 }
 
 // This and freeaddrinfo needed by AMD's open GL driver for the RPC case
@@ -197,204 +208,214 @@ auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::siz
 
 auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlapped, DWORD* transfer, BOOL wait, DWORD* flags)
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    get_log() << "siege_WSAGetOverlappedResult called. quitting.\n";
-    ::ExitProcess(-1);
-    // cancel get host by name task
+    return imports->WSAGetOverlappedResult(socket, overlapped, transfer, wait, flags);
   }
-  return imports->WSAGetOverlappedResult(socket, overlapped, transfer, wait, flags);
+
+  get_log() << "siege_WSAGetOverlappedResult called. not supported.\n";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+
+  return FALSE;
 }
 
 // TODO implement a version that deals with multiple buffers.
 // This is for our first candidate using this API, Alien vs Predator
 auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    get_log() << "siege_WSARecvFrom called.\n";
-    if (overlapped || completion_handler)
-    {
-      get_log() << "siege_WSARecvFrom is overlapped.\n";
+    return imports->WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
+  }
 
-      ::MessageBoxW(nullptr, L"The game tried to use WSARecvFrom, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-      ::ExitProcess(-1);
-    }
+  get_log() << "siege_WSARecvFrom called.\n";
+  if (overlapped || completion_handler)
+  {
+    get_log() << "siege_WSARecvFrom is overlapped. Not supported.\n";
+    get_log().flush();
+    imports->WSASetLastError(WSAENETDOWN);
 
-    if (!buffers)
+    return SOCKET_ERROR;
+  }
+
+  if (!buffers)
+  {
+    // TODO return error here
+  }
+
+  for (auto i = 0; i < buffer_count; ++i)
+  {
+    if (!buffers[i].buf)
     {
       // TODO return error here
     }
-
-    for (auto i = 0; i < buffer_count; ++i)
-    {
-      if (!buffers[i].buf)
-      {
-        // TODO return error here
-      }
-    }
-
-    struct span_pair
-    {
-      std::span<char> from_buffer;
-      std::span<char> to_param;
-    };
-
-    thread_local std::vector<char> temp_buffer;
-    thread_local std::vector<span_pair> span_buffer;
-
-    temp_buffer.reserve(buffer_count);
-    temp_buffer.resize(0);
-
-    std::size_t size = 0;
-    for (auto i = 0; i < buffer_count; ++i)
-    {
-      size += buffers[i].len;
-    }
-    temp_buffer.resize(0);
-    temp_buffer.resize(size);
-
-    auto begin = temp_buffer.begin();
-
-    for (auto i = 0; i < buffer_count; ++i)
-    {
-      span_pair& pair = span_buffer.emplace_back();
-      pair.to_param = std::span{ buffers[i].buf, buffers[i].len };
-      pair.from_buffer = std::span{ begin, buffers[i].len };
-
-      if (begin + buffers[i].len > temp_buffer.end())
-      {
-        break;
-      }
-      std::advance(begin, buffers[i].len);
-    }
-
-    auto received_size = siege_recvfrom(socket, temp_buffer.data(), static_cast<int>(temp_buffer.size()), *flags, from, from_len);
-
-    if (received_size == SOCKET_ERROR)
-    {
-      return SOCKET_ERROR;
-    }
-
-    *bytes_received = static_cast<DWORD>(received_size);
-
-    for (auto& pair : span_buffer)
-    {
-      // TODO assert that sizes are the same.
-      std::memcpy(pair.to_param.data(), pair.from_buffer.data(), pair.to_param.size());
-    }
-
-    // TODO log and/or reject or deal with MSG_PARTIAL
-    // TODO map WSAEWOULDBLOCK to WSA_IO_PENDING
-    // TODO make sure there isn't anything else that must go out.
-
-    return 0;
   }
 
-  return imports->WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
+  struct span_pair
+  {
+    std::span<char> from_buffer;
+    std::span<char> to_param;
+  };
+
+  thread_local std::vector<char> temp_buffer;
+  thread_local std::vector<span_pair> span_buffer;
+
+  temp_buffer.reserve(buffer_count);
+  temp_buffer.resize(0);
+
+  std::size_t size = 0;
+  for (auto i = 0; i < buffer_count; ++i)
+  {
+    size += buffers[i].len;
+  }
+  temp_buffer.resize(0);
+  temp_buffer.resize(size);
+
+  auto begin = temp_buffer.begin();
+
+  for (auto i = 0; i < buffer_count; ++i)
+  {
+    span_pair& pair = span_buffer.emplace_back();
+    pair.to_param = std::span{ buffers[i].buf, buffers[i].len };
+    pair.from_buffer = std::span{ begin, buffers[i].len };
+
+    if (begin + buffers[i].len > temp_buffer.end())
+    {
+      break;
+    }
+    std::advance(begin, buffers[i].len);
+  }
+
+  auto received_size = siege_recvfrom(socket, temp_buffer.data(), static_cast<int>(temp_buffer.size()), *flags, from, from_len);
+
+  if (received_size == SOCKET_ERROR)
+  {
+    return SOCKET_ERROR;
+  }
+
+  *bytes_received = static_cast<DWORD>(received_size);
+
+  for (auto& pair : span_buffer)
+  {
+    // TODO assert that sizes are the same.
+    std::memcpy(pair.to_param.data(), pair.from_buffer.data(), pair.to_param.size());
+  }
+
+  // TODO log and/or reject or deal with MSG_PARTIAL
+  // TODO map WSAEWOULDBLOCK to WSA_IO_PENDING
+  // TODO make sure there isn't anything else that must go out.
+
+  return 0;
 }
 
 auto __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPDWORD numberOfBytesRecvd, LPDWORD flags, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    return siege_WSARecvFrom(ws, buffers, bufferCount, numberOfBytesRecvd, flags, nullptr, 0, lpOverlapped, completionRoutine);
+    return imports->WSARecv(ws, buffers, bufferCount, numberOfBytesRecvd, flags, lpOverlapped, completionRoutine);
   }
 
-  return imports->WSARecv(ws, buffers, bufferCount, numberOfBytesRecvd, flags, lpOverlapped, completionRoutine);
+  return siege_WSARecvFrom(ws, buffers, bufferCount, numberOfBytesRecvd, flags, nullptr, 0, lpOverlapped, completionRoutine);
 }
 
 // TODO implement a version that deals with multiple buffers.
 // This is for our first candidate using this API, Alien vs Predator
 auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    if (overlapped || completion_handler)
-    {
-      get_log() << "siege_WSASendTo is overlapped.\n";
-      ::MessageBoxW(nullptr, L"The game tried to use WSASendTo, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-      ::ExitProcess(-1);
-    }
+    return imports->WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, to, len, overlapped, completion_handler);
+  }
 
-    thread_local std::vector<char> temp_buffer;
+  if (overlapped || completion_handler)
+  {
+    get_log() << "siege_WSASendTo is overlapped. Not supported.\n";
+    get_log().flush();
+    imports->WSASetLastError(WSAENETDOWN);
+    return SOCKET_ERROR;
+  }
 
-    if (!buffers)
+  thread_local std::vector<char> temp_buffer;
+
+  if (!buffers)
+  {
+    // TODO return error here
+  }
+
+  for (auto i = 0; i < buffer_count; ++i)
+  {
+    if (!buffers[i].buf)
     {
       // TODO return error here
     }
-
-    for (auto i = 0; i < buffer_count; ++i)
-    {
-      if (!buffers[i].buf)
-      {
-        // TODO return error here
-      }
-    }
-
-    std::size_t size = 0;
-    for (auto i = 0; i < buffer_count; ++i)
-    {
-      size += buffers[i].len;
-    }
-    temp_buffer.reserve(size);
-    temp_buffer.resize(0);
-
-    for (auto i = 0; i < buffer_count; ++i)
-    {
-      temp_buffer.insert(temp_buffer.end(), buffers[i].buf, buffers[i].buf + buffers[i].len);
-    }
-    // TODO log and/or reject or deal with MSG_PARTIAL
-
-    // TODO map WSAEWOULDBLOCK to WSA_IO_PENDING
-    auto sent_size = siege_sendto(socket, temp_buffer.data(), static_cast<int>(temp_buffer.size()), flags, to, len);
-
-    if (sent_size == SOCKET_ERROR)
-    {
-      return SOCKET_ERROR;
-    }
-
-    *bytes_sent = static_cast<DWORD>(sent_size);
-    return 0;
   }
-  return imports->WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, to, len, overlapped, completion_handler);
+
+  std::size_t size = 0;
+  for (auto i = 0; i < buffer_count; ++i)
+  {
+    size += buffers[i].len;
+  }
+  temp_buffer.reserve(size);
+  temp_buffer.resize(0);
+
+  for (auto i = 0; i < buffer_count; ++i)
+  {
+    temp_buffer.insert(temp_buffer.end(), buffers[i].buf, buffers[i].buf + buffers[i].len);
+  }
+  // TODO log and/or reject or deal with MSG_PARTIAL
+
+  // TODO map WSAEWOULDBLOCK to WSA_IO_PENDING
+  auto sent_size = siege_sendto(socket, temp_buffer.data(), static_cast<int>(temp_buffer.size()), flags, to, len);
+
+  if (sent_size == SOCKET_ERROR)
+  {
+    return SOCKET_ERROR;
+  }
+
+  *bytes_sent = static_cast<DWORD>(sent_size);
+  return 0;
 }
 
 auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler) noexcept
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    return siege_WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, nullptr, 0, overlapped, completion_handler);
+    return imports->WSASend(socket, buffers, buffer_count, bytes_sent, flags, overlapped, completion_handler);
   }
 
-  return imports->WSASend(socket, buffers, buffer_count, bytes_sent, flags, overlapped, completion_handler);
+  return siege_WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, nullptr, 0, overlapped, completion_handler);
 }
 
 auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents) noexcept
 {
   get_log() << "siege_WSAEventSelect";
-  if (use_custom_backend())
+
+  if (!use_custom_backend())
   {
-    get_log() << "siege_WSAEventSelect not supported. Showing message and closing app.";
-    get_log().flush();
-    ::MessageBoxW(nullptr, L"The game tried to use WSAEventSelect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->WSAEventSelect(s, hEventObject, lNetworkEvents);
   }
 
-  return imports->WSAEventSelect(s, hEventObject, lNetworkEvents);
+  get_log() << "siege_WSAEventSelect not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+
+  return SOCKET_ERROR;
 }
 
 auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents) noexcept
 {
   get_log() << "siege_WSAEnumNetworkEvents";
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    get_log() << "siege_WSAEnumNetworkEvents not supported. Showing message and closing app.";
-    get_log().flush();
-    ::MessageBoxW(nullptr, L"The game tried to use WSAEnumNetworkEvents, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
   }
-  return imports->WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
+
+  get_log() << "siege_WSAEnumNetworkEvents not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+
+  return SOCKET_ERROR;
 }
 
 auto __stdcall siege_WSACreateEvent() noexcept
@@ -422,8 +443,24 @@ auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* e
 
 auto __stdcall siege_gethostname(char* name, int namelen) noexcept
 {
-  ensure_imports();
-  return imports->gethostname(name, namelen);
+  if (!name || namelen <= 0)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return SOCKET_ERROR;
+  }
+  DWORD size = static_cast<DWORD>(namelen);
+
+  if (::GetComputerNameExA(ComputerNamePhysicalDnsHostname, name, &size))
+  {
+    return 0;
+  }
+
+  imports->WSASetLastError(WSAENETDOWN);
+  return SOCKET_ERROR;
+
+  // get_log() << "siege_gethostname.";
+  // ensure_imports();
+  // return imports->gethostname(name, namelen);
 }
 
 auto __stdcall siege_WSAGetLastError() noexcept

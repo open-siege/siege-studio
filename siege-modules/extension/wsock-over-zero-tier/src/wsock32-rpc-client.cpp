@@ -18,14 +18,7 @@ bool use_custom_backend();
 static struct rpc_process_info : ::PROCESS_INFORMATION
 {
   HWND server = nullptr;
-
-  // This is fine if we only ever have wsock and ws2_32 from one process.
-  // But fails completely when we have more than two.
-  // TODO find a way to handle more than two clients.
-  bool owning = true;
 } server_info{};
-
-std::shared_ptr<void> cleanup = nullptr;
 
 std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::size_t size, std::optional<ATOM> key = std::nullopt)
 {
@@ -170,6 +163,11 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       imports->WSACleanup();
     }
 
+    if (server_info.server)
+    {
+      return result;
+    }
+
     // preallocate some memory
     try
     {
@@ -191,7 +189,6 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
       server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
       if (server_window)
       {
-        server_info.owning = false;
         server_info.server = server_window;
         server_info.dwThreadId = ::GetWindowThreadProcessId(server_info.server, &server_info.dwProcessId);
         return result;
@@ -214,12 +211,17 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
     std::memcpy(&server_info, &process_info, sizeof(process_info));
 
-    cleanup = std::shared_ptr<void>{ nullptr, [](...) {
-                                      ::PostThreadMessageW(server_info.dwThreadId, WM_QUIT, 0, 0);
-                                      ::WaitForSingleObject(server_info.hProcess, 1000);
-                                      ::CloseHandle(server_info.hProcess);
-                                      ::CloseHandle(server_info.hThread);
-                                    } };
+    if (server_info.hProcess)
+    {
+      ::CloseHandle(server_info.hProcess);
+      server_info.hProcess = nullptr;
+    }
+
+    if (server_info.hThread)
+    {
+      ::CloseHandle(server_info.hThread);
+      server_info.hThread = nullptr;
+    }
 
     for (auto i = 0; i < 3; ++i)
     {
@@ -235,7 +237,6 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     if (!server_window)
     {
       get_log() << "Could not find server window";
-      cleanup.reset();
       return WSASYSNOTREADY;
     }
 
@@ -253,7 +254,6 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
     if (!is_init)
     {
-      cleanup.reset();
       return WSASYSNOTREADY;
     }
 
@@ -271,11 +271,6 @@ int __stdcall siege_WSACleanup()
 
   if (use_custom_backend())
   {
-    if (server_info.owning && server_info.server && cleanup)
-    {
-      cleanup.reset();
-    }
-
     return 0;
   }
 
@@ -597,37 +592,48 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 
 int __stdcall siege_listen(SOCKET ws, int backlog)
 {
-  get_log() << "siege_listen";
-  if (use_custom_backend())
+  get_log() << "siege_listen with backlog " << backlog;
+  if (!use_custom_backend())
   {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_listen, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->listen(ws, backlog);
   }
-  return imports->listen(ws, backlog);
+
+  get_log() << "The game tried to use siege_listen, which is currently not implemented.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+  return SOCKET_ERROR;
 }
 
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
   get_log() << "siege_accept";
-  if (use_custom_backend())
+
+  if (!use_custom_backend())
   {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_accept, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->accept(ws, name, namelen);
   }
 
-  return imports->accept(ws, name, namelen);
+  get_log() << "The game tried to use siege_accept, which is currently not implemented.";
+  get_log().flush();
+
+  imports->WSASetLastError(WSAENETDOWN);
+  return INVALID_SOCKET;
 }
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
   get_log() << "siege_connect";
 
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    ::MessageBoxW(nullptr, L"The game tried to use siege_connect, which is currently not implemented. Please disable Zero Tier in the settings.", L"Function not implemented", MB_ICONERROR);
-    ::ExitProcess(-1);
+    return imports->connect(ws, name, namelen);
   }
-  return imports->connect(ws, name, namelen);
+
+  get_log() << "The game tried to use siege_connect, which is currently not implemented.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+
+  return SOCKET_ERROR;
 }
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
@@ -794,15 +800,18 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 {
   ensure_imports();
 
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    get_log() << "siege_gethostbyname.";
+    return imports->gethostbyname(name);
+  }
 
-    thread_local hostent result{};
-    thread_local hostbyname_params::hostinfo storage{};
-    thread_local std::vector<char*> addresses;
+  get_log() << "siege_gethostbyname.";
 
-    auto has_result = send_message_to_server<hostbyname_params, hostbyname_params::message_id>(INVALID_SOCKET, [=](void* raw) {
+  thread_local hostent result{};
+  thread_local hostbyname_params::hostinfo storage{};
+  thread_local std::vector<char*> addresses;
+
+  auto has_result = send_message_to_server<hostbyname_params, hostbyname_params::message_id>(INVALID_SOCKET, [=](void* raw) {
       auto* params = new (raw) hostbyname_params{};
 
       if (name)
@@ -833,19 +842,15 @@ hostent* __stdcall siege_gethostbyname(const char* name)
       }
       addresses.emplace_back(nullptr);
 
-      result.h_addr_list = addresses.data();
-    });
+      result.h_addr_list = addresses.data(); });
 
-    if (!has_result)
-    {
-      imports->WSASetLastError(WSAHOST_NOT_FOUND);
-      return nullptr;
-    }
-
-    return &result;
+  if (!has_result)
+  {
+    imports->WSASetLastError(WSAHOST_NOT_FOUND);
+    return nullptr;
   }
 
-  return imports->gethostbyname(name);
+  return &result;
 }
 }
 

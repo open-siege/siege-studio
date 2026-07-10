@@ -10,6 +10,12 @@ import wsock32.rpc;
 
 namespace fs = std::filesystem;
 
+constexpr static UINT keep_alive_timer_id = 1;
+constexpr static UINT safety_timer_id = 2;
+constexpr static ULONGLONG grace_period_ms = 60000;
+inline static ULONGLONG last_activity = 0;
+inline static bool keep_alive_timer_started = false;
+
 HMODULE wsock_module = nullptr;
 decltype(::WSAStartup)* wsock_WSAStartup = nullptr;
 decltype(::WSACleanup)* wsock_WSACleanup = nullptr;
@@ -120,6 +126,33 @@ struct wsock_window : win32::basic_window<wsock_window>
 {
   std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override
   {
+    if (message >= WM_APP)
+    {
+      last_activity = ::GetTickCount64();
+      if (!keep_alive_timer_started)
+      {
+        ::KillTimer(*this, safety_timer_id);
+        ::SetTimer(*this, keep_alive_timer_id, 1000, nullptr);
+        keep_alive_timer_started = true;
+      }
+    }
+
+
+    if (message == WM_TIMER && wparam == safety_timer_id)
+    {
+      ::DestroyWindow(*this);
+      return 0;
+    }
+
+    if (message == WM_TIMER && wparam == keep_alive_timer_id)
+    {
+      if (::GetTickCount64() - last_activity >= grace_period_ms)
+      {
+        ::DestroyWindow(*this);
+      }
+      return 0;
+    }
+
     if (message == socket_params::message_id)
     {
       auto value = get_value<socket_params>(*this, lparam);
@@ -437,11 +470,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
   }
 
   ::SetPropW(*window, L"IsOnline", (HANDLE)1);
+  ::SetTimer(*window, safety_timer_id, 60000, nullptr);
 
   MSG msg;
 
   while (BOOL status = ::GetMessageW(&msg, nullptr, 0, 0) != 0)
   {
+    // TODO quit shouldn't quit. it means that we check if we still connections and then
+    // gracefully close if there are none.
     if (msg.message == WM_QUIT)
     {
       ::DestroyWindow(*window);
