@@ -243,6 +243,42 @@ export std::ostream& get_log(std::string_view log_prefix = "networking")
   return debug_log;
 }
 
+std::ostream& null_log()
+{
+  static thread_local std::ostream stream(nullptr);
+  return stream;
+}
+
+std::ostream& log_sampled(std::atomic<std::uint64_t>& counter, std::uint64_t count)
+{
+  if (counter.fetch_add(1, std::memory_order_relaxed) % count == 0)
+  {
+    return get_log();
+  }
+  return null_log();
+}
+
+export std::ostream& log_sampled_read()
+{
+  static std::atomic<std::uint64_t> counter{};
+  
+  return log_sampled(counter, 20011);
+}
+
+export std::ostream& log_sampled_write()
+{
+  static std::atomic<std::uint64_t> counter{};
+
+  return log_sampled(counter, 5003);
+}
+
+export std::ostream& log_sampled_check()
+{
+  static std::atomic<std::uint64_t> counter{};
+
+  return log_sampled(counter, 10007);
+}
+
 
 export std::string level_to_string(int level)
 {

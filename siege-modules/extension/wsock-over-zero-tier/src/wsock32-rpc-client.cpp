@@ -473,11 +473,21 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
-  get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
-
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    return send_message_to_server<ioctl_params, ioctl_params::message_id>(ws, [=](void* raw) {
+    return imports->ioctlsocket(ws, cmd, argp);
+  }
+
+  if (cmd == FIONREAD)
+  {
+    log_sampled_check() << "siege_ioctlsocket with FIONREAD";
+  }
+  else
+  {
+    get_log() << "siege_ioctlsocket with " << ioctl_cmd_to_string(cmd);
+  }
+
+  return send_message_to_server<ioctl_params, ioctl_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) ioctl_params{ .command = cmd };
 
       if (argp)
@@ -488,22 +498,41 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
       {
         *argp = params->argument;
         } });
-  }
-
-  auto result = imports->ioctlsocket(ws, cmd, argp);
-
-  get_log() << "siege_ioctlsocket finished";
-
-  return result;
 }
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    // TODO the server is always non-blocking.
-    // However, if we want to have blocking sockets we should block on the client side.
-    return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
+    return imports->recvfrom(ws, buf, len, flags, from, fromLen);
+  }
+
+  if (from)
+  {
+    if (flags & MSG_PEEK)
+    {
+      log_sampled_check() << "siege_recvfrom MSG_PEEK from address " << af_to_string(from->sa_family);
+    }
+    else
+    {
+      log_sampled_read() << "siege_recvfrom with from address " << af_to_string(from->sa_family);
+    }
+  }
+  else
+  {
+    if (flags & MSG_PEEK)
+    {
+      log_sampled_check() << "siege_recvfrom MSG_PEEK without address";
+    }
+    else
+    {
+      log_sampled_read() << "siege_recvfrom with without address";
+    }
+  }
+
+  // TODO the server is always non-blocking.
+  // However, if we want to have blocking sockets we should block on the client side.
+  return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) recvfrom_params{ .flags = flags };
 
       if (buf && len)
@@ -533,9 +562,6 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
         *fromLen = len;
         std::memcpy(from, &params->from_address, len);
       } });
-  }
-
-  return imports->recvfrom(ws, buf, len, flags, from, fromLen);
 }
 
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
@@ -638,9 +664,21 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
+    return imports->sendto(ws, buf, len, flags, to, tolen);
+  }
+
+  if (to)
+  {
+    log_sampled_write() << "siege_sendto with to address " << af_to_string(to->sa_family);
+  }
+  else
+  {
+    log_sampled_write() << "siege_sendto with no address";
+  }
+
+  return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sendto_params{ .flags = flags };
 
       if (buf && len)
@@ -660,9 +698,6 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
       }
 
       return params; });
-  }
-
-  return imports->sendto(ws, buf, len, flags, to, tolen);
 }
 
 int __stdcall siege_shutdown(SOCKET ws, int how)
@@ -727,13 +762,24 @@ int __stdcall siege_closesocket(SOCKET ws)
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    // TODO If the timeout is too long
-    // then the client will ignore the response from the server.
-    // It's better to update this to make the client do the waiting and
-    // send small timeout increments to the server
-    return send_message_to_server<select_params, select_params::message_id>(0, [=](void* raw) {
+    return imports->select(value, read, write, except, timeout);
+  }
+
+  if (timeout)
+  {
+    log_sampled_check() << "siege_select with timeout, sec: " << timeout->tv_sec << ", usec: " << timeout->tv_usec;
+  }
+  else
+  {
+    log_sampled_check() << "siege_select with no timeout";
+  }
+  // TODO If the timeout is too long
+  // then the client will ignore the response from the server.
+  // It's better to update this to make the client do the waiting and
+  // send small timeout increments to the server
+  return send_message_to_server<select_params, select_params::message_id>(0, [=](void* raw) {
       select_params* params = new (raw) select_params{};
 
       params->fd_set_count = value;
@@ -773,8 +819,6 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
       {
         *except = params->except_set;
       } });
-  }
-  return imports->select(value, read, write, except, timeout);
 }
 
 int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
