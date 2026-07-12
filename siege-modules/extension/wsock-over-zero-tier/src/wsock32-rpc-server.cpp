@@ -203,7 +203,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       return result;
     }
 
-    if (message == bind_params::message_id)
+    if (message == bind_params::bind_message_id || message == bind_params::connect_message_id)
     {
       auto value = get_value<bind_params>(*this, lparam);
 
@@ -214,7 +214,46 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = backend->bind((SOCKET)wparam, (sockaddr*)&params.address, params.address_size);
+      auto* func = message == bind_params::bind_message_id ? backend->bind : backend->connect;
+
+      sockaddr* address = params.address_size == 0 ? nullptr : (sockaddr*)&params.address;
+      
+      auto result = func((SOCKET)wparam, address, params.address_size);
+      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      return result;
+    }
+
+    if (message == listen_params::message_id)
+    {
+      auto value = get_value<listen_params>(*this, lparam);
+
+      if (!value)
+      {
+        return value.error();
+      }
+
+      auto& params = *value.value();
+      auto result = backend->listen((SOCKET)wparam, params.backlog);
+      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      return result;
+    }
+
+    if (message == accept_params::message_id)
+    {
+      auto value = get_value<accept_params>(*this, lparam);
+
+      if (!value)
+      {
+        return value.error();
+      }
+
+      auto& params = *value.value();
+
+      sockaddr* address = params.from_address_size == 0 ? nullptr : (sockaddr*)&params.from_address;
+      int* address_size = params.from_address_size == 0 ? nullptr : &params.from_address_size;
+
+      auto result = backend->accept((SOCKET)wparam, address, address_size);
+
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -336,7 +375,8 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = backend->select(params.fd_set_count, &params.read_set, &params.write_set, &params.except_set, &params.timeout);
+      timeval zero{};
+      auto result = backend->select(params.fd_set_count, &params.read_set, &params.write_set, &params.except_set, &zero);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }

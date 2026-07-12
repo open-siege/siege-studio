@@ -46,16 +46,36 @@ static_assert(std::is_trivially_copyable_v<sockopt_params>);
 
 export struct bind_params
 {
-  constexpr static auto message_id = sockopt_params::set_message_id + 1;
+  constexpr static auto bind_message_id = sockopt_params::set_message_id + 1;
+  constexpr static auto connect_message_id = bind_message_id + 1;
 
   int address_size;
   sockaddr_storage address;
 };
 static_assert(std::is_trivially_copyable_v<bind_params>);
 
+
+export struct listen_params
+{
+  constexpr static auto message_id = bind_params::connect_message_id + 1;
+
+  int backlog;
+};
+static_assert(std::is_trivially_copyable_v<listen_params>);
+
+export struct accept_params
+{
+  constexpr static auto message_id = listen_params::message_id + 1;
+
+  int from_address_size;
+  sockaddr_storage from_address;
+};
+static_assert(std::is_trivially_copyable_v<accept_params>);
+
+
 export struct sendto_params
 {
-  constexpr static auto message_id = bind_params::message_id + 1;
+  constexpr static auto message_id = accept_params::message_id + 1;
 
   int buffer_length;
   ATOM buffer;
@@ -85,7 +105,6 @@ export struct select_params
   fd_set read_set;
   fd_set write_set;
   fd_set except_set;
-  timeval timeout;
 };
 static_assert(std::is_trivially_copyable_v<select_params>);
 
@@ -125,4 +144,3 @@ export struct hostbyname_params
   } result;
 };
 static_assert(std::is_trivially_copyable_v<hostbyname_params>);
-

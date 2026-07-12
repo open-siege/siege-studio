@@ -109,8 +109,8 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
   });
 }
 
-template<typename TParam, int MessageId>
-int send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, std::function<void(TParam*)> on_finish = nullptr)
+template<typename TParam, int MessageId, typename TReturn = int>
+TReturn send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, std::function<void(TParam*)> on_finish = nullptr)
 {
   auto data = get_global_memory(sizeof(TParam));
   auto* params = init(data->second.data());
@@ -145,7 +145,7 @@ int send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, st
     on_finish(params);
   }
 
-  return (int)return_value;
+  return static_cast<TReturn>(return_value);
 }
 
 
@@ -448,27 +448,24 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
+  if (!use_custom_backend())
+  {
+    return imports->bind(ws, addr, namelen);
+  }
+
   get_log() << "siege_bind ";
 
-  if (use_custom_backend())
-  {
-    return send_message_to_server<bind_params, bind_params::message_id>(ws, [=](void* raw) {
-      auto* params = new (raw) bind_params{};
+  return send_message_to_server<bind_params, bind_params::bind_message_id>(ws, [=](void* raw) {
+    auto* params = new (raw) bind_params{};
 
-      if (addr && namelen)
-      {
-        auto len = std::clamp<int>(namelen, 0, sizeof(params->address));
-        params->address_size = len;
-        std::memcpy(&params->address, addr, len);
-      }
-      return params;
-    });
-  }
-  auto result = imports->bind(ws, addr, namelen);
-
-  get_log() << "Bind call has error " << imports->WSAGetLastError() << "";
-
-  return result;
+    if (addr && namelen)
+    {
+      auto len = std::clamp<int>(namelen, 0, sizeof(params->address));
+      params->address_size = len;
+      std::memcpy(&params->address, addr, len);
+    }
+    return params;
+  });
 }
 
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
@@ -618,48 +615,68 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
 
 int __stdcall siege_listen(SOCKET ws, int backlog)
 {
-  get_log() << "siege_listen with backlog " << backlog;
   if (!use_custom_backend())
   {
     return imports->listen(ws, backlog);
   }
 
-  get_log() << "The game tried to use siege_listen, which is currently not implemented.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
-  return SOCKET_ERROR;
+  get_log() << "siege_listen with backlog " << backlog;
+
+  return send_message_to_server<listen_params, listen_params::message_id>(ws, [=](void* raw) {
+    return new (raw) listen_params{ .backlog = backlog };
+  });
 }
 
-SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
+SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen)
 {
-  get_log() << "siege_accept";
-
   if (!use_custom_backend())
   {
-    return imports->accept(ws, name, namelen);
+    return imports->accept(ws, from, fromLen);
   }
 
-  get_log() << "The game tried to use siege_accept, which is currently not implemented.";
-  get_log().flush();
+  get_log() << "siege_accept";
 
-  imports->WSASetLastError(WSAENETDOWN);
-  return INVALID_SOCKET;
+
+  // TODO server sockets are always non-blocking.
+  // we should fix this the same way we fixed the send wrappers in client-shared.
+  return send_message_to_server<accept_params, accept_params::message_id, SOCKET>(ws, [=](void* raw) {
+      auto* params = new (raw) accept_params{ };
+
+      if (from && fromLen)
+      {
+        params->from_address_size = std::clamp<int>(*fromLen, 0, (int)sizeof(params->from_address));
+        std::memcpy(&params->from_address, from, params->from_address_size);
+      }
+
+      return params; }, [=](accept_params* params) {
+      if (from && fromLen)
+      {
+        auto len = std::clamp<int>(params->from_address_size, 0, *fromLen);
+        *fromLen = len;
+        std::memcpy(from, &params->from_address, len);
+      } });
 }
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
-  get_log() << "siege_connect";
-
   if (!use_custom_backend())
   {
     return imports->connect(ws, name, namelen);
   }
 
-  get_log() << "The game tried to use siege_connect, which is currently not implemented.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
+  get_log() << "siege_connect";
 
-  return SOCKET_ERROR;
+  return send_message_to_server<bind_params, bind_params::connect_message_id>(ws, [=](void* raw) {
+    auto* params = new (raw) bind_params{};
+
+    if (name && namelen)
+    {
+      auto len = std::clamp<int>(namelen, 0, sizeof(params->address));
+      params->address_size = len;
+      std::memcpy(&params->address, name, len);
+    }
+    return params;
+  });
 }
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
@@ -678,6 +695,8 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
     log_sampled_write() << "siege_sendto with no address";
   }
 
+  // TODO server sockets are always non-blocking.
+  // we should fix this the same way we fixed the send wrappers in client-shared.
   return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sendto_params{ .flags = flags };
 
@@ -775,11 +794,23 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
   {
     log_sampled_check() << "siege_select with no timeout";
   }
-  // TODO If the timeout is too long
-  // then the client will ignore the response from the server.
-  // It's better to update this to make the client do the waiting and
-  // send small timeout increments to the server
-  return send_message_to_server<select_params, select_params::message_id>(0, [=](void* raw) {
+
+  auto max_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::hours{ 24 });
+
+  auto time_to_wait = max_time;
+
+  if (timeout)
+  {
+    time_to_wait = std::min(timeval_to_ms(*timeout), max_time);
+  }
+  auto end = std::chrono::steady_clock::now() + time_to_wait;
+
+  fd_set staging_read{};
+  fd_set staging_write{};
+  fd_set staging_except{};
+
+  auto do_select = [&] {
+    return send_message_to_server<select_params, select_params::message_id>(0, [=](void* raw) {
       select_params* params = new (raw) select_params{};
 
       params->fd_set_count = value;
@@ -798,27 +829,56 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
       {
         params->except_set = *except;
       }
+      return params; }, [&](select_params* params) {
+      staging_read = params->read_set;
+      staging_write = params->write_set;
+      staging_except = params->except_set; });
+  };
 
-      if (timeout)
-      {
-        params->timeout = *timeout;
-      } 
-          return params; }, [=](select_params* params) {
-      
+  do
+  {
+    auto result = do_select();
+
+    if (result > 0)
+    {
       if (read)
       {
-        *read = params->read_set;
+        *read = staging_read;
       }
 
       if (write)
       {
-        *write = params->write_set;
+        *write = staging_write;
       }
 
       if (except)
       {
-        *except = params->except_set;
-      } });
+        *except = staging_except;
+      }
+      return result;
+    }
+
+    if (result == SOCKET_ERROR)
+    {
+      return result;
+    }
+
+    if (std::chrono::steady_clock::now() >= end)
+    {
+      break;
+    }
+
+    auto remaining = end - std::chrono::steady_clock::now();
+
+    auto sleep_time = std::min(
+      std::chrono::duration_cast<std::chrono::milliseconds>(remaining),
+      std::chrono::milliseconds{ 5 });
+
+    std::this_thread::sleep_for(sleep_time);
+
+  } while (std::chrono::steady_clock::now() < end);
+
+  return 0;
 }
 
 int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)

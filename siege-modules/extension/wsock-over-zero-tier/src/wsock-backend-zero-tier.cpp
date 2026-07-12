@@ -1165,11 +1165,7 @@ int zt_to_winsock_error(int error)
     return WSAEINTR;
   }
   case ZTS_EIO: {
-#if WSA_IO_INCOMPLETE
-    return WSA_IO_INCOMPLETE;
-#else
     return WSAEINPROGRESS;
-#endif
   }
   case ZTS_ENXIO: {
     return WSAEFAULT;

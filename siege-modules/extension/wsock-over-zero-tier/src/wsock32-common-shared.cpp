@@ -465,10 +465,8 @@ export int exception_to_error_code() noexcept
   }
 }
 
-export timeval ms_to_timeval(DWORD ms)
+export timeval ms_to_timeval(std::chrono::milliseconds total)
 {
-  auto total = std::chrono::milliseconds{ ms };
-
   auto secs = std::chrono::duration_cast<std::chrono::seconds>(total);
   auto usecs = std::chrono::duration_cast<std::chrono::microseconds>(total - secs);
 
@@ -476,4 +474,12 @@ export timeval ms_to_timeval(DWORD ms)
     .tv_sec = static_cast<long>(secs.count()),
     .tv_usec = static_cast<long>(usecs.count())
   };
+}
+
+export std::chrono::milliseconds timeval_to_ms(timeval total)
+{
+  auto secs = std::chrono::seconds{ total.tv_sec };
+  auto usecs = std::chrono::microseconds{ total.tv_usec };
+
+  return std::chrono::duration_cast<std::chrono::milliseconds>(secs + usecs);
 }

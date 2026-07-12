@@ -270,7 +270,7 @@ try_again:
       {
         return std::nullopt;
       }
-      return ms_to_timeval(timeout);
+      return ms_to_timeval(std::chrono::milliseconds{ timeout });
     }();
 
     result = backend->select(1, &read_set, nullptr, nullptr, wait_time ? &*wait_time : nullptr);
@@ -321,7 +321,7 @@ try_again:
       {
         return std::nullopt;
       }
-      return ms_to_timeval(timeout);
+      return ms_to_timeval(std::chrono::milliseconds{ timeout });
     }();
 
     result = backend->select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
@@ -433,7 +433,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
       {
         return std::nullopt;
       }
-      return ms_to_timeval(timeout);
+      return ms_to_timeval(std::chrono::milliseconds{ timeout });
     }();
 
     result = backend->select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
