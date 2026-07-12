@@ -19,30 +19,6 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
 namespace fs = std::filesystem;
 
-export struct backend_imports
-{
-  HMODULE module = nullptr;
-  decltype(::WSAStartup)* WSAStartup = nullptr;
-  decltype(::WSACleanup)* WSACleanup = nullptr;
-  decltype(::socket)* socket = nullptr;
-  decltype(::closesocket)* closesocket = nullptr;
-  decltype(::shutdown)* shutdown = nullptr;
-  decltype(::setsockopt)* setsockopt = nullptr;
-  decltype(::getsockopt)* getsockopt = nullptr;
-  decltype(::getsockname)* getsockname = nullptr;
-  decltype(::getpeername)* getpeername = nullptr;
-  decltype(::gethostbyname)* gethostbyname = nullptr;
-  decltype(::recvfrom)* recvfrom = nullptr;
-  decltype(::sendto)* sendto = nullptr;
-  decltype(::ioctlsocket)* ioctlsocket = nullptr;
-  decltype(::bind)* bind = nullptr;
-  decltype(::connect)* connect = nullptr;
-  decltype(::accept)* accept = nullptr;
-  decltype(::listen)* listen = nullptr;
-  decltype(::select)* select = nullptr;
-  decltype(::__WSAFDIsSet)* __WSAFDIsSet = nullptr;
-};
-
 extern "C" {
 hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
 {

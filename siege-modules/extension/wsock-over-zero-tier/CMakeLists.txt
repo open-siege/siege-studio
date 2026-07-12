@@ -53,7 +53,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     target_compile_definitions(ws2_32-rpc-client PRIVATE USE_WINSOCK2=TRUE)
     target_link_libraries(ws2_32-rpc-client PRIVATE siege-win-core siege-extension ws2_32)
 
-    add_executable(wsock32-rpc-server WIN32 src/wsock32-rpc.cpp src/wsock32-rpc-server.cpp)
+    add_executable(wsock32-rpc-server WIN32 src/wsock32-common-shared.cpp src/wsock32-rpc.cpp src/wsock32-rpc-server.cpp)
     set_target_properties(wsock32-rpc-server PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON

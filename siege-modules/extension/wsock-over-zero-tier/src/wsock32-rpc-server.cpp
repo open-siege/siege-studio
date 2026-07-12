@@ -7,6 +7,7 @@
 
 import std;
 import wsock32.rpc;
+import wsock32.shared;
 
 namespace fs = std::filesystem;
 
@@ -16,25 +17,7 @@ constexpr static ULONGLONG grace_period_ms = 60000;
 inline static ULONGLONG last_activity = 0;
 inline static bool keep_alive_timer_started = false;
 
-HMODULE wsock_module = nullptr;
-decltype(::WSAStartup)* wsock_WSAStartup = nullptr;
-decltype(::WSACleanup)* wsock_WSACleanup = nullptr;
-decltype(::socket)* wsock_socket = nullptr;
-decltype(::closesocket)* wsock_closesocket = nullptr;
-decltype(::shutdown)* wsock_shutdown = nullptr;
-decltype(::setsockopt)* wsock_setsockopt = nullptr;
-decltype(::getsockopt)* wsock_getsockopt = nullptr;
-decltype(::getsockname)* wsock_getsockname = nullptr;
-decltype(::getpeername)* wsock_getpeername = nullptr;
-decltype(::gethostbyname)* wsock_gethostbyname = nullptr;
-decltype(::recvfrom)* wsock_recvfrom = nullptr;
-decltype(::sendto)* wsock_sendto = nullptr;
-decltype(::ioctlsocket)* wsock_ioctlsocket = nullptr;
-decltype(::bind)* wsock_bind = nullptr;
-decltype(::accept)* wsock_accept = nullptr;
-decltype(::listen)* wsock_listen = nullptr;
-decltype(::select)* wsock_select = nullptr;
-decltype(::__WSAFDIsSet)* wsock___WSAFDIsSet = nullptr;
+std::optional<backend_imports> backend;
 decltype(::WSAGetLastError)* wsock_WSAGetLastError = nullptr;
 
 std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
@@ -165,7 +148,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       auto& params = *value.value();
 
       // backend always creates sockets as non-blocking by default
-      auto result = wsock_socket(params.address_family, params.type, params.protocol);
+      auto result = backend->socket(params.address_family, params.type, params.protocol);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
 
       return result;
@@ -183,7 +166,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = wsock_ioctlsocket((SOCKET)wparam, params.command, &params.argument);
+      auto result = backend->ioctlsocket((SOCKET)wparam, params.command, &params.argument);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -199,7 +182,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = wsock_getsockopt((SOCKET)wparam, params.level, params.optname, params.option_data.data(), &params.option_length);
+      auto result = backend->getsockopt((SOCKET)wparam, params.level, params.optname, params.option_data.data(), &params.option_length);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -215,7 +198,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = wsock_setsockopt((SOCKET)wparam, params.level, params.optname, params.option_data.data(), params.option_length);
+      auto result = backend->setsockopt((SOCKET)wparam, params.level, params.optname, params.option_data.data(), params.option_length);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -231,7 +214,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = wsock_bind((SOCKET)wparam, (sockaddr*)&params.address, params.address_size);
+      auto result = backend->bind((SOCKET)wparam, (sockaddr*)&params.address, params.address_size);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -256,7 +239,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       sockaddr* address = params.to_address_size == 0 ? nullptr : (sockaddr*)&params.to_address;
 
-      auto result = wsock_sendto((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, params.to_address_size);
+      auto result = backend->sendto((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, params.to_address_size);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -281,7 +264,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       sockaddr* address = params.from_address_size == 0 ? nullptr : (sockaddr*)&params.from_address;
       int* address_size = params.from_address_size == 0 ? nullptr : &params.from_address_size;
 
-      auto result = wsock_recvfrom((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, address_size);
+      auto result = backend->recvfrom((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, address_size);
 
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
@@ -300,7 +283,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       params.host_name.back() = '\0';
 
-      auto result = wsock_gethostbyname(params.host_name.data());
+      auto result = backend->gethostbyname(params.host_name.data());
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
 
       if (result && result->h_name)
@@ -353,21 +336,21 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = wsock_select(params.fd_set_count, &params.read_set, &params.write_set, &params.except_set, &params.timeout);
+      auto result = backend->select(params.fd_set_count, &params.read_set, &params.write_set, &params.except_set, &params.timeout);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
 
     if (message == general_params::close_message_id)
     {
-      auto result = wsock_closesocket((SOCKET)wparam);
+      auto result = backend->closesocket((SOCKET)wparam);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
 
     if (message == general_params::shutdown_message_id)
     {
-      auto result = wsock_shutdown((SOCKET)wparam, (int)lparam);
+      auto result = backend->shutdown((SOCKET)wparam, (int)lparam);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -383,7 +366,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
 
-      auto result = wsock___WSAFDIsSet((SOCKET)wparam, &params.set_to_check);
+      auto result = backend->__WSAFDIsSet((SOCKET)wparam, &params.set_to_check);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
     }
@@ -398,7 +381,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       }
 
       auto& params = *value.value();
-      auto* func = message == sockname_params::peer_name_message_id ? wsock_getpeername : wsock_getsockname;
+      auto* func = message == sockname_params::peer_name_message_id ? backend->getpeername : backend->getsockname;
 
       sockaddr* address = params.address_size == 0 ? nullptr : (sockaddr*)&params.address;
       int* address_size = params.address_size == 0 ? nullptr : &params.address_size;
@@ -456,13 +439,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   load_local_wsock();
 
-  if (!wsock_module)
+  if (!backend->module)
   {
     return -1;
   }
 
   WSADATA data{};
-  auto result = wsock_WSAStartup(MAKEWORD(2, 2), &data);
+  auto result = backend->WSAStartup(MAKEWORD(2, 2), &data);
 
   if (result != 0)
   {
@@ -495,13 +478,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     }
   }
 
-  wsock_WSACleanup();
+  backend->WSACleanup();
   return (int)msg.wParam;
 }
 
 void load_local_wsock()
 {
-  if (wsock_module)
+  if (backend)
   {
     return;
   }
@@ -523,7 +506,7 @@ void load_local_wsock()
     lib_path = temp.data();
   }
 
-  wsock_module = ::LoadLibraryExW(lib_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+  auto wsock_module = ::LoadLibraryExW(lib_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
   if (!wsock_module)
   {
@@ -536,23 +519,27 @@ void load_local_wsock()
     return;
   }
 
-  wsock_WSAStartup = (decltype(wsock_WSAStartup))::GetProcAddress(wsock_module, "backend_WSAStartup");
-  wsock_WSACleanup = (decltype(wsock_WSACleanup))::GetProcAddress(wsock_module, "backend_WSACleanup");
-  wsock_socket = (decltype(wsock_socket))::GetProcAddress(wsock_module, "backend_socket");
-  wsock_closesocket = (decltype(wsock_closesocket))::GetProcAddress(wsock_module, "backend_closesocket");
-  wsock_shutdown = (decltype(wsock_shutdown))::GetProcAddress(wsock_module, "backend_shutdown");
-  wsock_setsockopt = (decltype(wsock_setsockopt))::GetProcAddress(wsock_module, "backend_setsockopt");
-  wsock_getsockname = (decltype(wsock_getsockname))::GetProcAddress(wsock_module, "backend_getsockname");
-  wsock_getpeername = (decltype(wsock_getpeername))::GetProcAddress(wsock_module, "backend_getpeername");
-  wsock_getsockopt = (decltype(wsock_getsockopt))::GetProcAddress(wsock_module, "backend_getsockopt");
-  wsock_gethostbyname = (decltype(wsock_gethostbyname))::GetProcAddress(wsock_module, "backend_gethostbyname");
-  wsock_recvfrom = (decltype(wsock_recvfrom))::GetProcAddress(wsock_module, "backend_recvfrom");
-  wsock_sendto = (decltype(wsock_sendto))::GetProcAddress(wsock_module, "backend_sendto");
-  wsock_ioctlsocket = (decltype(wsock_ioctlsocket))::GetProcAddress(wsock_module, "backend_ioctlsocket");
-  wsock_bind = (decltype(wsock_bind))::GetProcAddress(wsock_module, "backend_bind");
-  wsock_accept = (decltype(wsock_accept))::GetProcAddress(wsock_module, "backend_accept");
-  wsock_listen = (decltype(wsock_listen))::GetProcAddress(wsock_module, "backend_listen");
-  wsock_select = (decltype(wsock_select))::GetProcAddress(wsock_module, "backend_select");
-  wsock___WSAFDIsSet = (decltype(wsock___WSAFDIsSet))::GetProcAddress(wsock_module, "backend___WSAFDIsSet");
+  backend = std::make_optional(backend_imports{
+    .module = wsock_module,
+    .WSAStartup = (decltype(backend_imports::WSAStartup))::GetProcAddress(wsock_module, "backend_WSAStartup"),
+    .WSACleanup = (decltype(backend_imports::WSACleanup))::GetProcAddress(wsock_module, "backend_WSACleanup"),
+    .socket = (decltype(backend_imports::socket))::GetProcAddress(wsock_module, "backend_socket"),
+    .closesocket = (decltype(backend_imports::closesocket))::GetProcAddress(wsock_module, "backend_closesocket"),
+    .shutdown = (decltype(backend_imports::shutdown))::GetProcAddress(wsock_module, "backend_shutdown"),
+    .setsockopt = (decltype(backend_imports::setsockopt))::GetProcAddress(wsock_module, "backend_setsockopt"),
+    .getsockopt = (decltype(backend_imports::getsockopt))::GetProcAddress(wsock_module, "backend_getsockopt"),
+    .getsockname = (decltype(backend_imports::getsockname))::GetProcAddress(wsock_module, "backend_getsockname"),
+    .getpeername = (decltype(backend_imports::getpeername))::GetProcAddress(wsock_module, "backend_getpeername"),
+    .gethostbyname = (decltype(backend_imports::gethostbyname))::GetProcAddress(wsock_module, "backend_gethostbyname"),
+    .recvfrom = (decltype(backend_imports::recvfrom))::GetProcAddress(wsock_module, "backend_recvfrom"),
+    .sendto = (decltype(backend_imports::sendto))::GetProcAddress(wsock_module, "backend_sendto"),
+    .ioctlsocket = (decltype(backend_imports::ioctlsocket))::GetProcAddress(wsock_module, "backend_ioctlsocket"),
+    .bind = (decltype(backend_imports::bind))::GetProcAddress(wsock_module, "backend_bind"),
+    .connect = (decltype(backend_imports::connect))::GetProcAddress(wsock_module, "backend_connect"),
+    .accept = (decltype(backend_imports::accept))::GetProcAddress(wsock_module, "backend_accept"),
+    .listen = (decltype(backend_imports::listen))::GetProcAddress(wsock_module, "backend_listen"),
+    .select = (decltype(backend_imports::select))::GetProcAddress(wsock_module, "backend_select"),
+    .__WSAFDIsSet = (decltype(backend_imports::__WSAFDIsSet))::GetProcAddress(wsock_module, "backend___WSAFDIsSet"),
+  });
   wsock_WSAGetLastError = (decltype(wsock_WSAGetLastError))::GetProcAddress(ws2_32, "WSAGetLastError");
 }
