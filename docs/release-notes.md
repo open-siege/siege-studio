@@ -3,6 +3,7 @@
 * Host name look-up implemented for games using WinSock2, which enables more games to work with the Zero Tier wrapper.
 * Fixed crash/issue launching partially supported games.
 * Zero Tier networking library now logs data which can be viewed by tools such as DebugView.
+* Fixed discovery and connection issues in Quake, HeXen II and Laser Arena.
 
 # Siege Studio + Siege Launcher 26.23 Development Release
 * Various fixes and improvements for Medal of Honor - Allied Assault and it's expansions.
