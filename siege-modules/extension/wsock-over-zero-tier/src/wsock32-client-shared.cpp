@@ -16,6 +16,7 @@ extern "C" {
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept;
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept;
 SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept;
+int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept;
 }
 
 namespace fs = std::filesystem;
@@ -25,40 +26,65 @@ export struct socket_handle_info
   void insert(SOCKET socket)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    handles.insert(socket);
-
-    // we always block on the client layer by default
-    virtual_blocking_handles.emplace(socket);
+    handles.emplace(socket, socket_context{});
   }
 
   void erase(SOCKET socket)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
     handles.erase(socket);
-    virtual_blocking_handles.erase(socket);
   }
 
   void set_virtual_blocking(SOCKET socket, bool should_block)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    if (!handles.contains(socket))
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
     {
       return;
     }
-    if (should_block)
+
+    item->second.is_virtual_blocking = should_block;
+  }
+
+  void set_overlapped(SOCKET socket, bool is_overlapped)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
     {
-      virtual_blocking_handles.emplace(socket);
+      return;
     }
-    else
-    {
-      virtual_blocking_handles.erase(socket);
-    }
+
+    item->second.is_overlapped = is_overlapped;
   }
 
   bool is_virtual_blocking(SOCKET socket) const
   {
     std::shared_lock<std::shared_mutex> lock(mutex);
-    return virtual_blocking_handles.contains(socket);
+    auto item = handles.find(socket);
+
+    if (item == handles.end())
+    {
+      return false;
+    }
+
+    return item->second.is_virtual_blocking;
+  }
+
+  bool is_overlapped(SOCKET socket) const
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    auto item = handles.find(socket);
+
+    if (item == handles.end())
+    {
+      return false;
+    }
+
+    return item->second.is_overlapped;
   }
 
   bool contains(SOCKET socket) const
@@ -68,8 +94,18 @@ export struct socket_handle_info
   }
 
 private:
-  std::set<SOCKET> handles;
-  std::set<SOCKET> virtual_blocking_handles;
+  struct socket_context
+  {
+    // backend sockets are non-blocking,
+    // so we have to block by default on the client-side
+    bool is_virtual_blocking = true;
+
+    // purely client-side. backends shouldn't know what overlapping is.
+    // definitely non-standard bsd.
+    bool is_overlapped = false;
+  };
+
+  std::map<SOCKET, socket_context> handles;
 
   mutable std::shared_mutex mutex;
 };
@@ -208,14 +244,6 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
     return INVALID_SOCKET;
   }
 
-  // TODO not in invalid flags because we will handle this
-  // later
-  if (dwFlags & WSA_FLAG_OVERLAPPED)
-  {
-    imports->WSASetLastError(WSAEPROVIDERFAILEDINIT);
-    return INVALID_SOCKET;
-  }
-
   constexpr static auto invalid_flags = std::array<DWORD, 4>{ { WSA_FLAG_MULTIPOINT_C_ROOT, WSA_FLAG_MULTIPOINT_C_LEAF, WSA_FLAG_MULTIPOINT_D_ROOT, WSA_FLAG_MULTIPOINT_D_LEAF } };
 
   for (auto flag : invalid_flags)
@@ -233,14 +261,21 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
     return INVALID_SOCKET;
   }
 
-  return siege_socket(af, type, protocol);
+  auto result = siege_socket(af, type, protocol);
+
+  if (result != INVALID_SOCKET && dwFlags & WSA_FLAG_OVERLAPPED)
+  {
+    get_socket_handles().set_overlapped(result, true);
+  }
+
+  return result;
 }
 
-SOCKET __stdcall siege_WSASocketA(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
+SOCKET __stdcall siege_WSASocketA(int af, int type, int protocol, LPWSAPROTOCOL_INFOA lpProtocolInfo, GROUP g, DWORD dwFlags)
 {
   if (!use_custom_backend())
   {
-    return imports->WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
+    return imports->WSASocketA(af, type, protocol, lpProtocolInfo, g, dwFlags);
   }
 
   get_log() << "siege_WSASocketA " << '\n';
@@ -254,17 +289,52 @@ SOCKET __stdcall siege_WSASocketA(int af, int type, int protocol, LPWSAPROTOCOL_
   return siege_WSASocketW(af, type, protocol, nullptr, g, dwFlags);
 }
 
-int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)
+int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine) noexcept
 {
   if (!use_custom_backend())
   {
     return imports->WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
   }
 
-  get_log() << "siege_WSAIoctl not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
-  return SOCKET_ERROR;
+  if (get_socket_handles().is_overlapped(s) && (overlapped || completionRoutine))
+  {
+    WSASetLastError(WSAEOPNOTSUPP);
+    return SOCKET_ERROR;
+  }
+
+  if (!(controlCode == FIONBIO || controlCode == FIONREAD))
+  {
+    imports->WSASetLastError(WSAEOPNOTSUPP);
+    return SOCKET_ERROR;
+  }
+
+  if (inBufferCount > 4)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
+
+  u_long temp{};
+
+  if (inBuffer && inBufferCount <= 4)
+  {
+    std::memcpy(&temp, inBuffer, inBufferCount);
+  }
+  auto result = siege_ioctlsocket(s, controlCode, &temp);
+
+  auto out_size = std::clamp<std::size_t>(outBufferCount, 0, sizeof(temp));
+
+  if (result == 0 && outBuffer && outBufferCount >= 4)
+  {
+    std::memcpy(outBuffer, &temp, out_size);
+  }
+
+  if (result == 0 && bytesReturned)
+  {
+    *bytesReturned = static_cast<DWORD>(out_size);
+  }
+
+  return result;
 }
 
 // This and freeaddrinfo needed by AMD's open GL driver for the RPC case

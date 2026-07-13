@@ -90,6 +90,7 @@ export struct wsock_imports
   decltype(::WSAEventSelect)* WSAEventSelect = nullptr;
   decltype(::WSAEnumNetworkEvents)* WSAEnumNetworkEvents = nullptr;
   decltype(::WSASocketW)* WSASocketW = nullptr;
+  decltype(::WSASocketA)* WSASocketA = nullptr;
   decltype(::WSAIoctl)* WSAIoctl = nullptr;
 
   // not actually used by any games, but rather by the AMD OpenGL driver
@@ -192,6 +193,7 @@ export std::optional<wsock_imports> load_system_wsock()
   imports.WSAEventSelect = (decltype(imports.WSAEventSelect))::GetProcAddress(imports.module, "WSAEventSelect");
   imports.WSAEnumNetworkEvents = (decltype(imports.WSAEnumNetworkEvents))::GetProcAddress(imports.module, "WSAEnumNetworkEvents");
   imports.WSASocketW = (decltype(imports.WSASocketW))::GetProcAddress(imports.module, "WSASocketW");
+  imports.WSASocketA = (decltype(imports.WSASocketA))::GetProcAddress(imports.module, "WSASocketA");
   imports.WSAIoctl = (decltype(imports.WSAIoctl))::GetProcAddress(imports.module, "WSAIoctl");
   imports.getaddrinfo = (decltype(imports.getaddrinfo))::GetProcAddress(imports.module, "getaddrinfo");
   imports.freeaddrinfo = (decltype(imports.freeaddrinfo))::GetProcAddress(imports.module, "freeaddrinfo");

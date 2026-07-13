@@ -468,7 +468,7 @@ int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
   });
 }
 
-int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
+int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept
 {
   if (!use_custom_backend())
   {

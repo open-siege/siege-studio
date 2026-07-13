@@ -299,7 +299,7 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
   return backend->getpeername(ws, name, length);
 }
 
-int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
+int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept
 {
   if (!use_custom_backend())
   {
