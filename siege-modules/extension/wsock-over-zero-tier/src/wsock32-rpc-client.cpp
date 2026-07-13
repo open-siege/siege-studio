@@ -504,7 +504,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept
   return result;
 }
 
-int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout);
+int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept;
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
@@ -933,7 +933,7 @@ int __stdcall siege_closesocket(SOCKET ws)
   return (int)return_value;
 }
 
-int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
+int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept
 {
   if (!use_custom_backend())
   {

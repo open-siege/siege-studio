@@ -470,7 +470,7 @@ int __stdcall siege_closesocket(SOCKET ws)
   return result;
 }
 
-int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
+int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept
 {
   if (!use_custom_backend())
   {

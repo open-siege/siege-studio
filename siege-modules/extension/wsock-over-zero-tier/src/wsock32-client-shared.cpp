@@ -18,7 +18,12 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept;
 SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept;
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept;
+int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept;
 }
+
+// TODO come up with a reasonable return type
+void queue_event_notification();
+void queue_window_notification();
 
 namespace fs = std::filesystem;
 
@@ -160,56 +165,6 @@ auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
 
   return SOCKET_ERROR;
 }
-
-auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
-{
-  if (!use_custom_backend())
-  {
-    return imports->WSAAsyncSelect(socket, window, message, flags);
-  }
-
-  bool notify_read = flags & FD_READ;
-  bool notify_write = flags & FD_WRITE;
-  bool notify_oob = flags & FD_OOB;
-
-  if (flags & FD_ACCEPT)
-  {
-    get_log() << "FD_ACCEPT not supported for siege_WSAAsyncSelect.\n";
-  }
-
-  if (flags & FD_CONNECT)
-  {
-    get_log() << "FD_CONNECT not supported for siege_WSAAsyncSelect.\n";
-  }
-
-  if (flags & FD_CLOSE)
-  {
-    get_log() << "FD_CLOSE not supported for siege_WSAAsyncSelect.\n";
-  }
-
-#ifdef USE_WINSOCK2
-  if (flags & FD_QOS)
-  {
-    get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
-  }
-
-  if (flags & FD_ROUTING_INTERFACE_CHANGE)
-  {
-    get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
-  }
-
-  if (flags & FD_ADDRESS_LIST_CHANGE)
-  {
-    get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
-  }
-#endif
-
-  get_log() << "siege_WSAAsyncSelect not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
-  return SOCKET_ERROR;
-}
-
 
 int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags) noexcept
 {
@@ -631,7 +586,57 @@ auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetwo
 
   return SOCKET_ERROR;
 }
+#endif 
+auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
+{
+  if (!use_custom_backend())
+  {
+    return imports->WSAAsyncSelect(socket, window, message, flags);
+  }
 
+  bool notify_read = flags & FD_READ;
+  bool notify_write = flags & FD_WRITE;
+  bool notify_oob = flags & FD_OOB;
+
+  if (flags & FD_ACCEPT)
+  {
+    get_log() << "FD_ACCEPT not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_CONNECT)
+  {
+    get_log() << "FD_CONNECT not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_CLOSE)
+  {
+    get_log() << "FD_CLOSE not supported for siege_WSAAsyncSelect.\n";
+  }
+
+#ifdef USE_WINSOCK2
+  if (flags & FD_QOS)
+  {
+    get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_ROUTING_INTERFACE_CHANGE)
+  {
+    get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
+  }
+
+  if (flags & FD_ADDRESS_LIST_CHANGE)
+  {
+    get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
+  }
+#endif
+
+  get_log() << "siege_WSAAsyncSelect not supported.";
+  get_log().flush();
+  imports->WSASetLastError(WSAENETDOWN);
+  return SOCKET_ERROR;
+}
+
+#ifdef USE_WINSOCK2
 auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents) noexcept
 {
   get_log() << "siege_WSAEnumNetworkEvents";
@@ -768,4 +773,71 @@ auto __stdcall siege_WSACancelBlockingCall()
   get_log() << "siege_WSACancelBlockingCall " << '\n';
   return imports->WSACancelBlockingCall();
 }
+}
+
+
+// TODO this is all just sketching at this point
+// to get the correct logic
+void worker()
+{
+  struct socket_work
+  {
+    SOCKET socket;
+    int type = SOCK_STREAM;
+    int requested_flags = 0;
+    int notified_flags = 0;// either sent to the window or given out via enum events
+    int enabled_flags = 0;// enabled until first notification, then it needs a relevant function to be called
+
+    enum tcp_state
+    {
+        unset,
+        listening, // server-side - FD_ACCEPT
+        accepted, // server-side - FD_CLOSE
+        connected // client-side - FD_CONNECT - FD_CLOSE
+    };
+  };
+
+  std::vector<socket_work> sockets;
+
+  fd_set read_set{};
+  fd_set write_set{};
+  fd_set except_set{};
+
+  for (auto& work : sockets)
+  {
+    if (work.enabled_flags & FD_READ)
+    {
+      FD_SET(work.socket, &read_set);
+    }
+
+    if (work.enabled_flags & FD_WRITE)
+    {
+      FD_SET(work.socket, &write_set);
+    }
+
+    if (work.enabled_flags & FD_OOB)
+    {
+      FD_SET(work.socket, &except_set);
+    }
+  }
+
+  timeval time{};
+  auto count = siege_select(3, &read_set, &write_set, &except_set, &time);
+
+  // FD_READ + FD_WRITE + FD_OOB map to select
+
+  // FD_ACCEPT + FD_CONNECT + FD_CLOSE can map to select
+  // but with extra info. we need to do them separately in order for it to make sense
+
+  // FD_ACCEPT == listen socket state + read
+  // FD_CONNECT == connecting socket state + write
+  // FD_CLOSE == read + msg peak with size of 0
+}
+
+void queue_event_notification()
+{
+}
+
+void queue_window_notification()
+{
 }
