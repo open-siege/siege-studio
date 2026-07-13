@@ -21,6 +21,9 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept;
 
 namespace fs = std::filesystem;
 
+// TODO will need shared memory
+// because ws2_32 and wsock32 may be loaded and
+// has to track this state
 export struct socket_handle_info
 {
   void insert(SOCKET socket)
@@ -384,11 +387,12 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
   }
 
   get_log() << "siege_WSARecvFrom called.\n";
-  if (overlapped || completion_handler)
+
+  if (get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler))
   {
     get_log() << "siege_WSARecvFrom is overlapped. Not supported.\n";
     get_log().flush();
-    imports->WSASetLastError(WSAENETDOWN);
+    imports->WSASetLastError(WSAEOPNOTSUPP);
 
     return SOCKET_ERROR;
   }
@@ -473,53 +477,79 @@ auto __stdcall siege_WSARecv(SOCKET ws, LPWSABUF buffers, DWORD bufferCount, LPD
   return siege_WSARecvFrom(ws, buffers, bufferCount, numberOfBytesRecvd, flags, nullptr, 0, lpOverlapped, completionRoutine);
 }
 
-// TODO implement a version that deals with multiple buffers.
-// This is for our first candidate using this API, Alien vs Predator
-auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
+auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_sent, DWORD flags, const sockaddr* to, int len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler) noexcept
 {
   if (!use_custom_backend())
   {
     return imports->WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, to, len, overlapped, completion_handler);
   }
 
-  if (overlapped || completion_handler)
+  if (get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler))
   {
-    get_log() << "siege_WSASendTo is overlapped. Not supported.\n";
-    get_log().flush();
-    imports->WSASetLastError(WSAENETDOWN);
+    get_log() << "siege_WSASendTo is overlapped. Not supported.";
+    imports->WSASetLastError(WSAEOPNOTSUPP);
     return SOCKET_ERROR;
   }
 
-  thread_local std::vector<char> temp_buffer;
+  if (flags & MSG_PARTIAL)
+  {
+    get_log() << "siege_WSASendTo MSG_PARTIAL requested. Not supported.";
+    imports->WSASetLastError(WSAEOPNOTSUPP);
+    return SOCKET_ERROR;
+  }
 
   if (!buffers)
   {
-    // TODO return error here
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
   }
 
   for (auto i = 0; i < buffer_count; ++i)
   {
-    if (!buffers[i].buf)
+    if (!buffers[i].buf && buffers[i].len > 0)
     {
-      // TODO return error here
+      imports->WSASetLastError(WSAEINVAL);
+      return SOCKET_ERROR;
     }
   }
 
+  // null bytes_sent is only allowed when overlapped is set.
+  // but since we already reject that, it has to be supplied.
+  if (!bytes_sent)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
+
+  constexpr static auto max_int = static_cast<std::size_t>(std::numeric_limits<int>::max());
   std::size_t size = 0;
   for (auto i = 0; i < buffer_count; ++i)
   {
+    auto len = static_cast<std::size_t>(buffers[i].len);
+
+    if (len > max_int - size)
+    {
+      imports->WSASetLastError(WSAEMSGSIZE);
+      return SOCKET_ERROR;
+    }
+
     size += buffers[i].len;
   }
+
+  thread_local std::vector<char> temp_buffer;
   temp_buffer.reserve(size);
   temp_buffer.resize(0);
 
   for (auto i = 0; i < buffer_count; ++i)
   {
+    if (!buffers[i].buf || buffers[i].len == 0)
+    {
+      continue;
+    }
+
     temp_buffer.insert(temp_buffer.end(), buffers[i].buf, buffers[i].buf + buffers[i].len);
   }
-  // TODO log and/or reject or deal with MSG_PARTIAL
 
-  // TODO map WSAEWOULDBLOCK to WSA_IO_PENDING
   auto sent_size = siege_sendto(socket, temp_buffer.data(), static_cast<int>(temp_buffer.size()), flags, to, len);
 
   if (sent_size == SOCKET_ERROR)
