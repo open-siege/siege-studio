@@ -4,6 +4,7 @@ module;
 #include <ws2tcpip.h>
 
 #include <siege/platform/win/module.hpp>
+#include <cassert>
 
 export module wsock32.shared.client;
 
@@ -377,9 +378,7 @@ auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlappe
   return FALSE;
 }
 
-// TODO implement a version that deals with multiple buffers.
-// This is for our first candidate using this API, Alien vs Predator
-auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler)
+auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler) noexcept
 {
   if (!use_custom_backend())
   {
@@ -397,17 +396,55 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
     return SOCKET_ERROR;
   }
 
+  if (!flags)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return SOCKET_ERROR;
+  }
+
+  if (*flags & MSG_PARTIAL)
+  {
+    get_log() << "siege_WSARecvFrom MSG_PARTIAL requested. Not supported.";
+    imports->WSASetLastError(WSAEOPNOTSUPP);
+    return SOCKET_ERROR;
+  }
+
   if (!buffers)
   {
-    // TODO return error here
+    imports->WSASetLastError(WSAEFAULT);
+    return SOCKET_ERROR;
   }
 
   for (auto i = 0; i < buffer_count; ++i)
   {
-    if (!buffers[i].buf)
+    if (!buffers[i].buf && buffers[i].len > 0)
     {
-      // TODO return error here
+      imports->WSASetLastError(WSAEINVAL);
+      return SOCKET_ERROR;
     }
+  }
+
+  // null bytes_received is only allowed when overlapped is set.
+  // but since we already reject that, it has to be supplied.
+  if (!bytes_received)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
+
+  constexpr static auto max_int = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  std::size_t size = 0;
+  for (auto i = 0; i < buffer_count; ++i)
+  {
+    auto len = static_cast<std::size_t>(buffers[i].len);
+
+    if (len > max_int - size)
+    {
+      imports->WSASetLastError(WSAEMSGSIZE);
+      return SOCKET_ERROR;
+    }
+
+    size += len;
   }
 
   struct span_pair
@@ -419,21 +456,19 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
   thread_local std::vector<char> temp_buffer;
   thread_local std::vector<span_pair> span_buffer;
 
-  temp_buffer.reserve(buffer_count);
-  temp_buffer.resize(0);
-
-  std::size_t size = 0;
-  for (auto i = 0; i < buffer_count; ++i)
-  {
-    size += buffers[i].len;
-  }
-  temp_buffer.resize(0);
+  span_buffer.reserve(buffer_count);
+  span_buffer.clear();
   temp_buffer.resize(size);
 
   auto begin = temp_buffer.begin();
 
   for (auto i = 0; i < buffer_count; ++i)
   {
+    if (buffers[i].len == 0)
+    {
+      continue;
+    }
+
     span_pair& pair = span_buffer.emplace_back();
     pair.to_param = std::span{ buffers[i].buf, buffers[i].len };
     pair.from_buffer = std::span{ begin, buffers[i].len };
@@ -454,15 +489,25 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
 
   *bytes_received = static_cast<DWORD>(received_size);
 
-  for (auto& pair : span_buffer)
+  if (span_buffer.empty())
   {
-    // TODO assert that sizes are the same.
-    std::memcpy(pair.to_param.data(), pair.from_buffer.data(), pair.to_param.size());
+    return 0;
   }
 
-  // TODO log and/or reject or deal with MSG_PARTIAL
-  // TODO map WSAEWOULDBLOCK to WSA_IO_PENDING
-  // TODO make sure there isn't anything else that must go out.
+  std::size_t remaining = static_cast<std::size_t>(received_size);
+  for (auto& pair : span_buffer)
+  {
+    auto to_copy = std::min(pair.to_param.size(), remaining);
+
+    if (to_copy == 0)
+    {
+      continue;
+    }
+
+    assert(pair.to_param.size() == pair.from_buffer.size());
+    std::memcpy(pair.to_param.data(), pair.from_buffer.data(), to_copy);
+    remaining -= to_copy;
+  }
 
   return 0;
 }
@@ -533,7 +578,7 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
       return SOCKET_ERROR;
     }
 
-    size += buffers[i].len;
+    size += len;
   }
 
   thread_local std::vector<char> temp_buffer;
