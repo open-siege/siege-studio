@@ -15,6 +15,7 @@ extern "C++" bool use_custom_backend();
 extern "C" {
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept;
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept;
+SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept;
 }
 
 namespace fs = std::filesystem;
@@ -201,10 +202,56 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
     return imports->WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
   }
 
-  get_log() << "siege_WSASocketW not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
-  return INVALID_SOCKET;
+  if (lpProtocolInfo)
+  {
+    imports->WSASetLastError(WSAEPROVIDERFAILEDINIT);
+    return INVALID_SOCKET;
+  }
+
+  // TODO not in invalid flags because we will handle this
+  // later
+  if (dwFlags & WSA_FLAG_OVERLAPPED)
+  {
+    imports->WSASetLastError(WSAEPROVIDERFAILEDINIT);
+    return INVALID_SOCKET;
+  }
+
+  constexpr static auto invalid_flags = std::array<DWORD, 4>{ { WSA_FLAG_MULTIPOINT_C_ROOT, WSA_FLAG_MULTIPOINT_C_LEAF, WSA_FLAG_MULTIPOINT_D_ROOT, WSA_FLAG_MULTIPOINT_D_LEAF } };
+
+  for (auto flag : invalid_flags)
+  {
+    if (dwFlags & flag)
+    {
+      imports->WSASetLastError(WSAEINVAL);
+      return INVALID_SOCKET;
+    }
+  }
+
+  if (g != 0)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return INVALID_SOCKET;
+  }
+
+  return siege_socket(af, type, protocol);
+}
+
+SOCKET __stdcall siege_WSASocketA(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
+{
+  if (!use_custom_backend())
+  {
+    return imports->WSASocketW(af, type, protocol, lpProtocolInfo, g, dwFlags);
+  }
+
+  get_log() << "siege_WSASocketA " << '\n';
+
+  if (lpProtocolInfo)
+  {
+    imports->WSASetLastError(WSAEPROVIDERFAILEDINIT);
+    return INVALID_SOCKET;
+  }
+
+  return siege_WSASocketW(af, type, protocol, nullptr, g, dwFlags);
 }
 
 int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD inBufferCount, LPVOID outBuffer, DWORD outBufferCount, LPDWORD bytesReturned, LPWSAOVERLAPPED overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completionRoutine)

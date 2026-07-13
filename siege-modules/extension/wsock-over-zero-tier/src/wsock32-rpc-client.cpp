@@ -277,7 +277,7 @@ int __stdcall siege_WSACleanup()
   return imports->WSACleanup();
 }
 
-SOCKET __stdcall siege_socket(int af, int type, int protocol)
+SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
 {
   ensure_imports();
 

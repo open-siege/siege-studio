@@ -118,7 +118,7 @@ int __stdcall siege_WSACleanup()
   return backend->WSACleanup();
 }
 
-SOCKET __stdcall siege_socket(int af, int type, int protocol)
+SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
 {
   ensure_imports();
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();

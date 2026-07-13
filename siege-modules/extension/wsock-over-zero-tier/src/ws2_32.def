@@ -46,6 +46,7 @@ EXPORTS
 	siege_socket @23
 	socket=siege_socket
 	WSASocketW=siege_WSASocketW
+	WSASocketA=siege_WSASocketA
 	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
 	siege_gethostname @57
