@@ -26,65 +26,6 @@ std::optional<backend_imports> backend;
 
 bool use_custom_backend();
 
-struct socket_handle_info
-{
-  void insert(SOCKET socket)
-  {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    handles.insert(socket);
-
-    // we always block on the client layer by default
-    virtual_blocking_handles.emplace(socket);
-  }
-
-  void erase(SOCKET socket)
-  {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    handles.erase(socket);
-  }
-
-  void set_virtual_blocking(SOCKET socket, bool should_block)
-  {
-    std::unique_lock<std::shared_mutex> lock(mutex);
-    if (!handles.contains(socket))
-    {
-      return;
-    }
-    if (should_block)
-    {
-      virtual_blocking_handles.emplace(socket);
-    }
-    else
-    {
-      virtual_blocking_handles.erase(socket);
-    }
-  }
-
-  bool is_virtual_blocking(SOCKET socket) const
-  {
-    std::shared_lock<std::shared_mutex> lock(mutex);
-    return virtual_blocking_handles.contains(socket);
-  }
-
-  bool contains(SOCKET socket) const
-  {
-    std::shared_lock<std::shared_mutex> lock(mutex);
-    return handles.contains(socket);
-  }
-
-private:
-  std::set<SOCKET> handles;
-  std::set<SOCKET> virtual_blocking_handles;
-
-  mutable std::shared_mutex mutex;
-};
-
-socket_handle_info& get_socket_handles()
-{
-  static socket_handle_info info{};
-  return info;
-}
-
 extern "C" {
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
@@ -402,7 +343,32 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
   {
     return imports->accept(ws, name, namelen);
   }
-  return backend->accept(ws, name, namelen);
+
+try_again:
+  auto result = backend->accept(ws, name, namelen);
+  auto last_error = imports->WSAGetLastError();
+
+  if (get_socket_handles().is_virtual_blocking(ws) && result == INVALID_SOCKET && last_error == WSAEWOULDBLOCK)
+  {
+    fd_set read_set;
+    FD_ZERO(&read_set);
+    FD_SET(ws, &read_set);
+
+    auto select_result = backend->select(1, &read_set, nullptr, nullptr, nullptr);
+
+    if (select_result == SOCKET_ERROR)
+    {
+      return INVALID_SOCKET;
+    }
+    goto try_again;
+  }
+
+  if (result != INVALID_SOCKET)
+  {
+    get_socket_handles().insert(result);
+  }
+
+  return result;
 }
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)

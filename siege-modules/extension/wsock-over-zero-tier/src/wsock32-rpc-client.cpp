@@ -280,46 +280,46 @@ int __stdcall siege_WSACleanup()
 SOCKET __stdcall siege_socket(int af, int type, int protocol)
 {
   ensure_imports();
+
+  if (!use_custom_backend())
+  {
+    return imports->socket(af, type, protocol);
+  }
+
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
-  if (use_custom_backend())
+  socket_params params{ .address_family = af, .type = type, .protocol = protocol };
+
+  auto data = get_global_memory(sizeof(params));
+  std::memcpy(data->second.data(), &params, sizeof(params));
+  DWORD_PTR new_socket = 0;
+  auto result = ::SendMessageTimeoutW(server_info.server, socket_params::message_id, 0, (LPARAM)data->first, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &new_socket);
+  data.reset();
+
+  if (!result)
   {
-    socket_params params{ .address_family = af, .type = type, .protocol = protocol };
+    get_log() << "Did not receive a successful result";
+    imports->WSASetLastError(WSAESOCKTNOSUPPORT);
+    return INVALID_SOCKET;
+  }
 
-    auto data = get_global_memory(sizeof(params));
-    std::memcpy(data->second.data(), &params, sizeof(params));
-    DWORD_PTR new_socket = 0;
-    auto result = ::SendMessageTimeoutW(server_info.server, socket_params::message_id, 0, (LPARAM)data->first, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &new_socket);
-    data.reset();
-
-    if (!result)
+  if ((SOCKET)new_socket == INVALID_SOCKET)
+  {
+    get_log() << "Received invalid socket";
+    int last_error = WSAESOCKTNOSUPPORT;
+    if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
     {
-      get_log() << "Did not receive a successful result";
-      imports->WSASetLastError(WSAESOCKTNOSUPPORT);
-      return INVALID_SOCKET;
+      last_error = server_last_error;
     }
-
-    if ((SOCKET)new_socket == INVALID_SOCKET)
-    {
-      get_log() << "Received invalid socket";
-      int last_error = WSAESOCKTNOSUPPORT;
-      if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
-      {
-        last_error = server_last_error;
-      }
-      imports->WSASetLastError(last_error);
-      return INVALID_SOCKET;
-    }
-
-    imports->WSASetLastError(0);
-    get_log() << "Returning new socket " << (std::size_t)new_socket;
-    return (SOCKET)new_socket;
+    imports->WSASetLastError(last_error);
+    return INVALID_SOCKET;
   }
 
 
-  auto result = imports->socket(af, type, protocol);
-  get_log() << "Created winsock socket successfully (" << (int)result << ")";
-  return result;
+  get_socket_handles().insert(new_socket);
+  imports->WSASetLastError(0);
+  get_log() << "Returning new socket " << (std::size_t)new_socket;
+  return (SOCKET)new_socket;
 }
 
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
@@ -484,7 +484,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
     get_log() << "siege_ioctlsocket with " << ioctl_cmd_to_string(cmd);
   }
 
-  return send_message_to_server<ioctl_params, ioctl_params::message_id>(ws, [=](void* raw) {
+  auto result = send_message_to_server<ioctl_params, ioctl_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) ioctl_params{ .command = cmd };
 
       if (argp)
@@ -495,7 +495,16 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
       {
         *argp = params->argument;
         } });
+
+  if (result == 0 && cmd == FIONBIO && argp)
+  {
+    get_socket_handles().set_virtual_blocking(ws, *argp == 0);
+  }
+
+  return result;
 }
+
+int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout);
 
 int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
@@ -527,9 +536,9 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
     }
   }
 
-  // TODO the server is always non-blocking.
-  // However, if we want to have blocking sockets we should block on the client side.
-  return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
+
+  auto do_recvfrom = [&]() {
+    return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) recvfrom_params{ .flags = flags };
 
       if (buf && len)
@@ -559,6 +568,39 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
         *fromLen = len;
         std::memcpy(from, &params->from_address, len);
       } });
+  };
+
+try_again:
+  auto result = do_recvfrom();
+  auto last_error = imports->WSAGetLastError();
+  if (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && last_error == WSAEWOULDBLOCK)
+  {
+    fd_set read_set;
+    FD_ZERO(&read_set);
+    FD_SET(ws, &read_set);
+
+    auto wait_time = [ws]() -> std::optional<timeval> {
+      DWORD timeout = 0;
+      int param_size = sizeof(timeout);
+      auto result = siege_getsockopt(ws, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
+
+      if (result == SOCKET_ERROR || timeout == 0)
+      {
+        return std::nullopt;
+      }
+      return ms_to_timeval(std::chrono::milliseconds{ timeout });
+    }();
+
+    result = siege_select(1, &read_set, nullptr, nullptr, wait_time ? &*wait_time : nullptr);
+
+    if (result == SOCKET_ERROR)
+    {
+      return result;
+    }
+    goto try_again;
+  }
+
+  return result;
 }
 
 int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
@@ -636,10 +678,8 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen)
 
   get_log() << "siege_accept";
 
-
-  // TODO server sockets are always non-blocking.
-  // we should fix this the same way we fixed the send wrappers in client-shared.
-  return send_message_to_server<accept_params, accept_params::message_id, SOCKET>(ws, [=](void* raw) {
+  auto do_accept = [&]() {
+    return send_message_to_server<accept_params, accept_params::message_id, SOCKET>(ws, [=](void* raw) {
       auto* params = new (raw) accept_params{ };
 
       if (from && fromLen)
@@ -655,6 +695,33 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen)
         *fromLen = len;
         std::memcpy(from, &params->from_address, len);
       } });
+  };
+
+try_again:
+  auto result = do_accept();
+  auto last_error = imports->WSAGetLastError();
+
+  if (get_socket_handles().is_virtual_blocking(ws) && result == INVALID_SOCKET && last_error == WSAEWOULDBLOCK)
+  {
+    fd_set read_set;
+    FD_ZERO(&read_set);
+    FD_SET(ws, &read_set);
+
+    auto select_result = siege_select(1, &read_set, nullptr, nullptr, nullptr);
+
+    if (select_result == SOCKET_ERROR)
+    {
+      return INVALID_SOCKET;
+    }
+    goto try_again;
+  }
+
+  if (result != INVALID_SOCKET)
+  {
+    get_socket_handles().insert(result);
+  }
+
+  return result;
 }
 
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
@@ -666,17 +733,68 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
   get_log() << "siege_connect";
 
-  return send_message_to_server<bind_params, bind_params::connect_message_id>(ws, [=](void* raw) {
-    auto* params = new (raw) bind_params{};
+  auto do_connect = [&]() {
+    return send_message_to_server<bind_params, bind_params::connect_message_id>(ws, [=](void* raw) {
+      auto* params = new (raw) bind_params{};
 
-    if (name && namelen)
+      if (name && namelen)
+      {
+        auto len = std::clamp<int>(namelen, 0, sizeof(params->address));
+        params->address_size = len;
+        std::memcpy(&params->address, name, len);
+      }
+      return params;
+    });
+  };
+
+  auto result = do_connect();
+  auto last_error = imports->WSAGetLastError();
+  auto is_pending = last_error == WSAEWOULDBLOCK || last_error == WSAEINPROGRESS || last_error == WSAEALREADY;
+
+  if (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && is_pending)
+  {
+    fd_set write_set;
+    FD_ZERO(&write_set);
+    FD_SET(ws, &write_set);
+
+    auto wait_time = [ws]() -> std::optional<timeval> {
+      DWORD timeout = 0;
+      int param_size = sizeof(timeout);
+      auto result = siege_getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
+
+      if (result == SOCKET_ERROR || timeout == 0)
+      {
+        return std::nullopt;
+      }
+      return ms_to_timeval(std::chrono::milliseconds{ timeout });
+    }();
+
+    result = siege_select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
+
+    if (result == SOCKET_ERROR)
     {
-      auto len = std::clamp<int>(namelen, 0, sizeof(params->address));
-      params->address_size = len;
-      std::memcpy(&params->address, name, len);
+      return result;
     }
-    return params;
-  });
+
+    int socket_error = 0;
+    int socket_size = sizeof(socket_error);
+    result = siege_getsockopt(ws, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&socket_error), &socket_size);
+
+    if (result != 0)
+    {
+      return result;
+    }
+
+    if (socket_error != 0)
+    {
+      imports->WSASetLastError(socket_error);
+      return SOCKET_ERROR;
+    }
+
+    return 0;
+  }
+
+  return result;
 }
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
@@ -695,9 +813,8 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
     log_sampled_write() << "siege_sendto with no address";
   }
 
-  // TODO server sockets are always non-blocking.
-  // we should fix this the same way we fixed the send wrappers in client-shared.
-  return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
+  auto do_sendto = [&]() {
+    return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sendto_params{ .flags = flags };
 
       if (buf && len)
@@ -717,6 +834,40 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
       }
 
       return params; });
+  };
+
+try_again:
+  auto result = do_sendto();
+  auto last_error = imports->WSAGetLastError();
+
+  if (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && last_error == WSAEWOULDBLOCK)
+  {
+    fd_set write_set;
+    FD_ZERO(&write_set);
+    FD_SET(ws, &write_set);
+
+    auto wait_time = [ws]() -> std::optional<timeval> {
+      DWORD timeout = 0;
+      int param_size = sizeof(timeout);
+      auto result = siege_getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
+
+      if (result == SOCKET_ERROR || timeout == 0)
+      {
+        return std::nullopt;
+      }
+      return ms_to_timeval(std::chrono::milliseconds{ timeout });
+    }();
+
+    result = siege_select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
+
+    if (result == SOCKET_ERROR)
+    {
+      return result;
+    }
+    goto try_again;
+  }
+
+  return result;
 }
 
 int __stdcall siege_shutdown(SOCKET ws, int how)
@@ -752,31 +903,34 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
 int __stdcall siege_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket";
-  if (use_custom_backend())
+
+  if (!use_custom_backend())
   {
-    DWORD_PTR return_value{};
-    auto result = ::SendMessageTimeoutW(server_info.server, general_params::close_message_id, (WPARAM)ws, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
-
-    if (!result)
-    {
-      imports->WSASetLastError(WSAESOCKTNOSUPPORT);
-      return SOCKET_ERROR;
-    }
-
-    if (return_value == SOCKET_ERROR)
-    {
-      int last_error = WSAESOCKTNOSUPPORT;
-      if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
-      {
-        last_error = server_last_error;
-      }
-      imports->WSASetLastError(last_error);
-      return SOCKET_ERROR;
-    }
-
-    return (int)return_value;
+    return imports->closesocket(ws);
   }
-  return imports->closesocket(ws);
+
+  DWORD_PTR return_value{};
+  auto result = ::SendMessageTimeoutW(server_info.server, general_params::close_message_id, (WPARAM)ws, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
+
+  if (!result)
+  {
+    imports->WSASetLastError(WSAESOCKTNOSUPPORT);
+    return SOCKET_ERROR;
+  }
+
+  if (return_value == SOCKET_ERROR)
+  {
+    int last_error = WSAESOCKTNOSUPPORT;
+    if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
+    {
+      last_error = server_last_error;
+    }
+    imports->WSASetLastError(last_error);
+    return SOCKET_ERROR;
+  }
+
+  get_socket_handles().erase(ws);
+  return (int)return_value;
 }
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)

@@ -19,6 +19,67 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
 namespace fs = std::filesystem;
 
+export struct socket_handle_info
+{
+  void insert(SOCKET socket)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    handles.insert(socket);
+
+    // we always block on the client layer by default
+    virtual_blocking_handles.emplace(socket);
+  }
+
+  void erase(SOCKET socket)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    handles.erase(socket);
+    virtual_blocking_handles.erase(socket);
+  }
+
+  void set_virtual_blocking(SOCKET socket, bool should_block)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    if (!handles.contains(socket))
+    {
+      return;
+    }
+    if (should_block)
+    {
+      virtual_blocking_handles.emplace(socket);
+    }
+    else
+    {
+      virtual_blocking_handles.erase(socket);
+    }
+  }
+
+  bool is_virtual_blocking(SOCKET socket) const
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    return virtual_blocking_handles.contains(socket);
+  }
+
+  bool contains(SOCKET socket) const
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    return handles.contains(socket);
+  }
+
+private:
+  std::set<SOCKET> handles;
+  std::set<SOCKET> virtual_blocking_handles;
+
+  mutable std::shared_mutex mutex;
+};
+
+export socket_handle_info& get_socket_handles()
+{
+  static socket_handle_info info{};
+  return info;
+}
+
+
 extern "C" {
 hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
 {
