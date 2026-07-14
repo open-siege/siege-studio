@@ -114,7 +114,7 @@ int __stdcall siege_WSACleanup()
   // and just let the
   /*::FreeLibrary(backend->module);
   backend = std::nullopt;*/
-
+  get_select_worker().request_stop();
   return backend->WSACleanup();
 }
 
@@ -132,7 +132,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
 
   if (socket != SOCKET_ERROR)
   {
-    get_socket_handles().insert(socket);
+    get_socket_handles().insert(socket, type);
   }
 
   return socket;
@@ -150,7 +150,7 @@ int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* op
   return backend->setsockopt(ws, level, optname, optval, optlen);
 }
 
-int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
+int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen) noexcept
 {
   get_log() << "siege_getsockopt" << ws << " " << optname;
 
@@ -222,6 +222,10 @@ try_again:
     }
     goto try_again;
   }
+  else if (!get_socket_handles().is_virtual_blocking(ws))
+  {
+    get_socket_handles().clear_io_flags(ws, FD_READ | FD_OOB);
+  }
 
   return result;
 }
@@ -272,6 +276,10 @@ try_again:
       return result;
     }
     goto try_again;
+  }
+  else if (!get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && last_error == WSAEWOULDBLOCK)
+  {
+    get_socket_handles().clear_io_flags(ws, FD_WRITE);
   }
 
   return result;
@@ -333,7 +341,14 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
     return imports->listen(ws, backlog);
   }
 
-  return backend->listen(ws, backlog);
+  auto result = backend->listen(ws, backlog);
+
+  if (result != SOCKET_ERROR)
+  {
+    get_socket_handles().set_listening(ws, true);
+  }
+
+  return result;
 }
 
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
@@ -362,10 +377,14 @@ try_again:
     }
     goto try_again;
   }
+  else if (!get_socket_handles().is_virtual_blocking(ws) && last_error != WSATRY_AGAIN)
+  {
+    get_socket_handles().clear_io_flags(ws, FD_ACCEPT);
+  }
 
   if (result != INVALID_SOCKET)
   {
-    get_socket_handles().insert(result);
+    get_socket_handles().insert(result, SOCK_STREAM, socket_handle_info::client_socket_state::accepted);
   }
 
   return result;
@@ -380,6 +399,7 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
     return imports->connect(ws, name, namelen);
   }
 
+  get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connecting);
   auto result = backend->connect(ws, name, namelen);
   auto last_error = imports->WSAGetLastError();
   auto is_pending = last_error == WSAEWOULDBLOCK || last_error == WSAEINPROGRESS || last_error == WSAEALREADY;
@@ -420,12 +440,24 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
     if (socket_error != 0)
     {
+      get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::unconnected);
       imports->WSASetLastError(socket_error);
       return SOCKET_ERROR;
     }
 
+    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connected);
     return 0;
   }
+
+  if (result == 0)
+  {
+    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connected);
+  }
+  else if (!is_pending && result == SOCKET_ERROR)
+  {
+    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::unconnected);
+  }
+
   return result;
 }
 
@@ -464,7 +496,7 @@ int __stdcall siege_closesocket(SOCKET ws)
 
   if (result != SOCKET_ERROR)
   {
-    get_socket_handles().erase(ws);
+    get_socket_handles().close(ws);
   }
 
   return result;

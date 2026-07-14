@@ -71,6 +71,7 @@ EXPORTS
 	WSAGetOverlappedResult=siege_WSAGetOverlappedResult
 	WSACreateEvent=siege_WSACreateEvent
 	WSAResetEvent=siege_WSAResetEvent
+	WSASetEvent=siege_WSASetEvent
 	WSACloseEvent=siege_WSACloseEvent
 	WSAWaitForMultipleEvents=siege_WSAWaitForMultipleEvents
 	WSASendTo=siege_WSASendTo

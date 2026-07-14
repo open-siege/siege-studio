@@ -19,11 +19,16 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept;
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept;
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept;
+int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen) noexcept;
 }
 
-// TODO come up with a reasonable return type
-void queue_event_notification();
-void queue_window_notification();
+enum struct worker_action : bool
+{
+  as_is,
+  restart_if_stopped
+};
+
+export std::jthread& get_select_worker(worker_action action = worker_action::as_is);
 
 namespace fs = std::filesystem;
 
@@ -32,16 +37,40 @@ namespace fs = std::filesystem;
 // has to track this state
 export struct socket_handle_info
 {
-  void insert(SOCKET socket)
+  enum struct client_socket_state
+  {
+    unconnected,
+    connecting,
+    connected,
+    accepted
+  };
+
+  void insert(SOCKET socket, int socket_type, client_socket_state client_state = client_socket_state::unconnected)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    handles.emplace(socket, socket_context{});
+
+    auto item = handles.find(socket);
+
+    if (item != handles.end() && item->second.is_closed)
+    {
+      handles.erase(item);
+    }
+
+
+    handles.emplace(socket, socket_context{ .socket_type = socket_type, .client_state = client_state });
   }
 
-  void erase(SOCKET socket)
+  void close(SOCKET socket)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    handles.erase(socket);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return;
+    }
+
+    item->second.is_closed = true;
   }
 
   void set_virtual_blocking(SOCKET socket, bool should_block)
@@ -55,6 +84,32 @@ export struct socket_handle_info
     }
 
     item->second.is_virtual_blocking = should_block;
+  }
+
+  void set_client_socket_state(SOCKET socket, client_socket_state state)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return;
+    }
+
+    item->second.client_state = state;
+  }
+
+  void set_listening(SOCKET socket, bool is_listening)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return;
+    }
+
+    item->second.is_listening = is_listening;
   }
 
   void set_overlapped(SOCKET socket, bool is_overlapped)
@@ -96,15 +151,217 @@ export struct socket_handle_info
     return item->second.is_overlapped;
   }
 
+  [[maybe_unused]] int clear_io_flags(SOCKET socket, int flag)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return 0;
+    }
+
+    item->second.io_flags = item->second.io_flags & ~flag;
+    return item->second.io_flags;
+  }
+
+  [[maybe_unused]] int set_io_flags(SOCKET socket, int flags, std::array<int, FD_MAX_EVENTS> errors)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return 0;
+    }
+
+    item->second.io_flags = item->second.io_flags | flags;
+    item->second.event_flags = item->second.event_flags | flags;
+
+    static constexpr std::pair<long, int> network_flags[] = {
+      { FD_READ, FD_READ_BIT },
+      { FD_WRITE, FD_WRITE_BIT },
+      { FD_OOB, FD_OOB_BIT },
+      { FD_ACCEPT, FD_ACCEPT_BIT },
+      { FD_CONNECT, FD_CONNECT_BIT },
+      { FD_CLOSE, FD_CLOSE_BIT },
+    };
+
+    for (auto [mask, bit] : network_flags)
+    {
+      if (flags & mask)
+      {
+        item->second.event_errors[bit] = errors[bit];
+      }
+    }
+
+    return item->second.io_flags;
+  }
+
+  std::optional<WSANETWORKEVENTS> consume_event_flags(SOCKET socket)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+
+    if (item == handles.end())
+    {
+      return std::nullopt;
+    }
+
+    WSANETWORKEVENTS result{
+      .lNetworkEvents = item->second.event_flags
+    };
+    std::memcpy(result.iErrorCode, item->second.event_errors.data(), std::min<std::size_t>(FD_MAX_EVENTS, item->second.event_errors.size()));
+
+    item->second.event_flags = 0;
+    item->second.event_errors = decltype(item->second.event_errors){};
+
+    return result;
+  }
+
   bool contains(SOCKET socket) const
   {
     std::shared_lock<std::shared_mutex> lock(mutex);
     return handles.contains(socket);
   }
 
+  struct window_target
+  {
+    decltype(::PostMessageW)* post_message;
+    HWND window;
+    u_int message;
+  };
+
+  struct event_target
+  {
+    WSAEVENT event;
+  };
+
+
+  bool set_window_target(SOCKET socket, HWND window, u_int message, int flags)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return false;
+    }
+
+    item->second.target = window_target{ .post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA, .window = window, .message = message };
+    item->second.select_flags = flags;
+    item->second.io_flags = 0;
+    item->second.event_flags = 0;
+    item->second.event_errors = decltype(item->second.event_errors){};
+    return true;
+  }
+
+  bool set_event_target(SOCKET socket, WSAEVENT event, int flags)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return false;
+    }
+    item->second.target = event_target{ .event = event };
+    item->second.select_flags = flags;
+    item->second.io_flags = 0;
+    item->second.event_flags = 0;
+    item->second.event_errors = decltype(item->second.event_errors){};
+    return true;
+  }
+
+  bool clear_target(SOCKET socket)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+
+    auto item = handles.find(socket);
+    if (item == handles.end())
+    {
+      return false;
+    }
+
+    item->second.target = std::monostate{};
+    item->second.select_flags = 0;
+    item->second.io_flags = 0;
+    item->second.event_flags = 0;
+    item->second.event_errors = decltype(item->second.event_errors){};
+    return true;
+  }
+
+
+  struct socket_work
+  {
+    SOCKET socket;
+    bool is_closed;
+    int socket_type;
+    bool is_listening;
+    client_socket_state client_state;
+    int select_flags;
+    int io_flags;
+    int event_flags;
+    std::array<int, FD_MAX_EVENTS> event_errors;
+    std::variant<window_target, event_target> target;
+  };
+
+  void get_sockets_to_watch(std::unordered_map<SOCKET, socket_work>& items) const
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    items.clear();
+    items.reserve(handles.size());
+
+    for (auto& handle : handles)
+    {
+      if (handle.second.select_flags == handle.second.io_flags)
+      {
+        continue;
+      }
+
+      if (std::holds_alternative<std::monostate>(handle.second.target))
+      {
+        continue;
+      }
+
+      std::variant<window_target, event_target> target{};
+
+      if (std::holds_alternative<window_target>(handle.second.target))
+      {
+        auto& temp = std::get<window_target>(handle.second.target);
+
+        if (!(temp.post_message || temp.window || temp.message))
+        {
+          continue;
+        }
+
+        target = temp;
+      }
+      else
+      {
+        auto& temp = std::get<event_target>(handle.second.target);
+
+        if (!(temp.event))
+        {
+          continue;
+        }
+        target = temp;
+      }
+
+      // leaving out .event_flags = handle.second.event_flags
+      // so that fresh event flags can be raised.
+      // same goes for .event_errors.
+      items.emplace(handle.first, socket_work{ .socket = handle.first, .is_closed = handle.second.is_closed, .socket_type = handle.second.socket_type, .is_listening = handle.second.is_listening, .client_state = handle.second.client_state, .select_flags = handle.second.select_flags, .io_flags = handle.second.io_flags, .target = target
+
+                                  });
+    }
+  }
+
 private:
   struct socket_context
   {
+    bool is_closed = false;
     // backend sockets are non-blocking,
     // so we have to block by default on the client-side
     bool is_virtual_blocking = true;
@@ -112,10 +369,23 @@ private:
     // purely client-side. backends shouldn't know what overlapping is.
     // definitely non-standard bsd.
     bool is_overlapped = false;
+
+    int socket_type;// likely SOCK_STREAM or SOCK_DGRAM
+
+    bool is_listening = false;
+
+    client_socket_state client_state = client_socket_state::unconnected;
+
+    int select_flags{};
+    int io_flags{};
+
+    int event_flags{};
+    std::array<int, FD_MAX_EVENTS> event_errors{};
+    std::variant<std::monostate, window_target, event_target> target{};
   };
 
-  std::map<SOCKET, socket_context> handles;
 
+  std::map<SOCKET, socket_context> handles;
   mutable std::shared_mutex mutex;
 };
 
@@ -224,6 +494,8 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
 
   if (result != INVALID_SOCKET && dwFlags & WSA_FLAG_OVERLAPPED)
   {
+    // TODO make the worker actually handle overlapped
+    get_select_worker(worker_action::restart_if_stopped);
     get_socket_handles().set_overlapped(result, true);
   }
 
@@ -571,117 +843,256 @@ auto __stdcall siege_WSASend(SOCKET socket, WSABUF* buffers, DWORD buffer_count,
   return siege_WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, nullptr, 0, overlapped, completion_handler);
 }
 
-auto __stdcall siege_WSAEventSelect(SOCKET s, WSAEVENT hEventObject, long lNetworkEvents) noexcept
+auto __stdcall siege_WSAEventSelect(SOCKET socket, WSAEVENT event, long flags) noexcept
 {
   get_log() << "siege_WSAEventSelect";
 
   if (!use_custom_backend())
   {
-    return imports->WSAEventSelect(s, hEventObject, lNetworkEvents);
+    return imports->WSAEventSelect(socket, event, flags);
   }
 
-  get_log() << "siege_WSAEventSelect not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
+  if (flags & FD_QOS)
+  {
+    get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
 
-  return SOCKET_ERROR;
+  if (flags & FD_ROUTING_INTERFACE_CHANGE)
+  {
+    get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
+
+  if (flags & FD_ADDRESS_LIST_CHANGE)
+  {
+    get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
+
+  if (flags == 0)
+  {
+    if (!get_socket_handles().clear_target(socket))
+    {
+      imports->WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+    return 0;
+  }
+
+  if (!get_socket_handles().set_event_target(socket, event, static_cast<int>(flags)))
+  {
+    imports->WSASetLastError(WSAENOTSOCK);
+    return SOCKET_ERROR;
+  }
+
+  get_socket_handles().set_virtual_blocking(socket, false);
+  get_select_worker(worker_action::restart_if_stopped);
+  return 0;
 }
-#endif 
+#endif
 auto __stdcall siege_WSAAsyncSelect(SOCKET socket, HWND window, u_int message, long flags)
 {
   if (!use_custom_backend())
   {
     return imports->WSAAsyncSelect(socket, window, message, flags);
   }
-
-  bool notify_read = flags & FD_READ;
-  bool notify_write = flags & FD_WRITE;
-  bool notify_oob = flags & FD_OOB;
-
-  if (flags & FD_ACCEPT)
-  {
-    get_log() << "FD_ACCEPT not supported for siege_WSAAsyncSelect.\n";
-  }
-
-  if (flags & FD_CONNECT)
-  {
-    get_log() << "FD_CONNECT not supported for siege_WSAAsyncSelect.\n";
-  }
-
-  if (flags & FD_CLOSE)
-  {
-    get_log() << "FD_CLOSE not supported for siege_WSAAsyncSelect.\n";
-  }
-
 #ifdef USE_WINSOCK2
   if (flags & FD_QOS)
   {
     get_log() << "FD_QOS not supported for siege_WSAAsyncSelect.\n";
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
   }
 
   if (flags & FD_ROUTING_INTERFACE_CHANGE)
   {
     get_log() << "FD_ROUTING_INTERFACE_CHANGE not supported for siege_WSAAsyncSelect.\n";
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
   }
 
   if (flags & FD_ADDRESS_LIST_CHANGE)
   {
     get_log() << "FD_ADDRESS_LIST_CHANGE not supported for siege_WSAAsyncSelect.\n";
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
   }
 #endif
 
-  get_log() << "siege_WSAAsyncSelect not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
-  return SOCKET_ERROR;
+  if (flags == 0)
+  {
+    if (!get_socket_handles().clear_target(socket))
+    {
+      imports->WSASetLastError(WSAENOTSOCK);
+      return SOCKET_ERROR;
+    }
+    return 0;
+  }
+
+  if (!get_socket_handles().set_window_target(socket, window, message, static_cast<int>(flags)))
+  {
+    imports->WSASetLastError(WSAENOTSOCK);
+    return SOCKET_ERROR;
+  }
+
+  get_socket_handles().set_virtual_blocking(socket, false);
+  get_select_worker(worker_action::restart_if_stopped);
+  return 0;
 }
 
 #ifdef USE_WINSOCK2
 auto __stdcall siege_WSAEnumNetworkEvents(SOCKET s, WSAEVENT hEventObject, LPWSANETWORKEVENTS lpNetworkEvents) noexcept
 {
-  get_log() << "siege_WSAEnumNetworkEvents";
   if (!use_custom_backend())
   {
     return imports->WSAEnumNetworkEvents(s, hEventObject, lpNetworkEvents);
   }
 
-  get_log() << "siege_WSAEnumNetworkEvents not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
+  if (!lpNetworkEvents)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
 
-  return SOCKET_ERROR;
+  auto result = get_socket_handles().consume_event_flags(s);
+
+  if (!result)
+  {
+    imports->WSASetLastError(WSAENOTSOCK);
+    return SOCKET_ERROR;
+  }
+
+  std::memcpy(lpNetworkEvents, &*result, sizeof(*lpNetworkEvents));
+  if (hEventObject)
+  {
+    ::ResetEvent(hEventObject);
+  }
+
+  return 0;
 }
 
 auto __stdcall siege_WSACreateEvent() noexcept
 {
-  ensure_imports();
-  return imports->WSACreateEvent();
+  if (!use_custom_backend())
+  {
+    ensure_imports();
+    return imports->WSACreateEvent();
+  }
+
+  auto result = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
+
+  if (result == nullptr)
+  {
+    // TODO map error code
+    imports->WSASetLastError(WSA_NOT_ENOUGH_MEMORY);
+    return WSA_INVALID_EVENT;
+  }
+  return result;
+}
+
+auto __stdcall siege_WSASetEvent(HANDLE event) noexcept
+{
+  if (!use_custom_backend())
+  {
+    ensure_imports();
+    return imports->WSASetEvent(event);
+  }
+
+  if (!::SetEvent(event))
+  {
+    // TODO map error code
+    imports->WSASetLastError(WSA_INVALID_HANDLE);
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 auto __stdcall siege_WSAResetEvent(HANDLE event) noexcept
 {
-  return imports->WSAResetEvent(event);
+  if (!use_custom_backend())
+  {
+    ensure_imports();
+    return imports->WSAResetEvent(event);
+  }
+
+  if (!::ResetEvent(event))
+  {
+    // TODO map error code
+    imports->WSASetLastError(WSA_INVALID_HANDLE);
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 auto __stdcall siege_WSACloseEvent(HANDLE event) noexcept
 {
-  return imports->WSACloseEvent(event);
+  if (!use_custom_backend())
+  {
+    ensure_imports();
+    return imports->WSACloseEvent(event);
+  }
+
+  if (!::CloseHandle(event))
+  {
+    // TODO map error code
+    imports->WSASetLastError(WSA_INVALID_HANDLE);
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* events, BOOL wait_all, DWORD timeout, BOOL alertable) noexcept
 {
-  return imports->WSAWaitForMultipleEvents(event_count, events, wait_all, timeout, alertable);
+  if (!use_custom_backend())
+  {
+    ensure_imports();
+    return imports->WSAWaitForMultipleEvents(event_count, events, wait_all, timeout, alertable);
+  }
+
+  if (event_count == 0 || event_count > WSA_MAXIMUM_WAIT_EVENTS)
+  {
+    imports->WSASetLastError(WSA_INVALID_PARAMETER);
+    return WSA_WAIT_FAILED;
+  }
+
+  static_assert(WAIT_TIMEOUT == WSA_WAIT_TIMEOUT);
+  static_assert(WAIT_IO_COMPLETION == WSA_WAIT_IO_COMPLETION);
+  static_assert(WAIT_OBJECT_0 == WSA_WAIT_EVENT_0);
+
+  auto result = ::WaitForMultipleObjectsEx(event_count, events, wait_all, timeout, alertable);
+
+  if (result == WAIT_FAILED)
+  {
+    // TODO map error code
+    imports->WSASetLastError(WSA_INVALID_HANDLE);
+  }
+
+  return result;
 }
 #endif
 
 
 auto __stdcall siege_gethostname(char* name, int namelen) noexcept
 {
+  ensure_imports();
+  if (!use_custom_backend())
+  {
+    return imports->gethostname(name, namelen);
+  }
+
   if (!name || namelen <= 0)
   {
     imports->WSASetLastError(WSAEFAULT);
     return SOCKET_ERROR;
   }
+
   DWORD size = static_cast<DWORD>(namelen);
 
   if (::GetComputerNameExA(ComputerNamePhysicalDnsHostname, name, &size))
@@ -775,69 +1186,240 @@ auto __stdcall siege_WSACancelBlockingCall()
 }
 }
 
-
-// TODO this is all just sketching at this point
-// to get the correct logic
-void worker()
+std::jthread& get_select_worker(worker_action action)
 {
-  struct socket_work
-  {
-    SOCKET socket;
-    int type = SOCK_STREAM;
-    int requested_flags = 0;
-    int notified_flags = 0;// either sent to the window or given out via enum events
-    int enabled_flags = 0;// enabled until first notification, then it needs a relevant function to be called
-
-    enum tcp_state
+  static auto worker_impl = [](std::stop_token token) {
+    while (!token.stop_requested())
     {
-        unset,
-        listening, // server-side - FD_ACCEPT
-        accepted, // server-side - FD_CLOSE
-        connected // client-side - FD_CONNECT - FD_CLOSE
-    };
+      thread_local std::unordered_map<SOCKET, socket_handle_info::socket_work> socket_work;
+      thread_local std::unordered_set<SOCKET> closed_sockets;
+      closed_sockets.clear();
+
+      get_socket_handles().get_sockets_to_watch(socket_work);
+      fd_set read_set{};
+      fd_set write_set{};
+      fd_set except_set{};
+
+
+      if (socket_work.empty())
+      {
+        std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
+        continue;
+      }
+
+      for (auto& [socket, work] : socket_work)
+      {
+        if (work.client_state != socket_handle_info::client_socket_state::unconnected && work.is_closed && work.select_flags & FD_CLOSE && ~work.io_flags & FD_CLOSE)
+        {
+          closed_sockets.emplace(socket);
+          continue;
+        }
+
+        if (work.is_listening && work.select_flags & FD_ACCEPT && ~work.io_flags & FD_ACCEPT)
+        {
+          FD_SET(work.socket, &read_set);
+          continue;
+        }
+
+        bool is_client_connected = work.client_state == socket_handle_info::client_socket_state::connected;
+        bool is_client_accepted = work.client_state == socket_handle_info::client_socket_state::accepted;
+
+        if ((is_client_connected || is_client_accepted) && work.select_flags & FD_CLOSE && ~work.io_flags & FD_CLOSE)
+        {
+          FD_SET(work.socket, &read_set);
+        }
+
+        bool is_client_connecting = work.client_state == socket_handle_info::client_socket_state::connecting;
+        if ((is_client_connected || is_client_connecting) && work.select_flags & FD_CONNECT && ~work.io_flags & FD_CONNECT)
+        {
+          FD_SET(work.socket, &write_set);
+          FD_SET(work.socket, &except_set);
+        }
+
+        if (work.select_flags & FD_READ && ~work.io_flags & FD_READ)
+        {
+          FD_SET(work.socket, &read_set);
+        }
+
+        if (work.select_flags & FD_WRITE && ~work.io_flags & FD_WRITE)
+        {
+          FD_SET(work.socket, &write_set);
+        }
+
+        if (work.select_flags & FD_OOB && ~work.io_flags & FD_OOB)
+        {
+          FD_SET(work.socket, &except_set);
+        }
+      }
+
+      timeval time{};
+      auto count = siege_select(0, &read_set, &write_set, &except_set, &time);
+
+      if (count == 0 && closed_sockets.empty())
+      {
+        std::this_thread::yield();
+        continue;
+      }
+
+      // the flags could have been reset in-between, however unlikely
+      get_socket_handles().get_sockets_to_watch(socket_work);
+      for (auto i = 0; i < read_set.fd_count; i++)
+      {
+        try
+        {
+          auto& work = socket_work.at(read_set.fd_array[i]);
+
+          if (work.is_listening && work.select_flags & FD_ACCEPT && ~work.io_flags & FD_ACCEPT)
+          {
+            work.event_flags |= FD_ACCEPT;
+            continue;
+          }
+
+          if (work.select_flags & FD_READ || work.select_flags & FD_CLOSE)
+          {
+            u_long bytes = 0;
+            if (siege_ioctlsocket(work.socket, FIONREAD, &bytes) == 0)
+            {
+              if (bytes > 0)
+              {
+                if (work.select_flags & FD_READ && ~work.io_flags & FD_READ)
+                {
+                  work.event_flags |= FD_READ;
+                }
+              }
+              else if (work.select_flags & FD_CLOSE && ~work.io_flags & FD_CLOSE)
+              {
+                DWORD error = 0;
+                int error_size = sizeof(error);
+                if (siege_getsockopt(work.socket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&error), &error_size) == 0 && error != 0)
+                {
+                  work.event_errors[FD_CLOSE_BIT] = static_cast<int>(error);
+                }
+                else
+                {
+                  work.event_errors[FD_CLOSE_BIT] = 0;
+                }
+                work.event_flags |= FD_CLOSE;
+              }
+            }
+          }
+        }
+        catch (const std::out_of_range&)
+        {
+        }
+      }
+
+      for (auto i = 0; i < write_set.fd_count; i++)
+      {
+        try
+        {
+          auto& work = socket_work.at(write_set.fd_array[i]);
+
+          bool is_client_connected = work.client_state == socket_handle_info::client_socket_state::connected;
+          bool is_client_connecting = work.client_state == socket_handle_info::client_socket_state::connecting;
+
+          if ((is_client_connected || is_client_connecting) && work.select_flags & FD_CONNECT && ~work.io_flags & FD_CONNECT)
+          {
+            work.event_errors[FD_CONNECT_BIT] = 0;
+            work.event_flags |= FD_CONNECT;
+
+            if (is_client_connecting)
+            {
+              get_socket_handles().set_client_socket_state(write_set.fd_array[i], socket_handle_info::client_socket_state::connected);
+            }
+          }
+
+          if (work.select_flags & FD_WRITE && ~work.io_flags & FD_WRITE)
+          {
+            work.event_flags |= FD_WRITE;
+          }
+        }
+        catch (const std::out_of_range&)
+        {
+        }
+      }
+
+      for (auto i = 0; i < except_set.fd_count; i++)
+      {
+        try
+        {
+          auto& work = socket_work.at(except_set.fd_array[i]);
+
+          bool is_client_connected = work.client_state == socket_handle_info::client_socket_state::connected;
+          bool is_client_connecting = work.client_state == socket_handle_info::client_socket_state::connecting;
+
+          if ((is_client_connected || is_client_connecting) && work.select_flags & FD_CONNECT && ~work.io_flags & FD_CONNECT)
+          {
+            DWORD last_error = 0;
+
+            int last_error_size = sizeof(last_error);
+
+            if (siege_getsockopt(work.socket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&last_error), &last_error_size) == 0 && last_error != 0)
+            {
+              work.event_errors[FD_CONNECT_BIT] = static_cast<int>(last_error);
+              work.event_flags |= FD_CONNECT;
+              get_socket_handles().set_client_socket_state(except_set.fd_array[i], socket_handle_info::client_socket_state::unconnected);
+              continue;
+            }
+          }
+
+          if (work.select_flags & FD_OOB && ~work.io_flags & FD_OOB)
+          {
+            work.event_flags |= FD_OOB;
+          }
+        }
+        catch (const std::out_of_range&)
+        {
+        }
+      }
+
+      for (auto socket : closed_sockets)
+      {
+        try
+        {
+          auto& work = socket_work.at(socket);
+          work.event_flags |= FD_CLOSE;
+          work.event_errors[FD_CLOSE_BIT] = 0;
+        }
+        catch (const std::out_of_range&)
+        {
+        }
+      }
+
+      for (auto& [socket, work] : socket_work)
+      {
+        if (work.event_flags == 0)
+        {
+          continue;
+        }
+
+        get_socket_handles().set_io_flags(socket, work.event_flags, work.event_errors);
+
+        if (std::holds_alternative<socket_handle_info::window_target>(work.target))
+        {
+          auto& window = std::get<socket_handle_info::window_target>(work.target);
+          assert(window.post_message != nullptr);
+
+          // TODO also add FD_CLOSE here too.
+          auto error = work.event_flags & FD_CONNECT ? work.event_errors[FD_CONNECT_BIT] : 0;
+          window.post_message(window.window, window.message, static_cast<WPARAM>(socket), MAKELPARAM(work.event_flags, error));
+        }
+        else
+        {
+          auto& event = std::get<socket_handle_info::event_target>(work.target);
+
+          ::SetEvent(event.event);
+        }
+      }
+    }
   };
 
-  std::vector<socket_work> sockets;
+  static std::jthread worker = std::jthread(worker_impl);
 
-  fd_set read_set{};
-  fd_set write_set{};
-  fd_set except_set{};
-
-  for (auto& work : sockets)
+  if (action == worker_action::restart_if_stopped && worker.get_stop_token().stop_requested())
   {
-    if (work.enabled_flags & FD_READ)
-    {
-      FD_SET(work.socket, &read_set);
-    }
-
-    if (work.enabled_flags & FD_WRITE)
-    {
-      FD_SET(work.socket, &write_set);
-    }
-
-    if (work.enabled_flags & FD_OOB)
-    {
-      FD_SET(work.socket, &except_set);
-    }
+    worker = std::jthread(worker_impl);
   }
 
-  timeval time{};
-  auto count = siege_select(3, &read_set, &write_set, &except_set, &time);
-
-  // FD_READ + FD_WRITE + FD_OOB map to select
-
-  // FD_ACCEPT + FD_CONNECT + FD_CLOSE can map to select
-  // but with extra info. we need to do them separately in order for it to make sense
-
-  // FD_ACCEPT == listen socket state + read
-  // FD_CONNECT == connecting socket state + write
-  // FD_CLOSE == read + msg peak with size of 0
-}
-
-void queue_event_notification()
-{
-}
-
-void queue_window_notification()
-{
+  return worker;
 }

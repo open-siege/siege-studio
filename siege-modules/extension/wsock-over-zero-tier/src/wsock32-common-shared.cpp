@@ -80,6 +80,7 @@ export struct wsock_imports
   decltype(::WSAStringToAddressA)* WSAStringToAddressA = nullptr;
   decltype(::WSAGetOverlappedResult)* WSAGetOverlappedResult = nullptr;
   decltype(::WSACreateEvent)* WSACreateEvent = nullptr;
+  decltype(::WSASetEvent)* WSASetEvent = nullptr;
   decltype(::WSAResetEvent)* WSAResetEvent = nullptr;
   decltype(::WSACloseEvent)* WSACloseEvent = nullptr;
   decltype(::WSAWaitForMultipleEvents)* WSAWaitForMultipleEvents = nullptr;
@@ -184,6 +185,7 @@ export std::optional<wsock_imports> load_system_wsock()
   imports.WSAGetOverlappedResult = (decltype(imports.WSAGetOverlappedResult))::GetProcAddress(imports.module, "WSAGetOverlappedResult");
   imports.WSACreateEvent = (decltype(imports.WSACreateEvent))::GetProcAddress(imports.module, "WSACreateEvent");
   imports.WSAResetEvent = (decltype(imports.WSAResetEvent))::GetProcAddress(imports.module, "WSAResetEvent");
+  imports.WSASetEvent = (decltype(imports.WSASetEvent))::GetProcAddress(imports.module, "WSASetEvent");
   imports.WSACloseEvent = (decltype(imports.WSACloseEvent))::GetProcAddress(imports.module, "WSACloseEvent");
   imports.WSAWaitForMultipleEvents = (decltype(imports.WSAWaitForMultipleEvents))::GetProcAddress(imports.module, "WSAWaitForMultipleEvents");
   imports.WSASendTo = (decltype(imports.WSASendTo))::GetProcAddress(imports.module, "WSASendTo");
