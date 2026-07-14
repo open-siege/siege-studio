@@ -89,7 +89,17 @@ int __stdcall backend_listen(SOCKET ws, int backlog) noexcept
 SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen) noexcept
 {
   get_log() << "siege_accept\n";
-  return imports->accept(ws, name, namelen);
+  auto result = imports->accept(ws, name, namelen);
+
+  u_long non_blocking = 1u;
+
+  if (imports->ioctlsocket(result, FIONBIO, &non_blocking) == SOCKET_ERROR)
+  {
+    imports->closesocket(result);
+    return INVALID_SOCKET;
+  }
+
+  return result;
 }
 
 int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen) noexcept

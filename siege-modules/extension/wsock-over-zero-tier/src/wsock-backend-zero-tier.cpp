@@ -236,7 +236,7 @@ SOCKET __stdcall backend_socket(int af, int type, int protocol)
 
     int non_blocking = 1;
 
-    if (zts_bsd_ioctl(socket, ZTS_FIONBIO, &non_blocking) < -1)
+    if (zts_bsd_ioctl(socket, ZTS_FIONBIO, &non_blocking) < 0)
     {
       zts_bsd_close(socket);
       return INVALID_SOCKET;
@@ -273,7 +273,6 @@ static_assert(SO_RCVBUF == ZTS_SO_RCVBUF);
 static_assert(SO_SNDBUF == ZTS_SO_SNDBUF);
 static_assert(SO_ERROR == ZTS_SO_ERROR);
 static_assert(SO_LINGER == ZTS_SO_LINGER);
-static_assert(SO_ACCEPTCONN == ZTS_SO_ACCEPTCONN);
 static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall backend_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
@@ -566,6 +565,14 @@ SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
     if (zt_addr.sin_addr.S_addr)
     {
       get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
+    }
+
+    int non_blocking = 1;
+
+    if (zts_bsd_ioctl(zt_result, ZTS_FIONBIO, &non_blocking) < 0)
+    {
+      zts_bsd_close(zt_result);
+      return INVALID_SOCKET;
     }
 
     get_zero_tier_handles().insert(zt_result);
