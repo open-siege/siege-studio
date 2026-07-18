@@ -536,7 +536,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
     }
   }
 
-
+  // TODO add SEH here for bad buffers
   auto do_recvfrom = [&]() {
     return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
       auto* params = new (raw) recvfrom_params{ .flags = flags };
@@ -633,7 +633,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
   return imports->getsockname(ws, name, length);
 }
 
-int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
+int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length) noexcept
 {
   get_log() << "siege_getpeername";
   if (use_custom_backend())
@@ -819,6 +819,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
     return imports->sendto(ws, buf, len, flags, to, tolen);
   }
 
+  // TODO add SEH here for bad buffers
   if (to)
   {
     log_sampled_write() << "siege_sendto with to address " << af_to_string(to->sa_family);
@@ -919,6 +920,7 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
   return imports->shutdown(ws, how);
 }
 
+// TODO needs to cancel pending overlapped operations
 int __stdcall siege_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket";

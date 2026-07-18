@@ -194,6 +194,7 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
 
 try_again:
+  // TODO add SEH here for bad buffers
   auto result = backend->recvfrom(ws, buf, len, flags, from, fromLen);
   auto last_error = imports->WSAGetLastError();
   if (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && last_error == WSAEWOULDBLOCK)
@@ -248,6 +249,7 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
   }
 
 try_again:
+  // TODO add SEH here for bad buffers
   auto result = backend->sendto(ws, buf, len, flags, to, tolen);
   auto last_error = imports->WSAGetLastError();
 
@@ -296,7 +298,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
   return backend->getsockname(ws, name, length);
 }
 
-int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length)
+int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length) noexcept
 {
   get_log() << "siege_getpeername\n";
   if (!use_custom_backend())
@@ -484,6 +486,7 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
   return backend->shutdown(ws, how);
 }
 
+// TODO needs to cancel pending overlapped operations
 int __stdcall siege_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket\n";

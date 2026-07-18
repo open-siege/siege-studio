@@ -20,6 +20,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept;
 int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept;
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept;
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen) noexcept;
+int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length) noexcept;
 }
 
 enum struct worker_action : bool
@@ -29,8 +30,10 @@ enum struct worker_action : bool
 };
 
 export std::jthread& get_select_worker(worker_action action = worker_action::as_is);
+export std::jthread& get_overlapped_worker(worker_action action = worker_action::as_is);
 
 namespace fs = std::filesystem;
+namespace stl = std::ranges;
 
 // TODO will need shared memory
 // because ws2_32 and wsock32 may be loaded and
@@ -293,6 +296,7 @@ export struct socket_handle_info
   }
 
 
+  // TODO rename this
   struct socket_work
   {
     SOCKET socket;
@@ -311,6 +315,8 @@ export struct socket_handle_info
   {
     std::shared_lock<std::shared_mutex> lock(mutex);
     items.clear();
+
+    // TODO reserve only non-blocking sockets
     items.reserve(handles.size());
 
     for (auto& handle : handles)
@@ -358,6 +364,437 @@ export struct socket_handle_info
     }
   }
 
+  struct overlapped_event
+  {
+    HANDLE event;
+  };
+
+  struct overlapped_callback
+  {
+    HANDLE thread_handle;
+    LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_routine;
+  };
+
+  struct overlapped_write_work
+  {
+    SOCKET socket;
+    WSAOVERLAPPED* overlapped;
+    std::span<char> data_to_write;
+    std::shared_ptr<void> data_token;
+    sockaddr addr;
+    int addr_size;
+    DWORD flags;
+    std::variant<std::monostate, overlapped_event, overlapped_callback> target;
+  };
+
+  struct overlapped_read_work
+  {
+    SOCKET socket;
+    WSAOVERLAPPED* overlapped;
+    std::vector<std::span<char>> read_targets;
+    DWORD flags;
+    int read_addr_size;
+    std::variant<std::monostate, overlapped_event, overlapped_callback> target;
+  };
+
+  struct overlapped_result
+  {
+    std::expected<DWORD, DWORD> result;
+    WSAOVERLAPPED* overlapped;
+    DWORD flags;
+    sockaddr* target_addr;
+    int* target_addr_size;
+    sockaddr received_addr;
+    int received_addr_size;
+    LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_callback;
+  };
+
+  struct overlapped_write_params
+  {
+    SOCKET socket;
+    WSAOVERLAPPED* overlapped;
+    std::vector<char> data;
+    sockaddr addr;
+    int addr_size;
+    DWORD flags;
+    HANDLE thread_handle;
+    LPWSAOVERLAPPED_COMPLETION_ROUTINE callback;
+  };
+
+  struct overlapped_read_params
+  {
+    SOCKET socket;
+    WSAOVERLAPPED* overlapped;
+    std::vector<std::span<char>> read_targets;
+    sockaddr* addr;
+    int* addr_size;
+    DWORD flags;
+    HANDLE thread_handle;
+    LPWSAOVERLAPPED_COMPLETION_ROUTINE callback;
+  };
+
+  void queue_overlapped_write_work(overlapped_write_params params)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto socket_data = handles.find(params.socket);
+
+    if (socket_data == handles.end())
+    {
+      return;
+    }
+
+    auto& state = socket_data->second.overlapped_write_queue.emplace_back();
+    state.overlapped = params.overlapped;
+    auto temp = std::make_shared<std::vector<char>>(std::move(params.data));
+    state.data_to_write = *temp;
+    state.data_token = temp;
+    state.addr = params.addr;
+    state.addr_size = params.addr_size;
+    state.flags = params.flags;
+
+    if (params.thread_handle && params.callback)
+    {
+      state.target = overlapped_callback{ .thread_handle = params.thread_handle, .completion_routine = params.callback };
+    }
+    else if (params.overlapped->hEvent)
+    {
+      state.target = overlapped_event{ .event = params.overlapped->hEvent };
+    }
+
+    overlapped_sockets.emplace(params.overlapped, params.socket);
+  }
+
+  void queue_overlapped_read_work(overlapped_read_params params)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto socket_data = handles.find(params.socket);
+
+    if (socket_data == handles.end())
+    {
+      return;
+    }
+
+    auto& state = socket_data->second.overlapped_read_queue.emplace_back();
+    state.overlapped = params.overlapped;
+
+    state.read_targets = std::move(params.read_targets);
+    state.target_addr = params.addr;
+    state.target_addr_size = params.addr_size;
+    state.flags = params.flags;
+
+    if (params.thread_handle && params.callback)
+    {
+      state.target = overlapped_callback{ .thread_handle = params.thread_handle, .completion_routine = params.callback };
+    }
+    else if (params.overlapped->hEvent)
+    {
+      state.target = overlapped_event{ .event = params.overlapped->hEvent };
+    }
+
+    overlapped_sockets.emplace(params.overlapped, params.socket);
+  }
+
+  void get_overlapped_sockets_with_work(std::unordered_set<SOCKET>& sockets) const
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    sockets.clear();
+    sockets.reserve(overlapped_sockets.size());
+
+    for (auto& [socket, context] : handles)
+    {
+      if (stl::any_of(context.overlapped_read_queue, [](auto& work) {
+            return std::holds_alternative<std::monostate>(work.socket_result);
+          }))
+      {
+        sockets.emplace(socket);
+      }
+      else if (stl::any_of(context.overlapped_write_queue, [](auto& work) {
+                 return std::holds_alternative<std::monostate>(work.socket_result);
+               }))
+      {
+        sockets.emplace(socket);
+      }
+    }
+  }
+
+  std::optional<overlapped_write_work> peek_overlapped_write_work(SOCKET socket)
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    auto data = handles.find(socket);
+
+    if (data == handles.end())
+    {
+      return std::nullopt;
+    }
+
+    if (data->second.overlapped_write_queue.empty())
+    {
+      return std::nullopt;
+    }
+
+    auto pending = stl::find_if(data->second.overlapped_write_queue, [](auto& work) {
+      return std::holds_alternative<std::monostate>(work.socket_result);
+    });
+
+
+    if (pending == data->second.overlapped_write_queue.end())
+    {
+      return std::nullopt;
+    }
+
+    return std::make_optional(overlapped_write_work{
+      .socket = socket,
+      .overlapped = pending->overlapped,
+      .data_to_write = pending->data_to_write,
+      .data_token = pending->data_token,
+      .addr = pending->addr,
+      .addr_size = pending->addr_size,
+      .flags = pending->flags,
+      .target = pending->target,
+    });
+  }
+
+  std::optional<overlapped_read_work> peek_overlapped_read_work(SOCKET socket)
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+
+    auto data = handles.find(socket);
+
+    if (data == handles.end())
+    {
+      return std::nullopt;
+    }
+
+    if (data->second.overlapped_read_queue.empty())
+    {
+      return std::nullopt;
+    }
+
+    auto pending = stl::find_if(data->second.overlapped_read_queue, [](auto& work) {
+      return std::holds_alternative<std::monostate>(work.socket_result);
+    });
+
+
+    if (pending == data->second.overlapped_read_queue.end())
+    {
+      return std::nullopt;
+    }
+
+    return std::make_optional(overlapped_read_work{
+      .socket = socket,
+      .overlapped = pending->overlapped,
+      .read_targets = pending->read_targets,
+      .flags = pending->flags,
+      .read_addr_size = pending->target_addr_size ? *pending->target_addr_size : 0,
+      .target = pending->target,
+    });
+  }
+
+  bool overlapped_work_is_complete(WSAOVERLAPPED* overlapped) const
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    auto socket = overlapped_sockets.find(overlapped);
+
+    if (socket == overlapped_sockets.end())
+    {
+      return false;
+    }
+    auto& data = handles.at(socket->second);
+
+    auto read_work = stl::find_if(data.overlapped_read_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    auto write_work = stl::find_if(data.overlapped_write_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    if (read_work != data.overlapped_read_queue.end())
+    {
+      return !std::holds_alternative<std::monostate>(read_work->socket_result);
+    }
+    else if (write_work != data.overlapped_write_queue.end())
+    {
+      return !std::holds_alternative<std::monostate>(write_work->socket_result);
+    }
+
+    return false;
+  }
+
+  void complete_overlapped_write_work(WSAOVERLAPPED* overlapped, DWORD transferred)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto socket = overlapped_sockets.find(overlapped);
+
+    if (socket == overlapped_sockets.end())
+    {
+      return;
+    }
+
+    auto& data = handles.at(socket->second);
+
+    auto write_work = stl::find_if(data.overlapped_write_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    if (write_work != data.overlapped_write_queue.end())
+    {
+      write_work->socket_result = transferred;
+    }
+  }
+
+  void complete_overlapped_read_work(WSAOVERLAPPED* overlapped, DWORD transferred, DWORD flags, sockaddr addr, int addr_len)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto socket = overlapped_sockets.find(overlapped);
+
+    if (socket == overlapped_sockets.end())
+    {
+      return;
+    }
+
+    auto& data = handles.at(socket->second);
+
+    auto read_state = stl::find_if(data.overlapped_read_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    if (read_state != data.overlapped_read_queue.end())
+    {
+      read_state->socket_result = transferred;
+      read_state->flags = flags;
+      read_state->received_addr = addr;
+      read_state->received_addr_size = addr_len;
+    }
+  }
+
+  void error_overlapped_work(WSAOVERLAPPED* overlapped, int error_code)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto socket = overlapped_sockets.find(overlapped);
+
+    if (socket == overlapped_sockets.end())
+    {
+      return;
+    }
+
+    auto& data = handles.at(socket->second);
+
+    auto read_work = stl::find_if(data.overlapped_read_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    auto write_work = stl::find_if(data.overlapped_write_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    if (read_work != data.overlapped_read_queue.end())
+    {
+      read_work->socket_result = error_code;
+    }
+    else if (write_work != data.overlapped_write_queue.end())
+    {
+      write_work->socket_result = error_code;
+    }
+  }
+
+  void remove_overlapped_work(WSAOVERLAPPED* overlapped)
+  {
+    std::unique_lock<std::shared_mutex> lock(mutex);
+    auto socket = overlapped_sockets.find(overlapped);
+
+    if (socket == overlapped_sockets.end())
+    {
+      return;
+    }
+
+    auto& data = handles.at(socket->second);
+
+    auto read_work = stl::find_if(data.overlapped_read_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    auto write_work = stl::find_if(data.overlapped_write_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    if (read_work != data.overlapped_read_queue.end())
+    {
+      data.overlapped_read_queue.erase(read_work);
+    }
+
+    if (write_work != data.overlapped_write_queue.end())
+    {
+      data.overlapped_write_queue.erase(write_work);
+    }
+
+    overlapped_sockets.erase(overlapped);
+  }
+
+  std::expected<overlapped_result, std::errc> get_overlapped_result(WSAOVERLAPPED* overlapped)
+  {
+    std::shared_lock<std::shared_mutex> lock(mutex);
+    auto socket = overlapped_sockets.find(overlapped);
+
+    if (socket == overlapped_sockets.end())
+    {
+      return std::unexpected(std::errc::bad_address);
+    }
+
+    auto& data = handles.at(socket->second);
+
+    auto read_work = stl::find_if(data.overlapped_read_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    auto get_result = [overlapped](auto& work) {
+      std::expected<DWORD, DWORD> final_result;
+      if (std::holds_alternative<DWORD>(work.socket_result))
+      {
+        final_result = std::get<DWORD>(work.socket_result);
+      }
+      else
+      {
+        final_result = std::unexpected(static_cast<DWORD>(std::get<int>(work.socket_result)));
+      }
+      LPWSAOVERLAPPED_COMPLETION_ROUTINE callback = nullptr;
+
+      if (std::holds_alternative<overlapped_callback>(work.target))
+      {
+        callback = std::get<overlapped_callback>(work.target).completion_routine;
+      }
+      return overlapped_result{
+        .result = final_result,
+        .overlapped = overlapped,
+        .flags = work.flags,
+        .completion_callback = callback
+      };
+    };
+
+    if (read_work != data.overlapped_read_queue.end() && !std::holds_alternative<std::monostate>(read_work->socket_result))
+    {
+      auto common_result = get_result(*read_work);
+
+      common_result.received_addr = read_work->received_addr;
+      common_result.received_addr_size = read_work->received_addr_size;
+      common_result.target_addr = read_work->target_addr;
+      common_result.target_addr_size = read_work->target_addr_size;
+
+      return common_result;
+    }
+
+    auto write_work = stl::find_if(data.overlapped_write_queue, [overlapped](auto& state) {
+      return state.overlapped == overlapped;
+    });
+
+    if (write_work != data.overlapped_write_queue.end() && !std::holds_alternative<std::monostate>(write_work->socket_result))
+    {
+      return get_result(*write_work);
+    }
+
+    return std::unexpected(std::errc::operation_in_progress);
+  }
+
 private:
   struct socket_context
   {
@@ -382,10 +819,44 @@ private:
     int event_flags{};
     std::array<int, FD_MAX_EVENTS> event_errors{};
     std::variant<std::monostate, window_target, event_target> target{};
+
+    struct overlapped_write_state
+    {
+      WSAOVERLAPPED* overlapped;
+      std::span<char> data_to_write;
+      std::shared_ptr<void> data_token;
+
+      sockaddr addr;
+      int addr_size;
+      DWORD flags;
+
+      std::variant<std::monostate, overlapped_event, overlapped_callback> target;
+      std::variant<std::monostate, DWORD, int> socket_result;
+    };
+
+    struct overlapped_read_state
+    {
+      WSAOVERLAPPED* overlapped;
+
+      DWORD flags;
+
+      std::vector<std::span<char>> read_targets;
+
+      sockaddr received_addr;
+      int received_addr_size;
+
+      sockaddr* target_addr;
+      int* target_addr_size;
+      std::variant<std::monostate, overlapped_event, overlapped_callback> target;
+      std::variant<std::monostate, DWORD, int> socket_result;
+    };
+
+    std::deque<overlapped_read_state> overlapped_read_queue;
+    std::deque<overlapped_write_state> overlapped_write_queue;
   };
 
-
   std::map<SOCKET, socket_context> handles;
+  std::map<WSAOVERLAPPED*, SOCKET> overlapped_sockets;
   mutable std::shared_mutex mutex;
 };
 
@@ -494,8 +965,7 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
 
   if (result != INVALID_SOCKET && dwFlags & WSA_FLAG_OVERLAPPED)
   {
-    // TODO make the worker actually handle overlapped
-    get_select_worker(worker_action::restart_if_stopped);
+    get_overlapped_worker(worker_action::restart_if_stopped);
     get_socket_handles().set_overlapped(result, true);
   }
 
@@ -591,18 +1061,72 @@ auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::siz
 }
 
 
-auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, OVERLAPPED* overlapped, DWORD* transfer, BOOL wait, DWORD* flags)
+auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, WSAOVERLAPPED* overlapped, DWORD* transferred, BOOL wait, DWORD* flags)
 {
   if (!use_custom_backend())
   {
-    return imports->WSAGetOverlappedResult(socket, overlapped, transfer, wait, flags);
+    return imports->WSAGetOverlappedResult(socket, overlapped, transferred, wait, flags);
   }
 
-  get_log() << "siege_WSAGetOverlappedResult called. not supported.\n";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
+  if (!overlapped || !transferred || !flags)
+  {
+    imports->WSASetLastError(WSA_INVALID_PARAMETER);
+    return FALSE;
+  }
 
-  return FALSE;
+  auto result = get_socket_handles().get_overlapped_result(overlapped);
+
+  if (!result && result.error() == std::errc::bad_address)
+  {
+    imports->WSASetLastError(WSA_INVALID_PARAMETER);
+    return FALSE;
+  }
+
+  if (!result && !wait && result.error() == std::errc::operation_in_progress)
+  {
+    imports->WSASetLastError(WSA_IO_INCOMPLETE);
+    return FALSE;
+  }
+
+  if (wait && !result)
+  {
+    auto wait_result = ::WaitForSingleObject(overlapped->hEvent, INFINITE);
+
+    if (wait_result == WAIT_FAILED)
+    {
+      imports->WSASetLastError(WSA_INVALID_PARAMETER);
+      return FALSE;
+    }
+  }
+
+  result = get_socket_handles().get_overlapped_result(overlapped);
+
+  if (!result)
+  {
+    imports->WSASetLastError(WSA_OPERATION_ABORTED);
+    return FALSE;
+  }
+
+  if (!result->result)
+  {
+    imports->WSASetLastError(result->result.error());
+    get_socket_handles().remove_overlapped_work(overlapped);
+    return FALSE;
+  }
+
+  *transferred = *result->result;
+  *flags = result->flags;
+
+  if (result->target_addr && result->target_addr_size && result->received_addr_size > 0)
+  {
+    auto real_size = std::clamp<int>(result->received_addr_size, 0, *result->target_addr_size);
+    std::memcpy(result->target_addr, &result->received_addr, real_size);
+    *result->target_addr_size = real_size;
+  }
+
+  get_socket_handles().remove_overlapped_work(overlapped);
+
+  return TRUE;
 }
 
 auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_count, DWORD* bytes_received, DWORD* flags, sockaddr* from, INT* from_len, OVERLAPPED* overlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE completion_handler) noexcept
@@ -613,15 +1137,6 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
   }
 
   get_log() << "siege_WSARecvFrom called.\n";
-
-  if (get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler))
-  {
-    get_log() << "siege_WSARecvFrom is overlapped. Not supported.\n";
-    get_log().flush();
-    imports->WSASetLastError(WSAEOPNOTSUPP);
-
-    return SOCKET_ERROR;
-  }
 
   if (!flags)
   {
@@ -651,9 +1166,9 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
     }
   }
 
-  // null bytes_received is only allowed when overlapped is set.
-  // but since we already reject that, it has to be supplied.
-  if (!bytes_received)
+  bool should_queue_overlapped = get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler);
+
+  if (!bytes_received && !should_queue_overlapped)
   {
     imports->WSASetLastError(WSAEINVAL);
     return SOCKET_ERROR;
@@ -674,17 +1189,61 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
     size += len;
   }
 
+
+  if (should_queue_overlapped)
+  {
+    HANDLE thread_handle = nullptr;
+    if (completion_handler)
+    {
+      thread_handle = ::OpenThread(THREAD_SET_CONTEXT, FALSE, ::GetCurrentThreadId());
+
+      if (!thread_handle)
+      {
+        imports->WSASetLastError(WSAEINVAL);
+        return SOCKET_ERROR;
+      }
+    }
+
+    std::vector<std::span<char>> spans;
+
+    spans.reserve(buffer_count);
+
+    for (auto i = 0; i < buffer_count; ++i)
+    {
+      if (buffers[i].len == 0)
+      {
+        continue;
+      }
+      spans.emplace_back(buffers[i].buf, buffers[i].len);
+    }
+
+    get_socket_handles().queue_overlapped_read_work(socket_handle_info::overlapped_read_params{
+      .socket = socket,
+      .overlapped = overlapped,
+      .read_targets = std::move(spans),
+      .addr = from,
+      .addr_size = from_len,
+      .flags = *flags,
+      .thread_handle = thread_handle,
+      .callback = completion_handler });
+
+    imports->WSASetLastError(WSA_IO_PENDING);
+    return SOCKET_ERROR;
+  }
+
   struct span_pair
   {
     std::span<char> from_buffer;
     std::span<char> to_param;
   };
 
+  // thread_local for memory caching
   thread_local std::vector<char> temp_buffer;
   thread_local std::vector<span_pair> span_buffer;
 
   span_buffer.reserve(buffer_count);
   span_buffer.clear();
+
   temp_buffer.resize(size);
 
   auto begin = temp_buffer.begin();
@@ -756,13 +1315,6 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
     return imports->WSASendTo(socket, buffers, buffer_count, bytes_sent, flags, to, len, overlapped, completion_handler);
   }
 
-  if (get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler))
-  {
-    get_log() << "siege_WSASendTo is overlapped. Not supported.";
-    imports->WSASetLastError(WSAEOPNOTSUPP);
-    return SOCKET_ERROR;
-  }
-
   if (flags & MSG_PARTIAL)
   {
     get_log() << "siege_WSASendTo MSG_PARTIAL requested. Not supported.";
@@ -785,9 +1337,9 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
     }
   }
 
-  // null bytes_sent is only allowed when overlapped is set.
-  // but since we already reject that, it has to be supplied.
-  if (!bytes_sent)
+  bool should_queue_overlapped = get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler);
+
+  if (!bytes_sent && !should_queue_overlapped)
   {
     imports->WSASetLastError(WSAEINVAL);
     return SOCKET_ERROR;
@@ -820,6 +1372,53 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
     }
 
     temp_buffer.insert(temp_buffer.end(), buffers[i].buf, buffers[i].buf + buffers[i].len);
+  }
+
+  if (should_queue_overlapped)
+  {
+    HANDLE thread_handle = nullptr;
+    if (completion_handler)
+    {
+      thread_handle = ::OpenThread(THREAD_SET_CONTEXT, FALSE, ::GetCurrentThreadId());
+
+      if (!thread_handle)
+      {
+        imports->WSASetLastError(WSAEINVAL);
+        return SOCKET_ERROR;
+      }
+    }
+
+    sockaddr temp{};
+    int temp_len = std::clamp<int>(len, 0, static_cast<int>(sizeof(sockaddr)));
+
+    if (to)
+    {
+      std::memcpy(&temp, to, temp_len);
+    }
+    else
+    {
+      temp_len = sizeof(sockaddr);
+      auto peer_result = siege_getpeername(socket, &temp, &temp_len);
+
+      if (peer_result == SOCKET_ERROR)
+      {
+        imports->WSASetLastError(WSAEINVAL);
+        return SOCKET_ERROR;
+      }
+    }
+
+    get_socket_handles().queue_overlapped_write_work(socket_handle_info::overlapped_write_params{
+      .socket = socket,
+      .overlapped = overlapped,
+      .data = std::move(temp_buffer),
+      .addr = temp,
+      .addr_size = temp_len,
+      .flags = flags,
+      .thread_handle = thread_handle,
+      .callback = completion_handler });
+
+    imports->WSASetLastError(WSA_IO_PENDING);
+    return SOCKET_ERROR;
   }
 
   auto sent_size = siege_sendto(socket, temp_buffer.data(), static_cast<int>(temp_buffer.size()), flags, to, len);
@@ -1102,10 +1701,6 @@ auto __stdcall siege_gethostname(char* name, int namelen) noexcept
 
   imports->WSASetLastError(WSAENETDOWN);
   return SOCKET_ERROR;
-
-  // get_log() << "siege_gethostname.";
-  // ensure_imports();
-  // return imports->gethostname(name, namelen);
 }
 
 auto __stdcall siege_WSAGetLastError() noexcept
@@ -1423,3 +2018,159 @@ std::jthread& get_select_worker(worker_action action)
 
   return worker;
 }
+
+#ifdef USE_WINSOCK2
+void __stdcall apc_callback(ULONG_PTR overlapped_raw)
+{
+  // TODO get pending overlapped data.
+  // get the state and the target callback
+  // call it and then
+  WSAOVERLAPPED* overlapped = (WSAOVERLAPPED*)overlapped_raw;
+
+  auto result = get_socket_handles().get_overlapped_result(overlapped);
+
+  if (!result)
+  {
+    return;
+  }
+
+  if (result->target_addr && result->target_addr_size && result->received_addr_size > 0)
+  {
+    auto real_size = std::clamp<int>(result->received_addr_size, 0, *result->target_addr_size);
+    std::memcpy(result->target_addr, &result->received_addr, real_size);
+    *result->target_addr_size = real_size;
+  }
+
+  if (result->result && result->completion_callback)
+  {
+    result->completion_callback(0, *result->result, overlapped, result->flags);
+  }
+  else if (result->completion_callback)
+  {
+    result->completion_callback(result->result.error(), 0, overlapped, result->flags);
+  }
+
+  get_socket_handles().remove_overlapped_work(overlapped);
+}
+
+std::jthread& get_overlapped_worker(worker_action action)
+{
+  static auto worker_impl = [](std::stop_token token) {
+    while (!token.stop_requested())
+    {
+      thread_local std::unordered_set<SOCKET> sockets;
+
+      get_socket_handles().get_overlapped_sockets_with_work(sockets);
+
+      // do one job for each socket each cycle
+      for (auto socket : sockets)
+      {
+        auto read_work = get_socket_handles().peek_overlapped_read_work(socket);
+        auto write_work = get_socket_handles().peek_overlapped_write_work(socket);
+
+        if (!(read_work || write_work))
+        {
+          continue;
+        }
+        fd_set read_set{};
+        fd_set write_set{};
+
+        if (read_work)
+        {
+          FD_SET(socket, &read_set);
+        }
+
+        if (write_work)
+        {
+          FD_SET(socket, &write_set);
+        }
+
+        timeval zero{};
+
+        auto result = siege_select(0, &read_set, &write_set, nullptr, &zero);
+
+        if (result == 0)
+        {
+          continue;
+        }
+
+        auto dispatch_work = [](auto& work) {
+          if (std::holds_alternative<socket_handle_info::overlapped_callback>(work.target))
+          {
+            auto& target = std::get<socket_handle_info::overlapped_callback>(work.target);
+            assert(target.thread_handle != nullptr);
+            assert(target.completion_routine != nullptr);
+
+            ::QueueUserAPC(apc_callback, target.thread_handle, (ULONG_PTR)work.overlapped);
+          }
+          else if (std::holds_alternative<socket_handle_info::overlapped_event>(work.target))
+          {
+            auto& target = std::get<socket_handle_info::overlapped_event>(work.target);
+            assert(target.event != nullptr);
+            ::SetEvent(target.event);
+          }
+        };
+
+        if (read_set.fd_count > 0)
+        {
+          assert(read_work.has_value());
+
+          thread_local std::vector<WSABUF> temp;
+          temp.clear();
+          temp.reserve(read_work->read_targets.size());
+
+          for (auto& target : read_work->read_targets)
+          {
+            temp.emplace_back(static_cast<ULONG>(target.size()), target.data());
+          }
+
+          DWORD bytes_received = 0;
+          sockaddr addr{};
+          int* addr_size = read_work->read_addr_size > 0 ? &read_work->read_addr_size : nullptr;
+          auto socket_result = siege_WSARecvFrom(socket, temp.data(), static_cast<DWORD>(temp.size()), &bytes_received, &read_work->flags, &addr, addr_size, nullptr, nullptr);
+
+          if (socket_result != SOCKET_ERROR)
+          {
+            get_socket_handles().complete_overlapped_read_work(read_work->overlapped, bytes_received, read_work->flags, addr, read_work->read_addr_size);
+          }
+          else
+          {
+            get_socket_handles().error_overlapped_work(read_work->overlapped, siege_WSAGetLastError());
+          }
+
+          dispatch_work(*read_work);
+        }
+
+        if (write_set.fd_count > 0)
+        {
+          assert(write_work.has_value());
+          // TODO fill in from work
+          auto socket_result = siege_sendto(socket, write_work->data_to_write.data(), static_cast<int>(write_work->data_to_write.size()), write_work->flags, &write_work->addr, write_work->addr_size);
+
+          if (socket_result != SOCKET_ERROR)
+          {
+            get_socket_handles().complete_overlapped_write_work(write_work->overlapped, socket_result);
+          }
+          else
+          {
+            get_socket_handles().error_overlapped_work(write_work->overlapped, siege_WSAGetLastError());
+          }
+
+          dispatch_work(*write_work);
+        }
+      }
+
+      std::this_thread::yield();
+    }
+  };
+
+  static std::jthread worker = std::jthread(worker_impl);
+
+  if (action == worker_action::restart_if_stopped && worker.get_stop_token().stop_requested())
+  {
+    worker = std::jthread(worker_impl);
+  }
+
+  return worker;
+}
+#endif
