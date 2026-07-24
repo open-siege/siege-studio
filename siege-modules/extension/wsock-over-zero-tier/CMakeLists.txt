@@ -61,35 +61,30 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     )
     target_link_libraries(wsock32-rpc-server PRIVATE siege-win-core ws2_32)
 
-    add_executable(wsock32-rpc-tests src/wsock32-rpc.test.cpp)
-    set_target_properties(wsock32-rpc-tests PROPERTIES
+    add_executable(wsock32-tests src/wsock32.test.cpp)
+    set_target_properties(wsock32-tests PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_SCAN_FOR_MODULES ON
     )
-    target_include_directories(wsock32-rpc-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(wsock32-rpc-tests PRIVATE Catch2::Catch2WithMain siege-platform ws2_32)
+    target_include_directories(wsock32-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(wsock32-tests PRIVATE Catch2::Catch2WithMain siege-platform ws2_32)
 
-    add_executable(wsock32-e2e-tests src/wsock32-common-shared.cpp src/wsock32-e2e.test.cpp)
-        set_target_properties(wsock32-e2e-tests PROPERTIES
-        CXX_STANDARD 23
-        CXX_STANDARD_REQUIRED ON
-        CXX_SCAN_FOR_MODULES ON
-    )
-    target_include_directories(wsock32-e2e-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(wsock32-e2e-tests PRIVATE siege-platform)
-
-    add_dependencies(wsock32-e2e-tests wsock32-in-proc-client wsock-backend-zero-tier)
-    add_custom_command(TARGET wsock32-e2e-tests POST_BUILD
-       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-in-proc-client> $<TARGET_FILE_DIR:wsock32-e2e-tests>
-       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock-backend-ws2_32> $<TARGET_FILE_DIR:wsock32-e2e-tests>)
+    add_dependencies(wsock32-tests
+        wsock32-in-proc-client
+        wsock32-rpc-client
+        ws2_32-rpc-client
+        wsock32-rpc-server
+        wsock-backend-ws2_32)
 
     include(CTest)
     include(Catch)
-    catch_discover_tests(wsock32-rpc-tests)
+    catch_discover_tests(wsock32-tests)
 
-    add_custom_command(TARGET wsock32-rpc-tests POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-rpc-client> $<TARGET_FILE_DIR:wsock32-rpc-tests>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-rpc-server> $<TARGET_FILE_DIR:wsock32-rpc-tests>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ws2_32-rpc-client> $<TARGET_FILE_DIR:wsock32-rpc-tests>)
+    add_custom_command(TARGET wsock32-tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-in-proc-client> $<TARGET_FILE_DIR:wsock32-tests>
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-rpc-client> $<TARGET_FILE_DIR:wsock32-tests>
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ws2_32-rpc-client> $<TARGET_FILE_DIR:wsock32-tests>
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-rpc-server> $<TARGET_FILE_DIR:wsock32-tests>
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock-backend-ws2_32> $<TARGET_FILE_DIR:wsock32-tests>)
 endif()

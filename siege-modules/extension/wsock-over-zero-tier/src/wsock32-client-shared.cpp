@@ -4,6 +4,7 @@ module;
 #include <ws2tcpip.h>
 
 #include <siege/platform/win/module.hpp>
+#include <siege/platform/win/threading.hpp>
 #include <cassert>
 
 export module wsock32.shared.client;
@@ -21,6 +22,8 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept;
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept;
 int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen) noexcept;
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length) noexcept;
+SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen) noexcept;
+hostent* __stdcall siege_gethostbyname(const char* name) noexcept;
 }
 
 enum struct worker_action : bool
@@ -48,7 +51,13 @@ export struct socket_handle_info
     accepted
   };
 
-  void insert(SOCKET socket, int socket_type, client_socket_state client_state = client_socket_state::unconnected)
+  enum struct overlapped_state : bool
+  {
+    non_overlapped,
+    overlapped
+  };
+
+  void insert(SOCKET socket, int socket_type, overlapped_state is_overlapped, client_socket_state client_state = client_socket_state::unconnected)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
 
@@ -59,8 +68,7 @@ export struct socket_handle_info
       handles.erase(item);
     }
 
-
-    handles.emplace(socket, socket_context{ .socket_type = socket_type, .client_state = client_state });
+    handles.emplace(socket, socket_context{ .is_overlapped = is_overlapped, .socket_type = socket_type, .client_state = client_state });
   }
 
   void close(SOCKET socket)
@@ -74,6 +82,7 @@ export struct socket_handle_info
     }
 
     item->second.is_closed = true;
+    item->second.io_flags = item->second.select_flags = 0;
   }
 
   void set_virtual_blocking(SOCKET socket, bool should_block)
@@ -88,6 +97,25 @@ export struct socket_handle_info
 
     item->second.is_virtual_blocking = should_block;
   }
+
+
+  std::shared_ptr<void> temp_disable_virtual_blocking(SOCKET socket)
+  {
+    auto current_state = is_virtual_blocking(socket);
+
+    set_virtual_blocking(socket, false);
+    return std::shared_ptr<void>{
+      nullptr, [current_state, socket, this](...) {
+        // because someone could change the state in between calls
+        // we should only reset it if it is still false.
+        if (auto new_state = is_virtual_blocking(socket); new_state == false)
+        {
+          set_virtual_blocking(socket, current_state);
+        }
+      }
+    };
+  }
+
 
   void set_client_socket_state(SOCKET socket, client_socket_state state)
   {
@@ -115,7 +143,7 @@ export struct socket_handle_info
     item->second.is_listening = is_listening;
   }
 
-  void set_overlapped(SOCKET socket, bool is_overlapped)
+  void set_overlapped(SOCKET socket, overlapped_state is_overlapped)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
 
@@ -141,14 +169,14 @@ export struct socket_handle_info
     return item->second.is_virtual_blocking;
   }
 
-  bool is_overlapped(SOCKET socket) const
+  overlapped_state is_overlapped(SOCKET socket) const
   {
     std::shared_lock<std::shared_mutex> lock(mutex);
     auto item = handles.find(socket);
 
     if (item == handles.end())
     {
-      return false;
+      return overlapped_state::non_overlapped;
     }
 
     return item->second.is_overlapped;
@@ -212,10 +240,15 @@ export struct socket_handle_info
       return std::nullopt;
     }
 
+    if (item->second.is_closed)
+    {
+      return std::nullopt;
+    }
+
     WSANETWORKEVENTS result{
       .lNetworkEvents = item->second.event_flags
     };
-    std::memcpy(result.iErrorCode, item->second.event_errors.data(), std::min<std::size_t>(FD_MAX_EVENTS, item->second.event_errors.size()));
+    std::memcpy(result.iErrorCode, item->second.event_errors.data(), sizeof(result.iErrorCode));
 
     item->second.event_flags = 0;
     item->second.event_errors = decltype(item->second.event_errors){};
@@ -252,6 +285,11 @@ export struct socket_handle_info
       return false;
     }
 
+    if (item->second.is_closed)
+    {
+      return false;
+    }
+
     item->second.target = window_target{ .post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA, .window = window, .message = message };
     item->second.select_flags = flags;
     item->second.io_flags = 0;
@@ -269,6 +307,12 @@ export struct socket_handle_info
     {
       return false;
     }
+
+    if (item->second.is_closed)
+    {
+      return false;
+    }
+
     item->second.target = event_target{ .event = event };
     item->second.select_flags = flags;
     item->second.io_flags = 0;
@@ -433,6 +477,7 @@ export struct socket_handle_info
     LPWSAOVERLAPPED_COMPLETION_ROUTINE callback;
   };
 
+  // TODO: reject in-flight OVERLAPPED* reuse (Pure)
   void queue_overlapped_write_work(overlapped_write_params params)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
@@ -464,6 +509,7 @@ export struct socket_handle_info
     overlapped_sockets.emplace(params.overlapped, params.socket);
   }
 
+  // TODO: reject in-flight OVERLAPPED* reuse (Pure)
   void queue_overlapped_read_work(overlapped_read_params params)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
@@ -805,7 +851,7 @@ private:
 
     // purely client-side. backends shouldn't know what overlapping is.
     // definitely non-standard bsd.
-    bool is_overlapped = false;
+    overlapped_state is_overlapped = overlapped_state::non_overlapped;
 
     int socket_type;// likely SOCK_STREAM or SOCK_DGRAM
 
@@ -885,26 +931,96 @@ HANDLE __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const c
     return imports->WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
   }
 
-  get_log() << "siege_WSAAsyncGetHostByName not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
+  if (!name)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
 
-  return nullptr;
+  if (!buffer)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (buffer_length <= 0)
+  {
+    imports->WSASetLastError(WSAENOBUFS);
+    return nullptr;
+  }
+
+  if (buffer_length < MAXGETHOSTSTRUCT)
+  {
+    imports->WSASetLastError(WSAENOBUFS);
+    return nullptr;
+  }
+
+  HANDLE cancel = ::CreateEventW(/*lpEventAttributes*/ nullptr, /*bManualReset*/ TRUE, /*bInitialState*/ FALSE, /*lpName*/ nullptr);
+
+  if (!cancel)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    return nullptr;
+  }
+
+  auto started = win32::queue_user_work_item([window, message, name = std::string{ name }, buffer = std::span(buffer, buffer_length), cancel]() {
+    auto auto_close = std::shared_ptr<void>{
+      nullptr, [cancel](...) {
+        ::CloseHandle(cancel);
+      }
+    };
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    auto result = siege_gethostbyname(name.c_str());
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    if (result)
+    {
+      auto* packed = new (buffer.data()) packed_hostent{ *result };
+
+      ::PostMessageW(window, message, (WPARAM)cancel, 0);
+    }
+    else
+    {
+      ::PostMessageW(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
+    }
+  });
+
+
+  if (!started)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    ::CloseHandle(cancel);
+    return nullptr;
+  }
+
+  return cancel;
 }
 
 auto __stdcall siege_WSACancelAsyncRequest(HANDLE request)
 {
-  get_log() << "siege_WSACancelAsyncRequest";
   if (!use_custom_backend())
   {
     return imports->WSACancelAsyncRequest(request);
   }
 
-  get_log() << "siege_WSACancelAsyncRequest not supported.";
-  get_log().flush();
-  imports->WSASetLastError(WSAENETDOWN);
+  get_log() << "siege_WSACancelAsyncRequest";
 
-  return SOCKET_ERROR;
+  if (!request || !::SetEvent(request))
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return SOCKET_ERROR;
+  }
+
+  return 0;
 }
 
 int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags) noexcept
@@ -929,7 +1045,6 @@ int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcep
 }
 
 #ifdef USE_WINSOCK2
-
 SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags)
 {
   get_log() << "siege_WSASocketW " << '\n';
@@ -963,10 +1078,17 @@ SOCKET __stdcall siege_WSASocketW(int af, int type, int protocol, LPWSAPROTOCOL_
 
   auto result = siege_socket(af, type, protocol);
 
-  if (result != INVALID_SOCKET && dwFlags & WSA_FLAG_OVERLAPPED)
+  if (result != INVALID_SOCKET)
   {
-    get_overlapped_worker(worker_action::restart_if_stopped);
-    get_socket_handles().set_overlapped(result, true);
+    if (dwFlags & WSA_FLAG_OVERLAPPED)
+    {
+      get_overlapped_worker(worker_action::restart_if_stopped);
+      get_socket_handles().set_overlapped(result, socket_handle_info::overlapped_state::overlapped);
+    }
+    else
+    {
+      get_socket_handles().set_overlapped(result, socket_handle_info::overlapped_state::non_overlapped);
+    }
   }
 
   return result;
@@ -997,12 +1119,13 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
     return imports->WSAIoctl(s, controlCode, inBuffer, inBufferCount, outBuffer, outBufferCount, bytesReturned, overlapped, completionRoutine);
   }
 
-  if (get_socket_handles().is_overlapped(s) && (overlapped || completionRoutine))
+  if ((bool)get_socket_handles().is_overlapped(s) && (overlapped || completionRoutine))
   {
     WSASetLastError(WSAEOPNOTSUPP);
     return SOCKET_ERROR;
   }
 
+  // TODO: SIO_GET_INTERFACE_LIST (Pure, Battlezone2), SIO_UDP_CONNRESET (Painkiller)
   if (!(controlCode == FIONBIO || controlCode == FIONREAD))
   {
     imports->WSASetLastError(WSAEOPNOTSUPP);
@@ -1036,6 +1159,24 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
   }
 
   return result;
+}
+
+SOCKET __stdcall siege_WSAAccept(SOCKET s, sockaddr* addr, LPINT addrlen, LPCONDITIONPROC lpfnCondition, DWORD_PTR dwCallbackData)
+{
+
+  if (!use_custom_backend())
+  {
+
+    return imports->WSAAccept(s, addr, addrlen, lpfnCondition, dwCallbackData);
+  }
+
+  if (lpfnCondition)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return INVALID_SOCKET;
+  }
+
+  return siege_accept(s, addr, addrlen);
 }
 
 // This and freeaddrinfo needed by AMD's open GL driver for the RPC case
@@ -1166,7 +1307,7 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
     }
   }
 
-  bool should_queue_overlapped = get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler);
+  bool should_queue_overlapped = (bool)get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler);
 
   if (!bytes_received && !should_queue_overlapped)
   {
@@ -1217,6 +1358,7 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
       spans.emplace_back(buffers[i].buf, buffers[i].len);
     }
 
+    get_overlapped_worker(worker_action::restart_if_stopped);
     get_socket_handles().queue_overlapped_read_work(socket_handle_info::overlapped_read_params{
       .socket = socket,
       .overlapped = overlapped,
@@ -1337,7 +1479,7 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
     }
   }
 
-  bool should_queue_overlapped = get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler);
+  bool should_queue_overlapped = (bool)get_socket_handles().is_overlapped(socket) && (overlapped || completion_handler);
 
   if (!bytes_sent && !should_queue_overlapped)
   {
@@ -1407,6 +1549,7 @@ auto __stdcall siege_WSASendTo(SOCKET socket, WSABUF* buffers, DWORD buffer_coun
       }
     }
 
+    get_overlapped_worker(worker_action::restart_if_stopped);
     get_socket_handles().queue_overlapped_write_work(socket_handle_info::overlapped_write_params{
       .socket = socket,
       .overlapped = overlapped,
@@ -1746,11 +1889,19 @@ auto __stdcall siege_inet_ntoa(in_addr in) noexcept
 }
 
 #ifdef USE_WINSOCK2
+// TODO: add WSAAddressToStringA (Celtic Kings)
 auto __stdcall siege_WSAStringToAddressA(LPSTR address_str, INT family, LPWSAPROTOCOL_INFOA info, LPSOCKADDR out_address, LPINT out_len)
 {
   ensure_imports();
   return imports->WSAStringToAddressA(address_str, family, info, out_address, out_len);
 }
+
+INT __stdcall siege_WSAAddressToStringA(LPSOCKADDR lpsaAddress, DWORD dwAddressLength, LPWSAPROTOCOL_INFOA lpProtocolInfo, LPSTR lpszAddressString, LPDWORD lpdwAddressStringLength)
+{
+  ensure_imports();
+  return imports->WSAAddressToStringA(lpsaAddress, dwAddressLength, lpProtocolInfo, lpszAddressString, lpdwAddressStringLength);
+}
+
 #endif
 
 auto __stdcall siege_WSASetLastError(int error)
@@ -1838,6 +1989,7 @@ std::jthread& get_select_worker(worker_action action)
 
         if (work.select_flags & FD_WRITE && ~work.io_flags & FD_WRITE)
         {
+          // TODO: edge after WSAEWOULDBLOCK, not level-trigger (GTR2)
           FD_SET(work.socket, &write_set);
         }
 
@@ -1858,6 +2010,36 @@ std::jthread& get_select_worker(worker_action action)
 
       // the flags could have been reset in-between, however unlikely
       get_socket_handles().get_sockets_to_watch(socket_work);
+
+      auto complete_connect = [](SOCKET socket, socket_handle_info::socket_work& work) {
+        bool is_client_connected = work.client_state == socket_handle_info::client_socket_state::connected;
+        bool is_client_connecting = work.client_state == socket_handle_info::client_socket_state::connecting;
+
+        if (!(is_client_connected || is_client_connecting) || !(work.select_flags & FD_CONNECT) || work.io_flags & FD_CONNECT || work.event_flags & FD_CONNECT)
+        {
+          return;
+        }
+
+        int connect_error = 0;
+        int connect_error_size = sizeof(connect_error);
+        if (siege_getsockopt(socket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&connect_error), &connect_error_size) != 0)
+        {
+          connect_error = 0;
+        }
+
+        work.event_errors[FD_CONNECT_BIT] = connect_error;
+        work.event_flags |= FD_CONNECT;
+
+        if (connect_error != 0)
+        {
+          get_socket_handles().set_client_socket_state(socket, socket_handle_info::client_socket_state::unconnected);
+        }
+        else if (is_client_connecting)
+        {
+          get_socket_handles().set_client_socket_state(socket, socket_handle_info::client_socket_state::connected);
+        }
+      };
+
       for (auto i = 0; i < read_set.fd_count; i++)
       {
         try
@@ -1909,20 +2091,7 @@ std::jthread& get_select_worker(worker_action action)
         try
         {
           auto& work = socket_work.at(write_set.fd_array[i]);
-
-          bool is_client_connected = work.client_state == socket_handle_info::client_socket_state::connected;
-          bool is_client_connecting = work.client_state == socket_handle_info::client_socket_state::connecting;
-
-          if ((is_client_connected || is_client_connecting) && work.select_flags & FD_CONNECT && ~work.io_flags & FD_CONNECT)
-          {
-            work.event_errors[FD_CONNECT_BIT] = 0;
-            work.event_flags |= FD_CONNECT;
-
-            if (is_client_connecting)
-            {
-              get_socket_handles().set_client_socket_state(write_set.fd_array[i], socket_handle_info::client_socket_state::connected);
-            }
-          }
+          complete_connect(write_set.fd_array[i], work);
 
           if (work.select_flags & FD_WRITE && ~work.io_flags & FD_WRITE)
           {
@@ -1939,24 +2108,7 @@ std::jthread& get_select_worker(worker_action action)
         try
         {
           auto& work = socket_work.at(except_set.fd_array[i]);
-
-          bool is_client_connected = work.client_state == socket_handle_info::client_socket_state::connected;
-          bool is_client_connecting = work.client_state == socket_handle_info::client_socket_state::connecting;
-
-          if ((is_client_connected || is_client_connecting) && work.select_flags & FD_CONNECT && ~work.io_flags & FD_CONNECT)
-          {
-            DWORD last_error = 0;
-
-            int last_error_size = sizeof(last_error);
-
-            if (siege_getsockopt(work.socket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&last_error), &last_error_size) == 0 && last_error != 0)
-            {
-              work.event_errors[FD_CONNECT_BIT] = static_cast<int>(last_error);
-              work.event_flags |= FD_CONNECT;
-              get_socket_handles().set_client_socket_state(except_set.fd_array[i], socket_handle_info::client_socket_state::unconnected);
-              continue;
-            }
-          }
+          complete_connect(except_set.fd_array[i], work);
 
           if (work.select_flags & FD_OOB && ~work.io_flags & FD_OOB)
           {
@@ -1995,7 +2147,7 @@ std::jthread& get_select_worker(worker_action action)
           auto& window = std::get<socket_handle_info::window_target>(work.target);
           assert(window.post_message != nullptr);
 
-          // TODO also add FD_CLOSE here too.
+          // TODO: high-word error for FD_CLOSE too (GTR2)
           auto error = work.event_flags & FD_CONNECT ? work.event_errors[FD_CONNECT_BIT] : 0;
           window.post_message(window.window, window.message, static_cast<WPARAM>(socket), MAKELPARAM(work.event_flags, error));
         }
@@ -2022,9 +2174,6 @@ std::jthread& get_select_worker(worker_action action)
 #ifdef USE_WINSOCK2
 void __stdcall apc_callback(ULONG_PTR overlapped_raw)
 {
-  // TODO get pending overlapped data.
-  // get the state and the target callback
-  // call it and then
   WSAOVERLAPPED* overlapped = (WSAOVERLAPPED*)overlapped_raw;
 
   auto result = get_socket_handles().get_overlapped_result(overlapped);
@@ -2102,6 +2251,7 @@ std::jthread& get_overlapped_worker(worker_action action)
             assert(target.completion_routine != nullptr);
 
             ::QueueUserAPC(apc_callback, target.thread_handle, (ULONG_PTR)work.overlapped);
+            ::CloseHandle(target.thread_handle);
           }
           else if (std::holds_alternative<socket_handle_info::overlapped_event>(work.target))
           {
@@ -2127,7 +2277,10 @@ std::jthread& get_overlapped_worker(worker_action action)
           DWORD bytes_received = 0;
           sockaddr addr{};
           int* addr_size = read_work->read_addr_size > 0 ? &read_work->read_addr_size : nullptr;
+
+          auto token = get_socket_handles().temp_disable_virtual_blocking(socket);
           auto socket_result = siege_WSARecvFrom(socket, temp.data(), static_cast<DWORD>(temp.size()), &bytes_received, &read_work->flags, &addr, addr_size, nullptr, nullptr);
+          token.reset();
 
           if (socket_result != SOCKET_ERROR)
           {
@@ -2144,8 +2297,10 @@ std::jthread& get_overlapped_worker(worker_action action)
         if (write_set.fd_count > 0)
         {
           assert(write_work.has_value());
-          // TODO fill in from work
+
+          auto token = get_socket_handles().temp_disable_virtual_blocking(socket);
           auto socket_result = siege_sendto(socket, write_work->data_to_write.data(), static_cast<int>(write_work->data_to_write.size()), write_work->flags, &write_work->addr, write_work->addr_size);
+          token.reset();
 
           if (socket_result != SOCKET_ERROR)
           {

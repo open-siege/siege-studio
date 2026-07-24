@@ -42,7 +42,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
   if (backend)
   {
-    return 0;
+    return backend->WSAStartup(version, data);
   }
 
   auto module_path = win32::module_ref::current_module().GetModuleFileName();
@@ -132,7 +132,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
 
   if (socket != SOCKET_ERROR)
   {
-    get_socket_handles().insert(socket, type);
+    get_socket_handles().insert(socket, type, socket_handle_info::overlapped_state::overlapped);
   }
 
   return socket;
@@ -353,7 +353,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
   return result;
 }
 
-SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen)
+SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen) noexcept
 {
   get_log() << "siege_accept\n";
   if (!use_custom_backend())
@@ -386,7 +386,9 @@ try_again:
 
   if (result != INVALID_SOCKET)
   {
-    get_socket_handles().insert(result, SOCK_STREAM, socket_handle_info::client_socket_state::accepted);
+    auto parent_overlapped_state = get_socket_handles().is_overlapped(ws);
+
+    get_socket_handles().insert(result, SOCK_STREAM, parent_overlapped_state, socket_handle_info::client_socket_state::accepted);
   }
 
   return result;
@@ -534,7 +536,7 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
   return backend->__WSAFDIsSet(ws, set);
 }
 
-hostent* __stdcall siege_gethostbyname(const char* name)
+hostent* __stdcall siege_gethostbyname(const char* name) noexcept
 {
   ensure_imports();
 

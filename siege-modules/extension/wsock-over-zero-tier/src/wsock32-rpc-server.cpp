@@ -479,6 +479,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   load_local_wsock();
 
+  if (!backend)
+  {
+    return -1;
+  }
+
   if (!backend->module)
   {
     return -1;
@@ -532,8 +537,8 @@ void load_local_wsock()
   auto module_path = win32::module_ref::current_module().GetModuleFileName();
 
   std::vector<wchar_t> temp;
-  temp.resize(::GetEnvironmentVariableW(L"WSOCK_RPC_BACKEND", nullptr, 0));
-  ::GetEnvironmentVariableW(L"WSOCK_RPC_BACKEND", temp.data(), (DWORD)temp.size() + 1);
+  temp.resize(::GetEnvironmentVariableW(L"SIEGE_WSOCK_BACKEND", nullptr, 0));
+  ::GetEnvironmentVariableW(L"SIEGE_WSOCK_BACKEND", temp.data(), (DWORD)temp.size() + 1);
 
   fs::path lib_path;
 
@@ -544,6 +549,10 @@ void load_local_wsock()
   else
   {
     lib_path = temp.data();
+    if (!lib_path.is_absolute())
+    {
+      lib_path = fs::path(module_path).parent_path() / lib_path;
+    }
   }
 
   auto wsock_module = ::LoadLibraryExW(lib_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -555,6 +564,12 @@ void load_local_wsock()
 
   HMODULE ws2_32 = nullptr;
   if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"ws2_32.dll", &ws2_32))
+  {
+    // may not be loaded yes, so we force load it. 
+    ws2_32 = ::LoadLibraryExW(L"ws2_32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+  }
+
+  if (!ws2_32)
   {
     return;
   }

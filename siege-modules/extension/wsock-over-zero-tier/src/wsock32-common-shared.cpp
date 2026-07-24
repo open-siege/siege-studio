@@ -78,6 +78,7 @@ export struct wsock_imports
 
 #ifdef USE_WINSOCK2
   decltype(::WSAStringToAddressA)* WSAStringToAddressA = nullptr;
+  decltype(::WSAAddressToStringA)* WSAAddressToStringA = nullptr;
   decltype(::WSAGetOverlappedResult)* WSAGetOverlappedResult = nullptr;
   decltype(::WSACreateEvent)* WSACreateEvent = nullptr;
   decltype(::WSASetEvent)* WSASetEvent = nullptr;
@@ -92,6 +93,7 @@ export struct wsock_imports
   decltype(::WSAEnumNetworkEvents)* WSAEnumNetworkEvents = nullptr;
   decltype(::WSASocketW)* WSASocketW = nullptr;
   decltype(::WSASocketA)* WSASocketA = nullptr;
+  decltype(::WSAAccept)* WSAAccept = nullptr;
   decltype(::WSAIoctl)* WSAIoctl = nullptr;
 
   // not actually used by any games, but rather by the AMD OpenGL driver
@@ -182,12 +184,14 @@ export std::optional<wsock_imports> load_system_wsock()
 
 #ifdef USE_WINSOCK2
   imports.WSAStringToAddressA = (decltype(imports.WSAStringToAddressA))::GetProcAddress(imports.module, "WSAStringToAddressA");
+  imports.WSAAddressToStringA = (decltype(imports.WSAAddressToStringA))::GetProcAddress(imports.module, "WSAAddressToStringA");
   imports.WSAGetOverlappedResult = (decltype(imports.WSAGetOverlappedResult))::GetProcAddress(imports.module, "WSAGetOverlappedResult");
   imports.WSACreateEvent = (decltype(imports.WSACreateEvent))::GetProcAddress(imports.module, "WSACreateEvent");
   imports.WSAResetEvent = (decltype(imports.WSAResetEvent))::GetProcAddress(imports.module, "WSAResetEvent");
   imports.WSASetEvent = (decltype(imports.WSASetEvent))::GetProcAddress(imports.module, "WSASetEvent");
   imports.WSACloseEvent = (decltype(imports.WSACloseEvent))::GetProcAddress(imports.module, "WSACloseEvent");
   imports.WSAWaitForMultipleEvents = (decltype(imports.WSAWaitForMultipleEvents))::GetProcAddress(imports.module, "WSAWaitForMultipleEvents");
+  imports.WSAAccept = (decltype(imports.WSAAccept))::GetProcAddress(imports.module, "WSAAccept");
   imports.WSASendTo = (decltype(imports.WSASendTo))::GetProcAddress(imports.module, "WSASendTo");
   imports.WSASend = (decltype(imports.WSASend))::GetProcAddress(imports.module, "WSASend");
   imports.WSARecvFrom = (decltype(imports.WSARecvFrom))::GetProcAddress(imports.module, "WSARecvFrom");
@@ -253,8 +257,8 @@ export std::ostream& get_log(std::string_view log_prefix = "networking")
     }
   };
 
-  static debug_string_buf buffer{};
-  static std::ostream debug_log{ &buffer };
+  thread_local debug_string_buf buffer{};
+  thread_local std::ostream debug_log{ &buffer };
 
   if (!buffer.view().empty() && buffer.view().back() != '\n')
   {
@@ -487,3 +491,41 @@ export std::chrono::milliseconds timeval_to_ms(timeval total)
 
   return std::chrono::duration_cast<std::chrono::milliseconds>(secs + usecs);
 }
+
+export struct packed_hostent
+{
+  hostent host;
+  std::array<char, 256> name;
+  std::array<char*, 1> aliases;
+  std::array<char*, 17> addr_list;
+  std::array<std::array<char, sizeof(sockaddr)>, 16> addr_data;
+
+  packed_hostent(const hostent& other)
+  {
+    std::strncpy(name.data(), other.h_name ? other.h_name : "", name.size() - 1);
+    name.back() = '\0';
+    aliases[0] = nullptr;
+
+    int addr_count = 0;
+    for (auto* entry = other.h_addr_list; entry && *entry && addr_count < addr_data.size(); ++entry)
+    {
+      auto len = std::min<short>(other.h_length, sizeof(sockaddr));
+      std::memcpy(addr_data[addr_count].data(), *entry, len);
+      addr_list[addr_count] = addr_data[addr_count].data();
+      ++addr_count;
+    }
+    addr_list[addr_count] = nullptr;
+
+    host = hostent{
+      .h_name = name.data(),
+      .h_aliases = aliases.data(),
+      .h_addrtype = other.h_addrtype,
+      .h_length = other.h_length,
+      .h_addr_list = addr_list.data(),
+    };
+  }
+
+  packed_hostent(const packed_hostent&) = delete;
+  packed_hostent& operator=(const packed_hostent&) = delete;
+};
+static_assert(sizeof(packed_hostent) <= MAXGETHOSTSTRUCT);

@@ -12,7 +12,6 @@ import wsock32.rpc;
 
 namespace fs = std::filesystem;
 
-std::optional<std::uint64_t> get_zero_tier_network_id();
 bool use_custom_backend();
 
 static struct rpc_process_info : ::PROCESS_INFORMATION
@@ -22,10 +21,12 @@ static struct rpc_process_info : ::PROCESS_INFORMATION
 
 std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::size_t size, std::optional<ATOM> key = std::nullopt)
 {
+  static std::mutex cache_mutex;
   static std::map<ATOM, std::span<char>> cache;
   static std::map<ATOM, std::span<char>> used_globals;
   static std::set<HANDLE> mapping_handles;
   static std::shared_ptr<void> deferred = { nullptr, [](...) {
+                                             std::unique_lock lock(cache_mutex);
                                              for (auto& item : cache)
                                              {
                                                ::GlobalDeleteAtom(item.first);
@@ -46,6 +47,7 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
                                              }
                                            } };
 
+  std::unique_lock lock(cache_mutex);
   auto iter = cache.end();
 
   if (key)
@@ -97,6 +99,7 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
   cache.erase(iter);
 
   return std::shared_ptr<std::pair<const ATOM, std::span<char>>>(&*added.first, [](std::pair<const ATOM, std::span<char>>* global) {
+    std::unique_lock lock(cache_mutex);
     auto existing = std::find_if(used_globals.begin(), used_globals.end(), [&](auto& item) {
       return item.second.data() == global->second.data();
     });
@@ -156,109 +159,112 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
   get_log("rpc-client") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
   auto result = imports->WSAStartup(version, data);
 
-  if (auto network_id = get_zero_tier_network_id(); network_id)
+  auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", nullptr, 0);
+  if (env_size <= 1)
   {
-    if (result == 0)
-    {
-      imports->WSACleanup();
-    }
+    return result;
+  }
 
-    if (server_info.server)
+  if (result == 0)
+  {
+    imports->WSACleanup();
+  }
+
+  if (server_info.server)
+  {
+    return result;
+  }
+
+  // preallocate some memory
+  try
+  {
+    get_log() << "Preallocating shared memory";
+    auto temp1 = get_global_memory(1024);
+    auto temp2 = get_global_memory(1024);
+  }
+  catch (...)
+  {
+    get_log() << "Could not preallocate memory";
+    return WSASYSNOTREADY;
+  }
+
+  HWND server_window = nullptr;
+
+  get_log() << "Finding existing server window";
+  for (auto i = 0; i < 3; ++i)
+  {
+    server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
+    if (server_window)
     {
+      server_info.server = server_window;
+      server_info.dwThreadId = ::GetWindowThreadProcessId(server_info.server, &server_info.dwProcessId);
       return result;
     }
-
-    // preallocate some memory
-    try
-    {
-      get_log() << "Preallocating shared memory";
-      auto temp1 = get_global_memory(1024);
-      auto temp2 = get_global_memory(1024);
-    }
-    catch (...)
-    {
-      get_log() << "Could not preallocate memory";
-      return WSASYSNOTREADY;
-    }
-
-    HWND server_window = nullptr;
-
-    get_log() << "Finding existing server window";
-    for (auto i = 0; i < 3; ++i)
-    {
-      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
-      if (server_window)
-      {
-        server_info.server = server_window;
-        server_info.dwThreadId = ::GetWindowThreadProcessId(server_info.server, &server_info.dwProcessId);
-        return result;
-      }
-      ::Sleep(50);
-    }
-
-    get_log() << "No server found. Launching new server";
-
-    auto exe_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / L"wsock32-rpc-server.exe";
-    auto process_info = win32::CreateProcessW({
-      .application_name = exe_path.c_str(),
-    });
-
-    if (!process_info)
-    {
-      get_log() << "Could not launch server";
-      return WSASYSNOTREADY;
-    }
-
-    std::memcpy(&server_info, &process_info, sizeof(process_info));
-
-    if (server_info.hProcess)
-    {
-      ::CloseHandle(server_info.hProcess);
-      server_info.hProcess = nullptr;
-    }
-
-    if (server_info.hThread)
-    {
-      ::CloseHandle(server_info.hThread);
-      server_info.hThread = nullptr;
-    }
-
-    for (auto i = 0; i < 3; ++i)
-    {
-      server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
-      if (server_window)
-      {
-        break;
-      }
-      ::Sleep(50);
-    }
-
-
-    if (!server_window)
-    {
-      get_log() << "Could not find server window";
-      return WSASYSNOTREADY;
-    }
-
-    bool is_init = false;
-    for (auto i = 0; i < 500; ++i)
-    {
-      is_init = ::GetPropW(server_window, L"IsOnline") == (HANDLE)1;
-
-      if (is_init)
-      {
-        break;
-      }
-      ::Sleep(100);
-    }
-
-    if (!is_init)
-    {
-      return WSASYSNOTREADY;
-    }
-
-    server_info.server = server_window;
+    ::Sleep(50);
   }
+
+  get_log() << "No server found. Launching new server";
+
+  auto exe_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / L"wsock32-rpc-server.exe";
+  auto process_info = win32::CreateProcessW({
+    .application_name = exe_path.c_str(),
+  });
+
+  if (!process_info)
+  {
+    get_log() << "Could not launch server";
+    return WSASYSNOTREADY;
+  }
+
+  std::memcpy(&server_info, &process_info, sizeof(process_info));
+
+  if (server_info.hProcess)
+  {
+    ::CloseHandle(server_info.hProcess);
+    server_info.hProcess = nullptr;
+  }
+
+  if (server_info.hThread)
+  {
+    ::CloseHandle(server_info.hThread);
+    server_info.hThread = nullptr;
+  }
+
+  for (auto i = 0; i < 3; ++i)
+  {
+    server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
+    if (server_window)
+    {
+      break;
+    }
+    ::Sleep(50);
+  }
+
+
+  if (!server_window)
+  {
+    get_log() << "Could not find server window";
+    return WSASYSNOTREADY;
+  }
+
+  bool is_init = false;
+  for (auto i = 0; i < 500; ++i)
+  {
+    is_init = ::GetPropW(server_window, L"IsOnline") == (HANDLE)1;
+
+    if (is_init)
+    {
+      break;
+    }
+    ::Sleep(100);
+  }
+
+  if (!is_init)
+  {
+    return WSASYSNOTREADY;
+  }
+
+  server_info.server = server_window;
 
   get_log().flush();
   return result;
@@ -316,7 +322,7 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
   }
 
 
-  get_socket_handles().insert(new_socket, type);
+  get_socket_handles().insert(new_socket, type, socket_handle_info::overlapped_state::overlapped);
   imports->WSASetLastError(0);
   get_log() << "Returning new socket " << (std::size_t)new_socket;
   return (SOCKET)new_socket;
@@ -538,15 +544,17 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
 
   // TODO add SEH here for bad buffers
   auto do_recvfrom = [&]() {
-    return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [=](void* raw) {
+    std::shared_ptr<std::pair<const ATOM, std::span<char>>> buffer_memory;
+
+    return send_message_to_server<recvfrom_params, recvfrom_params::message_id>(ws, [&](void* raw) {
       auto* params = new (raw) recvfrom_params{ .flags = flags };
 
       if (buf && len)
       {
         params->buffer_length = len;
 
-        auto temp = get_global_memory(params->buffer_length);
-        params->buffer = temp->first;
+        buffer_memory = get_global_memory(params->buffer_length);
+        params->buffer = buffer_memory->first;
       }
 
       if (from && fromLen)
@@ -555,11 +563,10 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
         std::memcpy(&params->from_address, from, params->from_address_size);
       }
 
-      return params; }, [=](recvfrom_params* params) {
-      if (buf && len)
+      return params; }, [&](recvfrom_params* params) {
+      if (buf && len && buffer_memory)
       {
-        auto data = get_global_memory(params->buffer_length, params->buffer);
-        std::memcpy(buf, data->second.data(), params->buffer_length);
+        std::memcpy(buf, buffer_memory->second.data(), params->buffer_length);
       }
 
       if (from && fromLen)
@@ -680,7 +687,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
   return result;
 }
 
-SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen)
+SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen) noexcept
 {
   if (!use_custom_backend())
   {
@@ -733,7 +740,9 @@ try_again:
 
   if (result != INVALID_SOCKET)
   {
-    get_socket_handles().insert(result, SOCK_STREAM, socket_handle_info::client_socket_state::accepted);
+    auto parent_overlapped_state = get_socket_handles().is_overlapped(ws);
+
+    get_socket_handles().insert(result, SOCK_STREAM, parent_overlapped_state, socket_handle_info::client_socket_state::accepted);
   }
 
   return result;
@@ -747,6 +756,8 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
   }
 
   get_log() << "siege_connect";
+
+  get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connecting);
 
   auto do_connect = [&]() {
     return send_message_to_server<bind_params, bind_params::connect_message_id>(ws, [=](void* raw) {
@@ -802,11 +813,22 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
     if (socket_error != 0)
     {
+      get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::unconnected);
       imports->WSASetLastError(socket_error);
       return SOCKET_ERROR;
     }
 
+    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connected);
     return 0;
+  }
+
+  if (result == 0)
+  {
+    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connected);
+  }
+  else if (!is_pending && result == SOCKET_ERROR)
+  {
+    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::unconnected);
   }
 
   return result;
@@ -830,17 +852,19 @@ int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const
   }
 
   auto do_sendto = [&]() {
-    return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [=](void* raw) {
+    std::shared_ptr<std::pair<const ATOM, std::span<char>>> buffer_memory;
+
+    return send_message_to_server<sendto_params, sendto_params::message_id>(ws, [&](void* raw) {
       auto* params = new (raw) sendto_params{ .flags = flags };
 
       if (buf && len)
       {
         params->buffer_length = len;
 
-        auto temp = get_global_memory(params->buffer_length);
-        params->buffer = temp->first;
+        buffer_memory = get_global_memory(params->buffer_length);
+        params->buffer = buffer_memory->first;
 
-        std::memcpy(temp->second.data(), buf, len);
+        std::memcpy(buffer_memory->second.data(), buf, len);
       }
 
       if (to && tolen)
@@ -1075,7 +1099,7 @@ int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 }
 
 // TODO just needs to be exposed in the backend and hooked up here
-hostent* __stdcall siege_gethostbyname(const char* name)
+hostent* __stdcall siege_gethostbyname(const char* name) noexcept
 {
   ensure_imports();
 
@@ -1133,36 +1157,7 @@ hostent* __stdcall siege_gethostbyname(const char* name)
 }
 }
 
-std::optional<std::uint64_t> get_zero_tier_network_id()
-{
-  static std::optional<std::uint64_t> result = []() -> std::optional<std::uint64_t> {
-    try
-    {
-      get_log() << "get_zero_tier_network_id";
-
-
-      if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
-      {
-        std::string network_id(env_size - 1, '\0');
-        ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", network_id.data(), network_id.size() + 1);
-
-        get_log() << "Zero Tier Network ID is " << network_id;
-        return std::strtoull(network_id.data(), 0, 16);
-      }
-
-      get_log() << "No zero tier network ID";
-      return std::nullopt;
-    }
-    catch (...)
-    {
-      return std::nullopt;
-    }
-  }();
-
-  return result;
-}
-
 bool use_custom_backend()
 {
-  return get_zero_tier_network_id().has_value();
+  return server_info.server != nullptr;
 }

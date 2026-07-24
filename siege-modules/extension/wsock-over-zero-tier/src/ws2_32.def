@@ -20,6 +20,8 @@ EXPORTS
 	siege_inet_ntoa @12
 	inet_ntoa=siege_inet_ntoa
 	siege_ioctlsocket @10
+	siege_gethostbyaddr @51
+	gethostbyaddr=siege_gethostbyaddr
 	ioctlsocket=siege_ioctlsocket
 	WSAIoctl=siege_WSAIoctl
 	siege_ntohl @14
@@ -49,6 +51,7 @@ EXPORTS
 	WSASocketA=siege_WSASocketA
 	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
+	gethostbyaddr=siege_gethostbyaddr
 	siege_gethostname @57
 	gethostname=siege_gethostname
 	siege_WSAGetLastError @111
@@ -65,9 +68,13 @@ EXPORTS
 	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
 	WSACancelBlockingCall=siege_WSACancelBlockingCall
 	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
+	siege_WSAAsyncGetHostByName @103
 	WSACancelAsyncRequest=siege_WSACancelAsyncRequest
+	siege_WSACancelAsyncRequest @108
 	WSAAsyncSelect=siege_WSAAsyncSelect
 	WSAStringToAddressA=siege_WSAStringToAddressA
+	WSAAddressToStringA=siege_WSAAddressToStringA
+	WSAAccept=siege_WSAAccept
 	WSAGetOverlappedResult=siege_WSAGetOverlappedResult
 	WSACreateEvent=siege_WSACreateEvent
 	WSAResetEvent=siege_WSAResetEvent

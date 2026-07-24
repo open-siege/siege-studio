@@ -8,6 +8,7 @@
 #endif
 #include <wsnwlink.h>
 #include <siege/platform/win/module.hpp>
+#include <siege/platform/shared.hpp>
 #include <cassert>
 
 import std;
@@ -659,34 +660,84 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
     {
       get_log() << "Trying to broadcast\n";
 
-      auto zt_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+      int sent = 0;
       int broadcast_result = 0;
 
-      int sent = 0;
-      if (auto& ips = get_fallback_broadcast_addresses(); !ips.empty() && zt_result < 0)
+      std::set<int> errors;
+
+      if (auto ips = get_fallback_broadcast_addresses(); !ips.empty())
       {
         auto index = 0;
 
         for (auto ip : ips)
         {
-          get_log() << "Could not broadcast. Trying direct IP " << index++ << ".\n";
+          get_log() << "Trying broadcast fallback to direct IP " << index << ".\n";
           address_and_size.first.sin_addr.S_addr = ip;
-          broadcast_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
-          if (broadcast_result > sent)
+          zts_fd_set set{};
+          zts_timeval zero{.tv_usec = 1000};
+
+          ZTS_FD_SET(to_zts(ws), &set);
+          auto is_ready = zts_bsd_select(to_zts(ws) + 1, nullptr, &set, nullptr, &zero);
+
+          if (is_ready && ZTS_FD_ISSET(to_zts(ws), &set))
           {
-            sent = broadcast_result;
+            get_log() << "Socket ready, doing broadcast " << index++ << ".\n";
+            broadcast_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+
+            if (broadcast_result > sent)
+            {
+              sent = broadcast_result;
+            }
+            else if (broadcast_result <= -1)
+            {
+              errors.emplace(zts_errno);
+            }
+          }
+          else
+          {
+            get_log() << "Socket not ready, trying next IP " << index++ << ".\n";
           }
         }
       }
 
-      if (sent != len)
+      if (zts_net_get_broadcast(*get_zero_tier_network_id()))
       {
-        get_log() << "Still could not broadcast.\n";
-        return zt_to_winsock_result(zt_result);
+        zts_fd_set set{};
+        zts_timeval zero{ .tv_usec = 1000 };
+
+        ZTS_FD_SET(to_zts(ws), &set);
+        auto is_ready = zts_bsd_select(to_zts(ws) + 1, nullptr, &set, nullptr, &zero);
+
+        if (is_ready && ZTS_FD_ISSET(to_zts(ws), &set))
+        {
+          address_and_size = copy_address(to, tolen);
+          auto zt_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
+          if (zt_result > sent)
+          {
+            sent = zt_result;
+          }
+          else if (zt_result <= -1)
+          {
+            errors.emplace(zts_errno);
+          }
+        }
       }
 
-      return sent;
+      if (sent > 0)
+      {
+        return sent;
+      }
+      else if (!errors.empty())
+      {
+        imports->WSASetLastError(zt_to_winsock_error(*errors.rbegin()));
+        return SOCKET_ERROR;
+      }
+      else
+      {
+        imports->WSASetLastError(WSAEACCES);
+        return SOCKET_ERROR;
+      }
     }
 
     auto zt_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
@@ -849,6 +900,33 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
     transfer_set_win32(*final_except, *except);
   }
 
+  // Winsock: connect failure is except-only. lwIP reports failure as write+except.
+  if (write && except && write->fd_count && except->fd_count)
+  {
+    fd_set kept_write{};
+    for (u_int i = 0; i < write->fd_count; ++i)
+    {
+      if (!FD_ISSET(write->fd_array[i], except))
+      {
+        FD_SET(write->fd_array[i], &kept_write);
+      }
+    }
+    *write = kept_write;
+  }
+
+  count = 0;
+  if (read)
+  {
+    count += static_cast<int>(read->fd_count);
+  }
+  if (write)
+  {
+    count += static_cast<int>(write->fd_count);
+  }
+  if (except)
+  {
+    count += static_cast<int>(except->fd_count);
+  }
   return count;
 }
 
@@ -890,52 +968,86 @@ hostent* __stdcall backend_gethostbyname(const char* name)
     get_log() << "siege_gethostbyname with no name \n";
   }
 
-  if (name && get_zero_tier_network_id() && get_node_online_status())
+  if (!name)
   {
-    get_log() << "Calling zts_bsd_gethostbyname\n";
-    auto result = zts_bsd_gethostbyname(name);
-    static std::map<std::string, hostent> host_cache;
-
-    if (result)
-    {
-      host_cache[name] = from_zts(*result);
-      get_log() << "Contains valid result\n";
-      return &host_cache[name];
-    }
-    else if (name)
-    {
-      auto result = imports->gethostbyname(name);
-
-      if (!result)
-      {
-        return nullptr;
-      }
-
-      std::array<char, 255> temp{};
-
-      if (imports->gethostname(temp.data(), temp.size()) == 0 && std::string_view(name) == temp.data())
-      {
-        host_cache[name] = *result;
-
-        if (host_cache[name].h_addr_list[0])
-        {
-          char ipstr[ZTS_IP_MAX_STR_LEN] = { 0 };
-          zts_addr_get_str(*get_zero_tier_network_id(), ZTS_AF_INET, ipstr, ZTS_IP_MAX_STR_LEN);
-
-          static std::array<char, sizeof(in_addr)> raw_ip{};
-          auto ip_int = imports->inet_addr(ipstr);
-          std::memcpy(raw_ip.data(), &ip_int, raw_ip.size());
-          host_cache[name].h_addr_list[0] = raw_ip.data();
-          host_cache[name].h_addr_list[1] = nullptr;
-        }
-        return &host_cache[name];
-      }
-
-      return nullptr;
-    }
+    return imports->gethostbyname(nullptr);
   }
 
-  return imports->gethostbyname(name);
+  auto zt_id = get_zero_tier_network_id();
+
+  if (!zt_id)
+  {
+    return nullptr;
+  }
+
+  auto get_internal_names = []() {
+    std::set<std::string> internal_names;
+
+    std::string temp_name;
+    temp_name.resize(256);
+
+    if (imports->gethostname(temp_name.data(), temp_name.size()) == 0)
+    {
+      if (auto end = temp_name.find('\0'); end != std::string::npos)
+      {
+        temp_name.resize(end);
+      }
+
+      internal_names.emplace(siege::platform::to_lower(temp_name));
+    }
+
+    temp_name.resize(256);
+    DWORD temp_size = static_cast<DWORD>(temp_name.size());
+
+    if (::GetComputerNameExA(ComputerNamePhysicalDnsHostname, temp_name.data(), &temp_size))
+    {
+      temp_name.resize(temp_size);
+      internal_names.emplace(siege::platform::to_lower(temp_name));
+    }
+
+    return internal_names;
+  };
+
+
+  static std::array<char, sizeof(in_addr)> raw_ip{};
+  static std::map<std::string, packed_hostent> host_cache;
+
+  get_log() << "Calling zts_bsd_gethostbyname\n";
+  auto result = zts_bsd_gethostbyname(name);
+
+  if (result)
+  {
+    host_cache.emplace(name, from_zts(*result));
+    get_log() << "Contains valid result\n";
+    return &host_cache.at(name).host;
+  }
+  else
+  {
+    auto name_str = std::string{ name };
+
+    auto internal_names = get_internal_names();
+    hostent temp_host{
+      .h_name = name_str.data(),
+      .h_addrtype = AF_INET,
+      .h_length = sizeof(in_addr),
+    };
+
+    if (internal_names.contains(siege::platform::to_lower(name_str)))
+    {
+      host_cache.emplace(name_str, temp_host);
+
+      char ipstr[ZTS_IP_MAX_STR_LEN] = { 0 };
+      zts_addr_get_str(*zt_id, ZTS_AF_INET, ipstr, ZTS_IP_MAX_STR_LEN);
+
+      auto ip_int = imports->inet_addr(ipstr);
+      std::memcpy(raw_ip.data(), &ip_int, raw_ip.size());
+      auto& host = host_cache.at(name_str).host;
+      host.h_addr_list[0] = raw_ip.data();
+      host.h_addr_list[1] = nullptr;
+      return &host_cache.at(name_str).host;
+    }
+  }
+  return nullptr;
 }
 }
 
@@ -1311,7 +1423,10 @@ int zt_to_winsock_error(int error)
   }
   case ZTS_EINPROGRESS: {
 
-    return WSAEINPROGRESS;
+    // on windows, WSAEINPROGRESS means something else
+    // (it's about blocking hooks and service provider callbacks).
+    // WOULDBLOCK is dual-purpose in wsock.
+    return WSAEWOULDBLOCK; 
   }
   default: {
 #ifdef WSA_INVALID_PARAMETER
