@@ -38,9 +38,7 @@ export std::jthread& get_overlapped_worker(worker_action action = worker_action:
 namespace fs = std::filesystem;
 namespace stl = std::ranges;
 
-// TODO will need shared memory
-// because ws2_32 and wsock32 may be loaded and
-// has to track this state
+// Dual-DLL: wsock32-rpc forwards into ws2_32-rpc, so only one copy of this state.
 export struct socket_handle_info
 {
   enum struct client_socket_state

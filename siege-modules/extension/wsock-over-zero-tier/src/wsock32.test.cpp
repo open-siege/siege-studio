@@ -111,6 +111,9 @@ TEST_CASE("wsock32-in-proc-client", "[wsock32][in-proc]")
 
 TEST_CASE("wsock32-rpc-client", "[wsock32][rpc]")
 {
+  // Prefer ws2_32-rpc-client over any real/system ws2_32 already loaded.
+  load_client("ws2_32-rpc-client.dll");
+
   SECTION("system fallback")
   {
     ::SetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", nullptr);

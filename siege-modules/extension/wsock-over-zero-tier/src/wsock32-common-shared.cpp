@@ -103,6 +103,77 @@ export struct wsock_imports
 #endif
 };
 
+export wsock_imports load_wsock_imports(HMODULE module)
+{
+  wsock_imports imports{
+    .module = module
+  };
+
+  imports.WSAStartup = (decltype(imports.WSAStartup))::GetProcAddress(module, "WSAStartup");
+  imports.WSACleanup = (decltype(imports.WSACleanup))::GetProcAddress(module, "WSACleanup");
+  imports.socket = (decltype(imports.socket))::GetProcAddress(module, "socket");
+  imports.setsockopt = (decltype(imports.setsockopt))::GetProcAddress(module, "setsockopt");
+  imports.getsockname = (decltype(imports.getsockname))::GetProcAddress(module, "getsockname");
+  imports.getpeername = (decltype(imports.getpeername))::GetProcAddress(module, "getpeername");
+  imports.getsockopt = (decltype(imports.getsockopt))::GetProcAddress(module, "getsockopt");
+  imports.gethostbyaddr = (decltype(imports.gethostbyaddr))::GetProcAddress(module, "gethostbyaddr");
+  imports.gethostname = (decltype(imports.gethostname))::GetProcAddress(module, "gethostname");
+  imports.gethostbyname = (decltype(imports.gethostbyname))::GetProcAddress(module, "gethostbyname");
+  imports.htons = (decltype(imports.htons))::GetProcAddress(module, "htons");
+  imports.htonl = (decltype(imports.htonl))::GetProcAddress(module, "htonl");
+  imports.ntohl = (decltype(imports.ntohl))::GetProcAddress(module, "ntohl");
+  imports.ntohs = (decltype(imports.ntohs))::GetProcAddress(module, "ntohs");
+  imports.inet_addr = (decltype(imports.inet_addr))::GetProcAddress(module, "inet_addr");
+  imports.inet_ntoa = (decltype(imports.inet_ntoa))::GetProcAddress(module, "inet_ntoa");
+  imports.recv = (decltype(imports.recv))::GetProcAddress(module, "recv");
+  imports.recvfrom = (decltype(imports.recvfrom))::GetProcAddress(module, "recvfrom");
+  imports.send = (decltype(imports.send))::GetProcAddress(module, "send");
+  imports.sendto = (decltype(imports.sendto))::GetProcAddress(module, "sendto");
+  imports.ioctlsocket = (decltype(imports.ioctlsocket))::GetProcAddress(module, "ioctlsocket");
+  imports.bind = (decltype(imports.bind))::GetProcAddress(module, "bind");
+  imports.connect = (decltype(imports.connect))::GetProcAddress(module, "connect");
+  imports.accept = (decltype(imports.accept))::GetProcAddress(module, "accept");
+  imports.listen = (decltype(imports.listen))::GetProcAddress(module, "listen");
+  imports.shutdown = (decltype(imports.shutdown))::GetProcAddress(module, "shutdown");
+  imports.select = (decltype(imports.select))::GetProcAddress(module, "select");
+  imports.closesocket = (decltype(imports.closesocket))::GetProcAddress(module, "closesocket");
+  imports.WSAGetLastError = (decltype(imports.WSAGetLastError))::GetProcAddress(module, "WSAGetLastError");
+  imports.WSASetLastError = (decltype(imports.WSASetLastError))::GetProcAddress(module, "WSASetLastError");
+  imports.__WSAFDIsSet = (decltype(imports.__WSAFDIsSet))::GetProcAddress(module, "__WSAFDIsSet");
+  imports.WSAAsyncGetHostByName = (decltype(imports.WSAAsyncGetHostByName))::GetProcAddress(module, "WSAAsyncGetHostByName");
+  imports.WSACancelAsyncRequest = (decltype(imports.WSACancelAsyncRequest))::GetProcAddress(module, "WSACancelAsyncRequest");
+  imports.WSASetBlockingHook = (decltype(imports.WSASetBlockingHook))::GetProcAddress(module, "WSASetBlockingHook");
+  imports.WSAUnhookBlockingHook = (decltype(imports.WSAUnhookBlockingHook))::GetProcAddress(module, "WSAUnhookBlockingHook");
+  imports.WSACancelBlockingCall = (decltype(imports.WSACancelBlockingCall))::GetProcAddress(module, "WSACancelBlockingCall");
+  imports.WSAAsyncSelect = (decltype(imports.WSAAsyncSelect))::GetProcAddress(module, "WSAAsyncSelect");
+
+#ifdef USE_WINSOCK2
+  imports.WSAStringToAddressA = (decltype(imports.WSAStringToAddressA))::GetProcAddress(module, "WSAStringToAddressA");
+  imports.WSAAddressToStringA = (decltype(imports.WSAAddressToStringA))::GetProcAddress(module, "WSAAddressToStringA");
+  imports.WSAGetOverlappedResult = (decltype(imports.WSAGetOverlappedResult))::GetProcAddress(module, "WSAGetOverlappedResult");
+  imports.WSACreateEvent = (decltype(imports.WSACreateEvent))::GetProcAddress(module, "WSACreateEvent");
+  imports.WSAResetEvent = (decltype(imports.WSAResetEvent))::GetProcAddress(module, "WSAResetEvent");
+  imports.WSASetEvent = (decltype(imports.WSASetEvent))::GetProcAddress(module, "WSASetEvent");
+  imports.WSACloseEvent = (decltype(imports.WSACloseEvent))::GetProcAddress(module, "WSACloseEvent");
+  imports.WSAWaitForMultipleEvents = (decltype(imports.WSAWaitForMultipleEvents))::GetProcAddress(module, "WSAWaitForMultipleEvents");
+  imports.WSAAccept = (decltype(imports.WSAAccept))::GetProcAddress(module, "WSAAccept");
+  imports.WSASendTo = (decltype(imports.WSASendTo))::GetProcAddress(module, "WSASendTo");
+  imports.WSASend = (decltype(imports.WSASend))::GetProcAddress(module, "WSASend");
+  imports.WSARecvFrom = (decltype(imports.WSARecvFrom))::GetProcAddress(module, "WSARecvFrom");
+  imports.WSARecv = (decltype(imports.WSARecv))::GetProcAddress(module, "WSARecv");
+  imports.WSAEventSelect = (decltype(imports.WSAEventSelect))::GetProcAddress(module, "WSAEventSelect");
+  imports.WSAEnumNetworkEvents = (decltype(imports.WSAEnumNetworkEvents))::GetProcAddress(module, "WSAEnumNetworkEvents");
+  imports.WSASocketW = (decltype(imports.WSASocketW))::GetProcAddress(module, "WSASocketW");
+  imports.WSASocketA = (decltype(imports.WSASocketA))::GetProcAddress(module, "WSASocketA");
+  imports.WSAIoctl = (decltype(imports.WSAIoctl))::GetProcAddress(module, "WSAIoctl");
+  imports.getaddrinfo = (decltype(imports.getaddrinfo))::GetProcAddress(module, "getaddrinfo");
+  imports.freeaddrinfo = (decltype(imports.freeaddrinfo))::GetProcAddress(module, "freeaddrinfo");
+  imports.inet_ntop = (decltype(imports.inet_ntop))::GetProcAddress(module, "inet_ntop");
+#endif
+
+  return imports;
+}
+
 export std::optional<wsock_imports> load_system_wsock()
 {
   auto module_path = win32::module_ref::current_module().GetModuleFileName();
@@ -135,78 +206,46 @@ export std::optional<wsock_imports> load_system_wsock()
     final_path.replace_extension(".dll");
   }
 
-  wsock_imports imports{
-    .module = ::LoadLibraryExW(final_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)
-  };
+  auto module = ::LoadLibraryExW(final_path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
-  if (!imports.module)
+  if (!module)
   {
     return std::nullopt;
   }
 
-  imports.WSAStartup = (decltype(imports.WSAStartup))::GetProcAddress(imports.module, "WSAStartup");
-  imports.WSACleanup = (decltype(imports.WSACleanup))::GetProcAddress(imports.module, "WSACleanup");
-  imports.socket = (decltype(imports.socket))::GetProcAddress(imports.module, "socket");
-  imports.setsockopt = (decltype(imports.setsockopt))::GetProcAddress(imports.module, "setsockopt");
-  imports.getsockname = (decltype(imports.getsockname))::GetProcAddress(imports.module, "getsockname");
-  imports.getpeername = (decltype(imports.getpeername))::GetProcAddress(imports.module, "getpeername");
-  imports.getsockopt = (decltype(imports.getsockopt))::GetProcAddress(imports.module, "getsockopt");
-  imports.gethostbyaddr = (decltype(imports.gethostbyaddr))::GetProcAddress(imports.module, "gethostbyaddr");
-  imports.gethostname = (decltype(imports.gethostname))::GetProcAddress(imports.module, "gethostname");
-  imports.gethostbyname = (decltype(imports.gethostbyname))::GetProcAddress(imports.module, "gethostbyname");
-  imports.htons = (decltype(imports.htons))::GetProcAddress(imports.module, "htons");
-  imports.htonl = (decltype(imports.htonl))::GetProcAddress(imports.module, "htonl");
-  imports.ntohl = (decltype(imports.ntohl))::GetProcAddress(imports.module, "ntohl");
-  imports.ntohs = (decltype(imports.ntohs))::GetProcAddress(imports.module, "ntohs");
-  imports.inet_addr = (decltype(imports.inet_addr))::GetProcAddress(imports.module, "inet_addr");
-  imports.inet_ntoa = (decltype(imports.inet_ntoa))::GetProcAddress(imports.module, "inet_ntoa");
-  imports.recv = (decltype(imports.recv))::GetProcAddress(imports.module, "recv");
-  imports.recvfrom = (decltype(imports.recvfrom))::GetProcAddress(imports.module, "recvfrom");
-  imports.send = (decltype(imports.send))::GetProcAddress(imports.module, "send");
-  imports.sendto = (decltype(imports.sendto))::GetProcAddress(imports.module, "sendto");
-  imports.ioctlsocket = (decltype(imports.ioctlsocket))::GetProcAddress(imports.module, "ioctlsocket");
-  imports.bind = (decltype(imports.connect))::GetProcAddress(imports.module, "bind");
-  imports.connect = (decltype(imports.connect))::GetProcAddress(imports.module, "connect");
-  imports.accept = (decltype(imports.accept))::GetProcAddress(imports.module, "accept");
-  imports.listen = (decltype(imports.listen))::GetProcAddress(imports.module, "listen");
-  imports.shutdown = (decltype(imports.shutdown))::GetProcAddress(imports.module, "shutdown");
-  imports.select = (decltype(imports.select))::GetProcAddress(imports.module, "select");
-  imports.closesocket = (decltype(imports.closesocket))::GetProcAddress(imports.module, "closesocket");
-  imports.WSAGetLastError = (decltype(imports.WSAGetLastError))::GetProcAddress(imports.module, "WSAGetLastError");
-  imports.WSASetLastError = (decltype(imports.WSASetLastError))::GetProcAddress(imports.module, "WSASetLastError");
-  imports.__WSAFDIsSet = (decltype(imports.__WSAFDIsSet))::GetProcAddress(imports.module, "__WSAFDIsSet");
-  imports.WSAAsyncGetHostByName = (decltype(imports.WSAAsyncGetHostByName))::GetProcAddress(imports.module, "WSAAsyncGetHostByName");
-  imports.WSACancelAsyncRequest = (decltype(imports.WSACancelAsyncRequest))::GetProcAddress(imports.module, "WSACancelAsyncRequest");
-  imports.WSASetBlockingHook = (decltype(imports.WSASetBlockingHook))::GetProcAddress(imports.module, "WSASetBlockingHook");
-  imports.WSAUnhookBlockingHook = (decltype(imports.WSAUnhookBlockingHook))::GetProcAddress(imports.module, "WSAUnhookBlockingHook");
-  imports.WSACancelBlockingCall = (decltype(imports.WSACancelBlockingCall))::GetProcAddress(imports.module, "WSACancelBlockingCall");
-  imports.WSAAsyncSelect = (decltype(imports.WSAAsyncSelect))::GetProcAddress(imports.module, "WSAAsyncSelect");
+  return load_wsock_imports(module);
+}
 
-#ifdef USE_WINSOCK2
-  imports.WSAStringToAddressA = (decltype(imports.WSAStringToAddressA))::GetProcAddress(imports.module, "WSAStringToAddressA");
-  imports.WSAAddressToStringA = (decltype(imports.WSAAddressToStringA))::GetProcAddress(imports.module, "WSAAddressToStringA");
-  imports.WSAGetOverlappedResult = (decltype(imports.WSAGetOverlappedResult))::GetProcAddress(imports.module, "WSAGetOverlappedResult");
-  imports.WSACreateEvent = (decltype(imports.WSACreateEvent))::GetProcAddress(imports.module, "WSACreateEvent");
-  imports.WSAResetEvent = (decltype(imports.WSAResetEvent))::GetProcAddress(imports.module, "WSAResetEvent");
-  imports.WSASetEvent = (decltype(imports.WSASetEvent))::GetProcAddress(imports.module, "WSASetEvent");
-  imports.WSACloseEvent = (decltype(imports.WSACloseEvent))::GetProcAddress(imports.module, "WSACloseEvent");
-  imports.WSAWaitForMultipleEvents = (decltype(imports.WSAWaitForMultipleEvents))::GetProcAddress(imports.module, "WSAWaitForMultipleEvents");
-  imports.WSAAccept = (decltype(imports.WSAAccept))::GetProcAddress(imports.module, "WSAAccept");
-  imports.WSASendTo = (decltype(imports.WSASendTo))::GetProcAddress(imports.module, "WSASendTo");
-  imports.WSASend = (decltype(imports.WSASend))::GetProcAddress(imports.module, "WSASend");
-  imports.WSARecvFrom = (decltype(imports.WSARecvFrom))::GetProcAddress(imports.module, "WSARecvFrom");
-  imports.WSARecv = (decltype(imports.WSARecv))::GetProcAddress(imports.module, "WSARecv");
-  imports.WSAEventSelect = (decltype(imports.WSAEventSelect))::GetProcAddress(imports.module, "WSAEventSelect");
-  imports.WSAEnumNetworkEvents = (decltype(imports.WSAEnumNetworkEvents))::GetProcAddress(imports.module, "WSAEnumNetworkEvents");
-  imports.WSASocketW = (decltype(imports.WSASocketW))::GetProcAddress(imports.module, "WSASocketW");
-  imports.WSASocketA = (decltype(imports.WSASocketA))::GetProcAddress(imports.module, "WSASocketA");
-  imports.WSAIoctl = (decltype(imports.WSAIoctl))::GetProcAddress(imports.module, "WSAIoctl");
-  imports.getaddrinfo = (decltype(imports.getaddrinfo))::GetProcAddress(imports.module, "getaddrinfo");
-  imports.freeaddrinfo = (decltype(imports.freeaddrinfo))::GetProcAddress(imports.module, "freeaddrinfo");
-  imports.inet_ntop = (decltype(imports.inet_ntop))::GetProcAddress(imports.module, "inet_ntop");
-#endif
+export std::optional<wsock_imports> load_peer_ws2()
+{
+  // Prefer the specific rpc client over a generic injected/system ws2_32.
+  // Exhaust LoadLibrary for the specific name before GetModuleHandle(ws2_32),
+  // otherwise any process that already linked system ws2_32 would short-circuit.
+  auto module = ::GetModuleHandleW(L"ws2_32-rpc-client.dll");
 
-  return imports;
+  if (!module)
+  {
+    auto dir = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
+    module = ::LoadLibraryW((dir / L"ws2_32-rpc-client.dll").c_str());
+  }
+
+  if (!module)
+  {
+    module = ::GetModuleHandleW(L"ws2_32.dll");
+  }
+
+  if (!module)
+  {
+    auto dir = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
+    module = ::LoadLibraryW((dir / L"ws2_32.dll").c_str());
+  }
+
+  if (!module)
+  {
+    return std::nullopt;
+  }
+
+  return load_wsock_imports(module);
 }
 
 export std::optional<wsock_imports> imports{};
