@@ -25,6 +25,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length) noexcept;
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen) noexcept;
 hostent* __stdcall siege_gethostbyname(const char* name) noexcept;
+int __stdcall siege_gethostname(char* name, int namelen) noexcept;
 }
 
 enum struct worker_action : bool
@@ -1141,6 +1142,72 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
     return 0;
   }
 
+  if (controlCode == SIO_GET_INTERFACE_LIST)
+  {
+    if (!outBuffer)
+    {
+      imports->WSASetLastError(WSAEFAULT);
+      return SOCKET_ERROR;
+    }
+
+    char hostname[256]{};
+    if (siege_gethostname(hostname, static_cast<int>(sizeof(hostname))) != 0)
+    {
+      return SOCKET_ERROR;
+    }
+
+    auto* host = siege_gethostbyname(hostname);
+    if (!host || host->h_addrtype != AF_INET || host->h_length < static_cast<short>(sizeof(in_addr)) || !host->h_addr_list || !host->h_addr_list[0])
+    {
+      imports->WSASetLastError(WSAEINVAL);
+      return SOCKET_ERROR;
+    }
+
+    std::size_t count = 0;
+    for (auto** addr = host->h_addr_list; *addr; ++addr)
+    {
+      ++count;
+    }
+
+    auto needed = count * sizeof(INTERFACE_INFO);
+    if (outBufferCount < needed)
+    {
+      imports->WSASetLastError(WSAEFAULT);
+      return SOCKET_ERROR;
+    }
+
+    auto* infos = reinterpret_cast<INTERFACE_INFO*>(outBuffer);
+    std::memset(infos, 0, needed);
+
+    in_addr netmask{};
+    netmask.S_un.S_addr = imports->htonl(0xFFFFFF00);
+
+    for (std::size_t i = 0; i < count; ++i)
+    {
+      in_addr address{};
+      std::memcpy(&address, host->h_addr_list[i], sizeof(address));
+
+      in_addr broadcast{};
+      broadcast.S_un.S_addr = address.S_un.S_addr | ~netmask.S_un.S_addr;
+
+      infos[i].iiFlags = IFF_UP | IFF_BROADCAST | IFF_MULTICAST;
+      infos[i].iiAddress.AddressIn.sin_family = AF_INET;
+      infos[i].iiAddress.AddressIn.sin_addr = address;
+      infos[i].iiBroadcastAddress.AddressIn.sin_family = AF_INET;
+      infos[i].iiBroadcastAddress.AddressIn.sin_addr = broadcast;
+      infos[i].iiNetmask.AddressIn.sin_family = AF_INET;
+      infos[i].iiNetmask.AddressIn.sin_addr = netmask;
+    }
+
+    if (bytesReturned)
+    {
+      *bytesReturned = static_cast<DWORD>(needed);
+    }
+
+    imports->WSASetLastError(0);
+    return 0;
+  }
+
   if (!(controlCode == FIONBIO || controlCode == FIONREAD))
   {
     imports->WSASetLastError(WSAEOPNOTSUPP);
@@ -1836,7 +1903,7 @@ auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* e
 #endif
 
 
-auto __stdcall siege_gethostname(char* name, int namelen) noexcept
+int __stdcall siege_gethostname(char* name, int namelen) noexcept
 {
   ensure_imports();
   if (!use_custom_backend())
