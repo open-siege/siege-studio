@@ -48,6 +48,10 @@ export struct wsock_imports
   decltype(::gethostbyaddr)* gethostbyaddr = nullptr;
   decltype(::gethostname)* gethostname = nullptr;
   decltype(::gethostbyname)* gethostbyname = nullptr;
+  decltype(::getservbyname)* getservbyname = nullptr;
+  decltype(::getservbyport)* getservbyport = nullptr;
+  decltype(::getprotobyname)* getprotobyname = nullptr;
+  decltype(::getprotobynumber)* getprotobynumber = nullptr;
   decltype(::recv)* recv = nullptr;
   decltype(::recvfrom)* recvfrom = nullptr;
   decltype(::send)* send = nullptr;
@@ -119,6 +123,10 @@ export wsock_imports load_wsock_imports(HMODULE module)
   imports.gethostbyaddr = (decltype(imports.gethostbyaddr))::GetProcAddress(module, "gethostbyaddr");
   imports.gethostname = (decltype(imports.gethostname))::GetProcAddress(module, "gethostname");
   imports.gethostbyname = (decltype(imports.gethostbyname))::GetProcAddress(module, "gethostbyname");
+  imports.getservbyname = (decltype(imports.getservbyname))::GetProcAddress(module, "getservbyname");
+  imports.getservbyport = (decltype(imports.getservbyport))::GetProcAddress(module, "getservbyport");
+  imports.getprotobyname = (decltype(imports.getprotobyname))::GetProcAddress(module, "getprotobyname");
+  imports.getprotobynumber = (decltype(imports.getprotobynumber))::GetProcAddress(module, "getprotobynumber");
   imports.htons = (decltype(imports.htons))::GetProcAddress(module, "htons");
   imports.htonl = (decltype(imports.htonl))::GetProcAddress(module, "htonl");
   imports.ntohl = (decltype(imports.ntohl))::GetProcAddress(module, "ntohl");

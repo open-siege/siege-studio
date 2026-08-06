@@ -52,6 +52,14 @@ EXPORTS
 	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
 	gethostbyaddr=siege_gethostbyaddr
+	siege_getprotobyname @53
+	getprotobyname=siege_getprotobyname
+	siege_getprotobynumber @54
+	getprotobynumber=siege_getprotobynumber
+	siege_getservbyname @55
+	getservbyname=siege_getservbyname
+	siege_getservbyport @56
+	getservbyport=siege_getservbyport
 	siege_gethostname @57
 	gethostname=siege_gethostname
 	siege_WSAGetLastError @111

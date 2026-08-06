@@ -26,6 +26,8 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length) noexcept
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen) noexcept;
 hostent* __stdcall siege_gethostbyname(const char* name) noexcept;
 int __stdcall siege_gethostname(char* name, int namelen) noexcept;
+servent* __stdcall siege_getservbyname(const char* name, const char* proto) noexcept;
+protoent* __stdcall siege_getprotobyname(const char* name) noexcept;
 }
 
 enum struct worker_action : bool
@@ -917,10 +919,65 @@ extern "C" {
 hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
 {
   ensure_imports();
+  if (!use_custom_backend())
+  {
+    return imports->gethostbyaddr(addr, len, type);
+  }
 
-  get_log() << "siege_gethostbyaddr\n";
+  if (!addr || type != AF_INET || len < static_cast<int>(sizeof(in_addr)))
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return nullptr;
+  }
 
-  return imports->gethostbyaddr(addr, len, type);
+  in_addr query{};
+  std::memcpy(&query, addr, sizeof(query));
+
+  if (query.S_un.S_addr == imports->htonl(INADDR_LOOPBACK))
+  {
+    static constexpr std::string_view localhost_name = "localhost";
+    static char* localhost_aliases[] = { nullptr };
+    static in_addr localhost_addr{};
+    static char* localhost_addrs[] = { reinterpret_cast<char*>(&localhost_addr), nullptr };
+    static hostent localhost_host{
+      .h_aliases = localhost_aliases,
+      .h_addrtype = AF_INET,
+      .h_length = sizeof(in_addr),
+      .h_addr_list = localhost_addrs,
+    };
+
+    localhost_addr.S_un.S_addr = imports->htonl(INADDR_LOOPBACK);
+    localhost_host.h_name = const_cast<char*>(localhost_name.data());
+    imports->WSASetLastError(0);
+    return &localhost_host;
+  }
+
+  std::array<char, 256> hostname{};
+  if (siege_gethostname(hostname.data(), static_cast<int>(hostname.size())) != 0)
+  {
+    return nullptr;
+  }
+
+  auto* self = siege_gethostbyname(hostname.data());
+  if (!self || self->h_addrtype != AF_INET || self->h_length < static_cast<short>(sizeof(in_addr)) || !self->h_addr_list)
+  {
+    imports->WSASetLastError(WSAHOST_NOT_FOUND);
+    return nullptr;
+  }
+
+  for (auto** entry = self->h_addr_list; *entry; ++entry)
+  {
+    in_addr candidate{};
+    std::memcpy(&candidate, *entry, sizeof(candidate));
+    if (candidate.S_un.S_addr == query.S_un.S_addr)
+    {
+      imports->WSASetLastError(0);
+      return self;
+    }
+  }
+
+  imports->WSASetLastError(WSAHOST_NOT_FOUND);
+  return nullptr;
 }
 
 HANDLE __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
@@ -1150,13 +1207,13 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
       return SOCKET_ERROR;
     }
 
-    char hostname[256]{};
-    if (siege_gethostname(hostname, static_cast<int>(sizeof(hostname))) != 0)
+    std::array<char, 256> hostname{};
+    if (siege_gethostname(hostname.data(), static_cast<int>(hostname.size())) != 0)
     {
       return SOCKET_ERROR;
     }
 
-    auto* host = siege_gethostbyname(hostname);
+    auto* host = siege_gethostbyname(hostname.data());
     if (!host || host->h_addrtype != AF_INET || host->h_length < static_cast<short>(sizeof(in_addr)) || !host->h_addr_list || !host->h_addr_list[0])
     {
       imports->WSASetLastError(WSAEINVAL);
@@ -1262,18 +1319,204 @@ SOCKET __stdcall siege_WSAAccept(SOCKET s, sockaddr* addr, LPINT addrlen, LPCOND
 }
 
 // This and freeaddrinfo needed by AMD's open GL driver for the RPC case
-auto __stdcall siege_getaddrinfo(const char* node_name, const char* service_name, const addrinfo* hints, addrinfo** results)
+struct siege_addrinfo
+{
+  addrinfo info;
+  sockaddr_in address;
+  std::array<char, 256> canonname;
+};
+
+void __stdcall siege_freeaddrinfo(addrinfo* results);
+
+int __stdcall siege_getaddrinfo(const char* node_name, const char* service_name, const addrinfo* hints, addrinfo** results)
 {
   ensure_imports();
-  get_log() << "siege_getaddrinfo " << '\n';
-  return imports->getaddrinfo(node_name, service_name, hints, results);
+  if (!use_custom_backend())
+  {
+    return imports->getaddrinfo(node_name, service_name, hints, results);
+  }
+
+  if (!results)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return WSAEINVAL;
+  }
+
+  *results = nullptr;
+
+  const bool has_node = node_name && *node_name;
+  const bool has_service = service_name && *service_name;
+  if (!has_node && !has_service)
+  {
+    imports->WSASetLastError(WSAHOST_NOT_FOUND);
+    return WSAHOST_NOT_FOUND;
+  }
+
+  int socktype = hints ? hints->ai_socktype : 0;
+  int protocol = hints ? hints->ai_protocol : 0;
+  const int flags = hints ? hints->ai_flags : 0;
+
+  if (hints && hints->ai_family != AF_UNSPEC && hints->ai_family != AF_INET)
+  {
+    imports->WSASetLastError(WSAEAFNOSUPPORT);
+    return WSAEAFNOSUPPORT;
+  }
+
+  u_short port = 0;
+  if (has_service)
+  {
+    const bool numeric_service = (flags & AI_NUMERICSERV) || std::all_of(service_name, service_name + std::strlen(service_name), [](unsigned char c) {
+      return std::isdigit(c) != 0;
+    });
+
+    if (numeric_service)
+    {
+      port = imports->htons(static_cast<u_short>(std::atoi(service_name)));
+    }
+    else
+    {
+      const char* proto_name = nullptr;
+      if (socktype == SOCK_STREAM || protocol == IPPROTO_TCP)
+      {
+        proto_name = "tcp";
+      }
+      else if (socktype == SOCK_DGRAM || protocol == IPPROTO_UDP)
+      {
+        proto_name = "udp";
+      }
+
+      auto* service = siege_getservbyname(service_name, proto_name);
+      if (!service)
+      {
+        imports->WSASetLastError(WSANO_DATA);
+        return WSANO_DATA;
+      }
+
+      port = service->s_port;
+      if (socktype == 0)
+      {
+        socktype = _stricmp(service->s_proto, "udp") == 0 ? SOCK_DGRAM : SOCK_STREAM;
+      }
+      if (protocol == 0)
+      {
+        if (auto* proto = siege_getprotobyname(service->s_proto))
+        {
+          protocol = proto->p_proto;
+        }
+      }
+    }
+  }
+
+  addrinfo* tail = nullptr;
+  auto append_result = [&](in_addr address, const char* canonname) -> int {
+    auto* node = new (std::nothrow) siege_addrinfo{};
+    if (!node)
+    {
+      siege_freeaddrinfo(*results);
+      *results = nullptr;
+      imports->WSASetLastError(WSA_NOT_ENOUGH_MEMORY);
+      return WSA_NOT_ENOUGH_MEMORY;
+    }
+
+    node->address = sockaddr_in{
+      .sin_family = AF_INET,
+      .sin_port = port,
+      .sin_addr = address,
+    };
+    node->info = addrinfo{
+      .ai_family = AF_INET,
+      .ai_socktype = socktype,
+      .ai_protocol = protocol,
+      .ai_addrlen = sizeof(sockaddr_in),
+      .ai_addr = reinterpret_cast<sockaddr*>(&node->address),
+    };
+
+    if ((flags & AI_CANONNAME) && canonname && !*results)
+    {
+      std::strncpy(node->canonname.data(), canonname, node->canonname.size() - 1);
+      node->canonname.back() = '\0';
+      node->info.ai_canonname = node->canonname.data();
+    }
+
+    if (!*results)
+    {
+      *results = &node->info;
+    }
+    else
+    {
+      tail->ai_next = &node->info;
+    }
+    tail = &node->info;
+    return 0;
+  };
+
+  if (!has_node)
+  {
+    in_addr address{};
+    address.S_un.S_addr = imports->htonl((flags & AI_PASSIVE) ? INADDR_ANY : INADDR_LOOPBACK);
+    if (auto error = append_result(address, nullptr); error != 0)
+    {
+      return error;
+    }
+    imports->WSASetLastError(0);
+    return 0;
+  }
+
+  in_addr numeric{};
+  numeric.S_un.S_addr = imports->inet_addr(node_name);
+  const bool parsed = numeric.S_un.S_addr != INADDR_NONE || std::string_view{ node_name } == "255.255.255.255";
+
+  if ((flags & AI_NUMERICHOST) || parsed)
+  {
+    if (!parsed)
+    {
+      imports->WSASetLastError(WSAHOST_NOT_FOUND);
+      return WSAHOST_NOT_FOUND;
+    }
+    if (auto error = append_result(numeric, nullptr); error != 0)
+    {
+      return error;
+    }
+    imports->WSASetLastError(0);
+    return 0;
+  }
+
+  auto* host = siege_gethostbyname(node_name);
+  if (!host || host->h_addrtype != AF_INET || host->h_length < static_cast<short>(sizeof(in_addr)) || !host->h_addr_list || !host->h_addr_list[0])
+  {
+    imports->WSASetLastError(WSAHOST_NOT_FOUND);
+    return WSAHOST_NOT_FOUND;
+  }
+
+  for (auto** entry = host->h_addr_list; *entry; ++entry)
+  {
+    in_addr address{};
+    std::memcpy(&address, *entry, sizeof(address));
+    if (auto error = append_result(address, host->h_name); error != 0)
+    {
+      return error;
+    }
+  }
+
+  imports->WSASetLastError(0);
+  return 0;
 }
 
-auto __stdcall siege_freeaddrinfo(addrinfo* results)
+void __stdcall siege_freeaddrinfo(addrinfo* results)
 {
   ensure_imports();
-  get_log() << "siege_freeaddrinfo " << '\n';
-  return imports->freeaddrinfo(results);
+  if (!use_custom_backend())
+  {
+    imports->freeaddrinfo(results);
+    return;
+  }
+
+  while (results)
+  {
+    auto* node = reinterpret_cast<siege_addrinfo*>(results);
+    results = results->ai_next;
+    delete node;
+  }
 }
 
 auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::size_t buf_size)
@@ -1903,6 +2146,152 @@ auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* e
 #endif
 
 
+namespace {
+struct service_entry
+{
+  std::string_view name;
+  u_short port;
+  std::string_view proto;
+};
+
+struct protocol_entry
+{
+  std::string_view name;
+  short number;
+};
+
+constexpr service_entry service_entries[] = {
+  { "directplaysrvr", 47624, "tcp" },
+  { "directplaysrvr", 47624, "udp" },
+  { "directplay8", 6073, "tcp" },
+  { "directplay8", 6073, "udp" },
+  { "xbox", 3074, "tcp" },
+  { "xbox", 3074, "udp" },
+  { "directplay", 2234, "tcp" },
+  { "directplay", 2234, "udp" },
+  { "close-combat", 1944, "tcp" },
+  { "close-combat", 1944, "udp" },
+  { "remote-winsock", 1745, "tcp" },
+  { "remote-winsock", 1745, "udp" },
+  { "doom", 666, "tcp" },
+  { "doom", 666, "udp" },
+  { "https", 443, "tcp" },
+  { "https", 443, "udp" },
+  { "http", 80, "tcp" },
+  { "ftp-data", 20, "tcp" },
+  { "ftp", 21, "tcp" },
+  { "ipx", 213, "udp" },
+};
+
+constexpr protocol_entry protocol_entries[] = {
+  { "ip", 0 },
+  { "icmp", 1 },
+  { "tcp", 6 },
+  { "udp", 17 },
+};
+
+bool name_equals(std::string_view left, std::string_view right);
+servent* make_servent(const service_entry& entry);
+protoent* make_protoent(const protocol_entry& entry);
+}
+
+servent* __stdcall siege_getservbyname(const char* name, const char* proto) noexcept
+{
+  ensure_imports();
+  if (!use_custom_backend())
+  {
+    return imports->getservbyname(name, proto);
+  }
+
+  if (!name)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return nullptr;
+  }
+
+  for (const auto& entry : service_entries)
+  {
+    if (name_equals(entry.name, name) && (!proto || name_equals(entry.proto, proto)))
+    {
+      imports->WSASetLastError(0);
+      return make_servent(entry);
+    }
+  }
+
+  imports->WSASetLastError(WSANO_DATA);
+  return nullptr;
+}
+
+servent* __stdcall siege_getservbyport(int port, const char* proto) noexcept
+{
+  ensure_imports();
+  if (!use_custom_backend())
+  {
+    return imports->getservbyport(port, proto);
+  }
+
+  const auto host_port = imports->ntohs(static_cast<u_short>(port));
+  for (const auto& entry : service_entries)
+  {
+    if (entry.port == host_port && (!proto || name_equals(entry.proto, proto)))
+    {
+      imports->WSASetLastError(0);
+      return make_servent(entry);
+    }
+  }
+
+  imports->WSASetLastError(WSANO_DATA);
+  return nullptr;
+}
+
+protoent* __stdcall siege_getprotobyname(const char* name) noexcept
+{
+  ensure_imports();
+  if (!use_custom_backend())
+  {
+    return imports->getprotobyname(name);
+  }
+
+  if (!name)
+  {
+    imports->WSASetLastError(WSAEINVAL);
+    return nullptr;
+  }
+
+  for (const auto& entry : protocol_entries)
+  {
+    if (name_equals(entry.name, name))
+    {
+      imports->WSASetLastError(0);
+      return make_protoent(entry);
+    }
+  }
+
+  imports->WSASetLastError(WSANO_DATA);
+  return nullptr;
+}
+
+protoent* __stdcall siege_getprotobynumber(int number) noexcept
+{
+  ensure_imports();
+  if (!use_custom_backend())
+  {
+    return imports->getprotobynumber(number);
+  }
+
+  for (const auto& entry : protocol_entries)
+  {
+    if (entry.number == number)
+    {
+      imports->WSASetLastError(0);
+      return make_protoent(entry);
+    }
+  }
+
+  imports->WSASetLastError(WSANO_DATA);
+  return nullptr;
+}
+
 int __stdcall siege_gethostname(char* name, int namelen) noexcept
 {
   ensure_imports();
@@ -2411,3 +2800,36 @@ std::jthread& get_overlapped_worker(worker_action action)
   return worker;
 }
 #endif
+
+namespace {
+char* empty_aliases[] = { nullptr };
+
+bool name_equals(std::string_view left, std::string_view right)
+{
+  return left.size() == right.size() && _strnicmp(left.data(), right.data(), left.size()) == 0;
+}
+
+char* as_c_str(std::string_view value)
+{
+  return const_cast<char*>(value.data());
+}
+
+servent* make_servent(const service_entry& entry)
+{
+  static servent result{};
+  result.s_name = as_c_str(entry.name);
+  result.s_aliases = empty_aliases;
+  result.s_port = imports->htons(entry.port);
+  result.s_proto = as_c_str(entry.proto);
+  return &result;
+}
+
+protoent* make_protoent(const protocol_entry& entry)
+{
+  static protoent result{};
+  result.p_name = as_c_str(entry.name);
+  result.p_aliases = empty_aliases;
+  result.p_proto = entry.number;
+  return &result;
+}
+}

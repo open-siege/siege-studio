@@ -182,6 +182,30 @@ hostent* __stdcall siege_gethostbyname(const char* name) noexcept
   return peer->gethostbyname(name);
 }
 
+servent* __stdcall siege_getservbyname(const char* name, const char* proto) noexcept
+{
+  ensure_peer();
+  return peer->getservbyname(name, proto);
+}
+
+servent* __stdcall siege_getservbyport(int port, const char* proto) noexcept
+{
+  ensure_peer();
+  return peer->getservbyport(port, proto);
+}
+
+protoent* __stdcall siege_getprotobyname(const char* name) noexcept
+{
+  ensure_peer();
+  return peer->getprotobyname(name);
+}
+
+protoent* __stdcall siege_getprotobynumber(int number) noexcept
+{
+  ensure_peer();
+  return peer->getprotobynumber(number);
+}
+
 int __stdcall siege_gethostname(char* name, int namelen) noexcept
 {
   ensure_peer();
