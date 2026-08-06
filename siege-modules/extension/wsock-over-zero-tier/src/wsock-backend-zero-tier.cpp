@@ -366,7 +366,7 @@ int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval
 
   int zt_result;
 
-  if (optval && optlen && *optlen == sizeof(DWORD) && (level == SOL_SOCKET || level == ZTS_SOL_SOCKET) && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO))
+  if (optval && optlen && *optlen == sizeof(DWORD) && level == ZTS_SOL_SOCKET && (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO))
   {
     get_log() << "Converting timeout values to correct format\n";
 
@@ -379,6 +379,17 @@ int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval
     {
       DWORD milliseconds = static_cast<DWORD>(timeout.tv_sec) * 1000u + static_cast<DWORD>(timeout.tv_usec) / 1000u;
       std::memcpy(optval, &milliseconds, *optlen);
+    }
+  }
+  else if (optval && optlen && *optlen == sizeof(DWORD) && level == ZTS_SOL_SOCKET && optname == SO_ERROR)
+  {
+    DWORD error = 0;
+    zt_result = zts_bsd_getsockopt(to_zts(ws), level, optname, &error, &size);
+
+    if (zt_result == 0)
+    {
+      error = static_cast<DWORD>(zt_to_winsock_error(static_cast<int>(error)));
+      std::memcpy(optval, &error, sizeof(error));
     }
   }
   else
@@ -675,7 +686,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
           address_and_size.first.sin_addr.S_addr = ip;
 
           zts_fd_set set{};
-          zts_timeval zero{.tv_usec = 1000};
+          zts_timeval zero{ .tv_usec = 1000 };
 
           ZTS_FD_SET(to_zts(ws), &set);
           auto is_ready = zts_bsd_select(to_zts(ws) + 1, nullptr, &set, nullptr, &zero);
@@ -1261,6 +1272,11 @@ int get_zts_errno()
 
 int zt_to_winsock_error(int error)
 {
+  if (error == 0)
+  {
+    return 0;
+  }
+
   switch (error)
   {
   case ZTS_EPERM: {
@@ -1426,7 +1442,7 @@ int zt_to_winsock_error(int error)
     // on windows, WSAEINPROGRESS means something else
     // (it's about blocking hooks and service provider callbacks).
     // WOULDBLOCK is dual-purpose in wsock.
-    return WSAEWOULDBLOCK; 
+    return WSAEWOULDBLOCK;
   }
   default: {
 #ifdef WSA_INVALID_PARAMETER
