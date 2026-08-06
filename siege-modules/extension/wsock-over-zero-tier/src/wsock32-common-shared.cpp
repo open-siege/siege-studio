@@ -77,6 +77,11 @@ export struct wsock_imports
   decltype(::WSAGetLastError)* WSAGetLastError = nullptr;
   decltype(::WSASetLastError)* WSASetLastError = nullptr;
   decltype(::WSAAsyncGetHostByName)* WSAAsyncGetHostByName = nullptr;
+  decltype(::WSAAsyncGetHostByAddr)* WSAAsyncGetHostByAddr = nullptr;
+  decltype(::WSAAsyncGetProtoByName)* WSAAsyncGetProtoByName = nullptr;
+  decltype(::WSAAsyncGetProtoByNumber)* WSAAsyncGetProtoByNumber = nullptr;
+  decltype(::WSAAsyncGetServByName)* WSAAsyncGetServByName = nullptr;
+  decltype(::WSAAsyncGetServByPort)* WSAAsyncGetServByPort = nullptr;
   decltype(::WSACancelAsyncRequest)* WSACancelAsyncRequest = nullptr;
   decltype(::WSAAsyncSelect)* WSAAsyncSelect = nullptr;
 
@@ -149,6 +154,11 @@ export wsock_imports load_wsock_imports(HMODULE module)
   imports.WSASetLastError = (decltype(imports.WSASetLastError))::GetProcAddress(module, "WSASetLastError");
   imports.__WSAFDIsSet = (decltype(imports.__WSAFDIsSet))::GetProcAddress(module, "__WSAFDIsSet");
   imports.WSAAsyncGetHostByName = (decltype(imports.WSAAsyncGetHostByName))::GetProcAddress(module, "WSAAsyncGetHostByName");
+  imports.WSAAsyncGetHostByAddr = (decltype(imports.WSAAsyncGetHostByAddr))::GetProcAddress(module, "WSAAsyncGetHostByAddr");
+  imports.WSAAsyncGetProtoByName = (decltype(imports.WSAAsyncGetProtoByName))::GetProcAddress(module, "WSAAsyncGetProtoByName");
+  imports.WSAAsyncGetProtoByNumber = (decltype(imports.WSAAsyncGetProtoByNumber))::GetProcAddress(module, "WSAAsyncGetProtoByNumber");
+  imports.WSAAsyncGetServByName = (decltype(imports.WSAAsyncGetServByName))::GetProcAddress(module, "WSAAsyncGetServByName");
+  imports.WSAAsyncGetServByPort = (decltype(imports.WSAAsyncGetServByPort))::GetProcAddress(module, "WSAAsyncGetServByPort");
   imports.WSACancelAsyncRequest = (decltype(imports.WSACancelAsyncRequest))::GetProcAddress(module, "WSACancelAsyncRequest");
   imports.WSASetBlockingHook = (decltype(imports.WSASetBlockingHook))::GetProcAddress(module, "WSASetBlockingHook");
   imports.WSAUnhookBlockingHook = (decltype(imports.WSAUnhookBlockingHook))::GetProcAddress(module, "WSAUnhookBlockingHook");
@@ -576,3 +586,55 @@ export struct packed_hostent
   packed_hostent& operator=(const packed_hostent&) = delete;
 };
 static_assert(sizeof(packed_hostent) <= MAXGETHOSTSTRUCT);
+
+export struct packed_protoent
+{
+  protoent proto;
+  std::array<char, NI_MAXSERV> name;
+  std::array<char*, 1> aliases;
+
+  packed_protoent(const protoent& other)
+  {
+    std::strncpy(name.data(), other.p_name ? other.p_name : "", name.size() - 1);
+    name.back() = '\0';
+    aliases[0] = nullptr;
+
+    proto = protoent{
+      .p_name = name.data(),
+      .p_aliases = aliases.data(),
+      .p_proto = other.p_proto,
+    };
+  }
+
+  packed_protoent(const packed_protoent&) = delete;
+  packed_protoent& operator=(const packed_protoent&) = delete;
+};
+static_assert(sizeof(packed_protoent) <= MAXGETHOSTSTRUCT);
+
+export struct packed_servent
+{
+  servent serv;
+  std::array<char, NI_MAXSERV> name;
+  std::array<char, NI_MAXSERV> proto;
+  std::array<char*, 1> aliases;
+
+  packed_servent(const servent& other)
+  {
+    std::strncpy(name.data(), other.s_name ? other.s_name : "", name.size() - 1);
+    name.back() = '\0';
+    std::strncpy(proto.data(), other.s_proto ? other.s_proto : "", proto.size() - 1);
+    proto.back() = '\0';
+    aliases[0] = nullptr;
+
+    serv = servent{
+      .s_name = name.data(),
+      .s_aliases = aliases.data(),
+      .s_port = other.s_port,
+      .s_proto = proto.data(),
+    };
+  }
+
+  packed_servent(const packed_servent&) = delete;
+  packed_servent& operator=(const packed_servent&) = delete;
+};
+static_assert(sizeof(packed_servent) <= MAXGETHOSTSTRUCT);

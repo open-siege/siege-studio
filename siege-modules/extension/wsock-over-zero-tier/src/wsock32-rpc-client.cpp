@@ -224,6 +224,36 @@ HANDLE __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const c
   return peer->WSAAsyncGetHostByName(window, message, name, buffer, buffer_length);
 }
 
+HANDLE __stdcall siege_WSAAsyncGetHostByAddr(HWND window, u_int message, const char* addr, int len, int type, char* buffer, int buffer_length)
+{
+  ensure_peer();
+  return peer->WSAAsyncGetHostByAddr(window, message, addr, len, type, buffer, buffer_length);
+}
+
+HANDLE __stdcall siege_WSAAsyncGetProtoByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
+{
+  ensure_peer();
+  return peer->WSAAsyncGetProtoByName(window, message, name, buffer, buffer_length);
+}
+
+HANDLE __stdcall siege_WSAAsyncGetProtoByNumber(HWND window, u_int message, int number, char* buffer, int buffer_length)
+{
+  ensure_peer();
+  return peer->WSAAsyncGetProtoByNumber(window, message, number, buffer, buffer_length);
+}
+
+HANDLE __stdcall siege_WSAAsyncGetServByName(HWND window, u_int message, const char* name, const char* proto, char* buffer, int buffer_length)
+{
+  ensure_peer();
+  return peer->WSAAsyncGetServByName(window, message, name, proto, buffer, buffer_length);
+}
+
+HANDLE __stdcall siege_WSAAsyncGetServByPort(HWND window, u_int message, int port, const char* proto, char* buffer, int buffer_length)
+{
+  ensure_peer();
+  return peer->WSAAsyncGetServByPort(window, message, port, proto, buffer, buffer_length);
+}
+
 int __stdcall siege_WSACancelAsyncRequest(HANDLE request)
 {
   ensure_peer();

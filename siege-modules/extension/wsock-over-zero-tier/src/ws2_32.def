@@ -75,8 +75,18 @@ EXPORTS
 	WSASetBlockingHook=siege_WSASetBlockingHook
 	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
 	WSACancelBlockingCall=siege_WSACancelBlockingCall
+	WSAAsyncGetHostByAddr=siege_WSAAsyncGetHostByAddr
+	siege_WSAAsyncGetHostByAddr @102
 	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
 	siege_WSAAsyncGetHostByName @103
+	WSAAsyncGetProtoByName=siege_WSAAsyncGetProtoByName
+	siege_WSAAsyncGetProtoByName @104
+	WSAAsyncGetProtoByNumber=siege_WSAAsyncGetProtoByNumber
+	siege_WSAAsyncGetProtoByNumber @105
+	WSAAsyncGetServByName=siege_WSAAsyncGetServByName
+	siege_WSAAsyncGetServByName @106
+	WSAAsyncGetServByPort=siege_WSAAsyncGetServByPort
+	siege_WSAAsyncGetServByPort @107
 	WSACancelAsyncRequest=siege_WSACancelAsyncRequest
 	siege_WSACancelAsyncRequest @108
 	WSAAsyncSelect=siege_WSAAsyncSelect

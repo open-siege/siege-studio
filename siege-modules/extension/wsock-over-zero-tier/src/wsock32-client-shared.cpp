@@ -27,7 +27,9 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen) noexcept;
 hostent* __stdcall siege_gethostbyname(const char* name) noexcept;
 int __stdcall siege_gethostname(char* name, int namelen) noexcept;
 servent* __stdcall siege_getservbyname(const char* name, const char* proto) noexcept;
+servent* __stdcall siege_getservbyport(int port, const char* proto) noexcept;
 protoent* __stdcall siege_getprotobyname(const char* name) noexcept;
+protoent* __stdcall siege_getprotobynumber(int number) noexcept;
 }
 
 enum struct worker_action : bool
@@ -1020,7 +1022,9 @@ HANDLE __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const c
     return nullptr;
   }
 
-  auto started = win32::queue_user_work_item([window, message, name = std::string{ name }, buffer = std::span(buffer, buffer_length), cancel]() {
+  auto post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA;
+
+  auto started = win32::queue_user_work_item([window, message, name = std::string{ name }, buffer = std::span(buffer, buffer_length), cancel, post_message]() {
     auto auto_close = std::shared_ptr<void>{
       nullptr, [cancel](...) {
         ::CloseHandle(cancel);
@@ -1043,14 +1047,377 @@ HANDLE __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const c
     {
       auto* packed = new (buffer.data()) packed_hostent{ *result };
 
-      ::PostMessageW(window, message, (WPARAM)cancel, 0);
+      post_message(window, message, (WPARAM)cancel, 0);
     }
     else
     {
-      ::PostMessageW(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
+      post_message(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
     }
   });
 
+
+  if (!started)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    ::CloseHandle(cancel);
+    return nullptr;
+  }
+
+  return cancel;
+}
+
+HANDLE __stdcall siege_WSAAsyncGetHostByAddr(HWND window, u_int message, const char* addr, int len, int type, char* buffer, int buffer_length)
+{
+  if (!use_custom_backend())
+  {
+    return imports->WSAAsyncGetHostByAddr(window, message, addr, len, type, buffer, buffer_length);
+  }
+
+  if (!addr)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (!buffer)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (buffer_length < MAXGETHOSTSTRUCT)
+  {
+    imports->WSASetLastError(WSAENOBUFS);
+    return nullptr;
+  }
+
+  HANDLE cancel = ::CreateEventW(/*lpEventAttributes*/ nullptr, /*bManualReset*/ TRUE, /*bInitialState*/ FALSE, /*lpName*/ nullptr);
+
+  if (!cancel)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    return nullptr;
+  }
+
+  auto post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA;
+
+  auto started = win32::queue_user_work_item([window, message, addr = std::string(addr, addr + std::max(len, 0)), len, type, buffer = std::span(buffer, buffer_length), cancel, post_message]() {
+    auto auto_close = std::shared_ptr<void>{
+      nullptr, [cancel](...) {
+        ::CloseHandle(cancel);
+      }
+    };
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    auto* result = siege_gethostbyaddr(addr.data(), len, type);
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    if (result)
+    {
+      new (buffer.data()) packed_hostent{ *result };
+      post_message(window, message, (WPARAM)cancel, 0);
+    }
+    else
+    {
+      post_message(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
+    }
+  });
+
+  if (!started)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    ::CloseHandle(cancel);
+    return nullptr;
+  }
+
+  return cancel;
+}
+
+HANDLE __stdcall siege_WSAAsyncGetProtoByNumber(HWND window, u_int message, int number, char* buffer, int buffer_length)
+{
+  if (!use_custom_backend())
+  {
+    return imports->WSAAsyncGetProtoByNumber(window, message, number, buffer, buffer_length);
+  }
+
+  if (!buffer)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (buffer_length < MAXGETHOSTSTRUCT)
+  {
+    imports->WSASetLastError(WSAENOBUFS);
+    return nullptr;
+  }
+
+  HANDLE cancel = ::CreateEventW(/*lpEventAttributes*/ nullptr, /*bManualReset*/ TRUE, /*bInitialState*/ FALSE, /*lpName*/ nullptr);
+
+  if (!cancel)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    return nullptr;
+  }
+
+  auto post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA;
+
+  auto started = win32::queue_user_work_item([window, message, number, buffer = std::span(buffer, buffer_length), cancel, post_message]() {
+    auto auto_close = std::shared_ptr<void>{
+      nullptr, [cancel](...) {
+        ::CloseHandle(cancel);
+      }
+    };
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    auto* result = siege_getprotobynumber(number);
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    if (result)
+    {
+      new (buffer.data()) packed_protoent{ *result };
+      post_message(window, message, (WPARAM)cancel, 0);
+    }
+    else
+    {
+      post_message(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
+    }
+  });
+
+  if (!started)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    ::CloseHandle(cancel);
+    return nullptr;
+  }
+
+  return cancel;
+}
+
+HANDLE __stdcall siege_WSAAsyncGetProtoByName(HWND window, u_int message, const char* name, char* buffer, int buffer_length)
+{
+  if (!use_custom_backend())
+  {
+    return imports->WSAAsyncGetProtoByName(window, message, name, buffer, buffer_length);
+  }
+
+  if (!name)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (!buffer)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (buffer_length < MAXGETHOSTSTRUCT)
+  {
+    imports->WSASetLastError(WSAENOBUFS);
+    return nullptr;
+  }
+
+  HANDLE cancel = ::CreateEventW(/*lpEventAttributes*/ nullptr, /*bManualReset*/ TRUE, /*bInitialState*/ FALSE, /*lpName*/ nullptr);
+
+  if (!cancel)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    return nullptr;
+  }
+
+  auto post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA;
+
+  auto started = win32::queue_user_work_item([window, message, name = std::string{ name }, buffer = std::span(buffer, buffer_length), cancel, post_message]() {
+    auto auto_close = std::shared_ptr<void>{
+      nullptr, [cancel](...) {
+        ::CloseHandle(cancel);
+      }
+    };
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    auto* result = siege_getprotobyname(name.c_str());
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    if (result)
+    {
+      new (buffer.data()) packed_protoent{ *result };
+      post_message(window, message, (WPARAM)cancel, 0);
+    }
+    else
+    {
+      post_message(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
+    }
+  });
+
+  if (!started)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    ::CloseHandle(cancel);
+    return nullptr;
+  }
+
+  return cancel;
+}
+
+HANDLE __stdcall siege_WSAAsyncGetServByPort(HWND window, u_int message, int port, const char* proto, char* buffer, int buffer_length)
+{
+  if (!use_custom_backend())
+  {
+    return imports->WSAAsyncGetServByPort(window, message, port, proto, buffer, buffer_length);
+  }
+
+  if (!buffer)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (buffer_length < MAXGETHOSTSTRUCT)
+  {
+    imports->WSASetLastError(WSAENOBUFS);
+    return nullptr;
+  }
+
+  HANDLE cancel = ::CreateEventW(/*lpEventAttributes*/ nullptr, /*bManualReset*/ TRUE, /*bInitialState*/ FALSE, /*lpName*/ nullptr);
+
+  if (!cancel)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    return nullptr;
+  }
+
+  auto post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA;
+
+  auto started = win32::queue_user_work_item([window, message, port, proto = proto ? std::optional<std::string>{ proto } : std::nullopt, buffer = std::span(buffer, buffer_length), cancel, post_message]() {
+    auto auto_close = std::shared_ptr<void>{
+      nullptr, [cancel](...) {
+        ::CloseHandle(cancel);
+      }
+    };
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    auto* result = siege_getservbyport(port, proto ? proto->c_str() : nullptr);
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    if (result)
+    {
+      new (buffer.data()) packed_servent{ *result };
+      post_message(window, message, (WPARAM)cancel, 0);
+    }
+    else
+    {
+      post_message(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
+    }
+  });
+
+  if (!started)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    ::CloseHandle(cancel);
+    return nullptr;
+  }
+
+  return cancel;
+}
+
+HANDLE __stdcall siege_WSAAsyncGetServByName(HWND window, u_int message, const char* name, const char* proto, char* buffer, int buffer_length)
+{
+  if (!use_custom_backend())
+  {
+    return imports->WSAAsyncGetServByName(window, message, name, proto, buffer, buffer_length);
+  }
+
+  if (!name)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (!buffer)
+  {
+    imports->WSASetLastError(WSAEFAULT);
+    return nullptr;
+  }
+
+  if (buffer_length < MAXGETHOSTSTRUCT)
+  {
+    imports->WSASetLastError(WSAENOBUFS);
+    return nullptr;
+  }
+
+  HANDLE cancel = ::CreateEventW(/*lpEventAttributes*/ nullptr, /*bManualReset*/ TRUE, /*bInitialState*/ FALSE, /*lpName*/ nullptr);
+
+  if (!cancel)
+  {
+    imports->WSASetLastError(WSAENETDOWN);
+    return nullptr;
+  }
+
+  auto post_message = ::IsWindowUnicode(window) ? ::PostMessageW : ::PostMessageA;
+
+  auto started = win32::queue_user_work_item([window, message, name = std::string{ name }, proto = proto ? std::optional<std::string>{ proto } : std::nullopt, buffer = std::span(buffer, buffer_length), cancel, post_message]() {
+    auto auto_close = std::shared_ptr<void>{
+      nullptr, [cancel](...) {
+        ::CloseHandle(cancel);
+      }
+    };
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    auto* result = siege_getservbyname(name.c_str(), proto ? proto->c_str() : nullptr);
+
+    if (::WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0)
+    {
+      return;
+    }
+
+    if (result)
+    {
+      new (buffer.data()) packed_servent{ *result };
+      post_message(window, message, (WPARAM)cancel, 0);
+    }
+    else
+    {
+      post_message(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
+    }
+  });
 
   if (!started)
   {
