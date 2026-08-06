@@ -36,15 +36,15 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     endif()
 
 
-    add_library(wsock32-rpc-client SHARED src/wsock32-common-shared.cpp src/wsock32-client-shared.cpp src/wsock32-rpc.cpp src/wsock32-rpc-client.cpp src/dll-main.cpp src/wsock32.def)
+    add_library(wsock32-rpc-client SHARED src/wsock32-common-shared.cpp src/wsock32-rpc-client.cpp src/wsock32.def)
     set_target_properties(wsock32-rpc-client PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_SCAN_FOR_MODULES ON
     )
-    target_link_libraries(wsock32-rpc-client PRIVATE siege-win-core siege-extension ws2_32)
+    target_link_libraries(wsock32-rpc-client PRIVATE siege-win-core ws2_32)
 
-    add_library(ws2_32-rpc-client SHARED src/wsock32-common-shared.cpp src/wsock32-client-shared.cpp src/wsock32-rpc.cpp src/wsock32-rpc-client.cpp src/dll-main.cpp src/ws2_32.def)
+    add_library(ws2_32-rpc-client SHARED src/wsock32-common-shared.cpp src/wsock32-client-shared.cpp src/wsock32-rpc.cpp src/ws2_32-rpc-client.cpp src/dll-main.cpp src/ws2_32.def)
     set_target_properties(ws2_32-rpc-client PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
