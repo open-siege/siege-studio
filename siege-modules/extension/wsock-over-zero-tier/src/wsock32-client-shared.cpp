@@ -2,6 +2,7 @@ module;
 
 #include <WinSock2.h>
 #include <ws2tcpip.h>
+#include <MSWSock.h>
 
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/threading.hpp>
@@ -1123,7 +1124,23 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
     return SOCKET_ERROR;
   }
 
-  // TODO: SIO_GET_INTERFACE_LIST (Pure, Battlezone2), SIO_UDP_CONNRESET (Painkiller)
+  if (controlCode == SIO_UDP_CONNRESET)
+  {
+    if (!inBuffer || inBufferCount < sizeof(BOOL))
+    {
+      imports->WSASetLastError(WSAEINVAL);
+      return SOCKET_ERROR;
+    }
+
+    if (bytesReturned)
+    {
+      *bytesReturned = 0;
+    }
+
+    imports->WSASetLastError(0);
+    return 0;
+  }
+
   if (!(controlCode == FIONBIO || controlCode == FIONREAD))
   {
     imports->WSASetLastError(WSAEOPNOTSUPP);
