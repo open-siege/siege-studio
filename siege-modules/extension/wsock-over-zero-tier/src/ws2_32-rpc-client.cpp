@@ -702,7 +702,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen) noexcept
     return imports->accept(ws, from, fromLen);
   }
 
-  get_log() << "siege_accept";
+  log_sampled_check() << "siege_accept";
 
   auto do_accept = [&]() {
     return send_message_to_server<accept_params, accept_params::message_id, SOCKET>(ws, [=](void* raw) {

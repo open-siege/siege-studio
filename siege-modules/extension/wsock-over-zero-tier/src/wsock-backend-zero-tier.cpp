@@ -554,7 +554,7 @@ int __stdcall backend_listen(SOCKET ws, int backlog)
 
 SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
-  get_log() << "siege_accept\n";
+  log_sampled_check() << "siege_accept\n";
   if (!get_zero_tier_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
@@ -562,7 +562,7 @@ SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
     return SOCKET_ERROR;
   }
 
-  get_log() << "zts_bsd_accept\n";
+  log_sampled_check() << "zts_bsd_accept\n";
 
   zts_sockaddr_in zt_addr{};
 

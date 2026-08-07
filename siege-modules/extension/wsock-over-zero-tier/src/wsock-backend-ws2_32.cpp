@@ -88,7 +88,7 @@ int __stdcall backend_listen(SOCKET ws, int backlog) noexcept
 
 SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen) noexcept
 {
-  get_log() << "siege_accept\n";
+  log_sampled_check() << "siege_accept\n";
   auto result = imports->accept(ws, name, namelen);
 
   u_long non_blocking = 1u;

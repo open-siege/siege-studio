@@ -355,7 +355,7 @@ int __stdcall siege_listen(SOCKET ws, int backlog)
 
 SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* name, int* namelen) noexcept
 {
-  get_log() << "siege_accept\n";
+  log_sampled_check() << "siege_accept\n";
   if (!use_custom_backend())
   {
     return imports->accept(ws, name, namelen);
