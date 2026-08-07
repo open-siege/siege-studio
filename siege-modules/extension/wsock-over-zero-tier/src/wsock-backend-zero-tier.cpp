@@ -1453,6 +1453,11 @@ int zt_to_winsock_error(int error)
   case ZTS_EALREADY: {
     return WSAEALREADY;
   }
+  // not documented but probably an implementation
+  // detail leaking through
+  case EINPROGRESS: {
+    return WSAEWOULDBLOCK;
+  }
   case ZTS_EINPROGRESS: {
 
     // on windows, WSAEINPROGRESS means something else
