@@ -285,6 +285,11 @@ int __stdcall backend_setsockopt(SOCKET ws, int level, int optname, const char* 
     return SOCKET_ERROR;
   }
 
+  if ((level == SOL_SOCKET || level == ZTS_SOL_SOCKET) && optname == SO_SNDBUF)
+  {
+    return 0;
+  }
+
   get_log() << "zts_bsd_setsockopt, socket: " << to_zts(ws) << " level: " << level_to_string(level) << " optname: " << option_to_string(optname);
 
   if (level != SOL_SOCKET)
