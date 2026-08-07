@@ -473,6 +473,11 @@ int __stdcall backend_getsockname(SOCKET ws, sockaddr* name, int* length)
 
     auto zt_result = zts_bsd_getsockname(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
 
+    if (zt_result < 0)
+    {
+      return zt_to_winsock_result(zt_result);
+    }
+
     copy_address(zt_addr, name, length);
 
     return zt_to_winsock_result(zt_result);
@@ -502,6 +507,11 @@ int __stdcall backend_getpeername(SOCKET ws, sockaddr* name, int* length)
     zts_socklen_t zt_size = sizeof(zt_addr);
 
     auto zt_result = zts_bsd_getpeername(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
+
+    if (zt_result < 0)
+    {
+      return zt_to_winsock_result(zt_result);
+    }
 
     copy_address(zt_addr, name, length);
 
@@ -575,28 +585,29 @@ SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
 
   auto zt_result = zts_bsd_accept(to_zts(ws), (zts_sockaddr*)&zt_addr, &zt_size);
 
-  if (zt_result >= 0)
+  if (zt_result < 0)
   {
-    copy_address(zt_addr, name, namelen);
-
-    if (zt_addr.sin_addr.S_addr)
-    {
-      get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
-    }
-
-    int non_blocking = 1;
-
-    if (zts_bsd_ioctl(zt_result, ZTS_FIONBIO, &non_blocking) < 0)
-    {
-      zts_bsd_close(zt_result);
-      return INVALID_SOCKET;
-    }
-
-    get_zero_tier_handles().insert(zt_result);
-    return from_zts(zt_result);
+    zt_to_winsock_result(zt_result);
+    return SOCKET_ERROR;
   }
 
-  return zt_to_winsock_result(zt_result);
+  copy_address(zt_addr, name, namelen);
+
+  if (zt_addr.sin_addr.S_addr)
+  {
+    get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
+  }
+
+  int non_blocking = 1;
+
+  if (zts_bsd_ioctl(zt_result, ZTS_FIONBIO, &non_blocking) < 0)
+  {
+    zts_bsd_close(zt_result);
+    return INVALID_SOCKET;
+  }
+
+  get_zero_tier_handles().insert(zt_result);
+  return from_zts(zt_result);
 }
 
 int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen)
@@ -1086,15 +1097,15 @@ int zt_to_winsock_result(int code)
     return SOCKET_ERROR;
   }
   case ZTS_ERR_NO_RESULT: {
-    return 0;
+    return SOCKET_ERROR;
   }
   case ZTS_ERR_GENERAL: {
     imports->WSASetLastError(WSASYSNOTREADY);
-    return 0;
+    return SOCKET_ERROR;
   }
   }
 
-  return 0;
+  return code >= 0 ? 0 : SOCKET_ERROR;
 }
 
 std::shared_ptr<char> get_shared_current_ip_address_storage()
