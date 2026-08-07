@@ -74,6 +74,7 @@ export struct wsock_imports
   decltype(::WSASetBlockingHook)* WSASetBlockingHook = nullptr;
   decltype(::WSAUnhookBlockingHook)* WSAUnhookBlockingHook = nullptr;
   decltype(::WSACancelBlockingCall)* WSACancelBlockingCall = nullptr;
+  decltype(::WSAIsBlocking)* WSAIsBlocking = nullptr;
   decltype(::WSAGetLastError)* WSAGetLastError = nullptr;
   decltype(::WSASetLastError)* WSASetLastError = nullptr;
   decltype(::WSAAsyncGetHostByName)* WSAAsyncGetHostByName = nullptr;
@@ -163,6 +164,7 @@ export wsock_imports load_wsock_imports(HMODULE module)
   imports.WSASetBlockingHook = (decltype(imports.WSASetBlockingHook))::GetProcAddress(module, "WSASetBlockingHook");
   imports.WSAUnhookBlockingHook = (decltype(imports.WSAUnhookBlockingHook))::GetProcAddress(module, "WSAUnhookBlockingHook");
   imports.WSACancelBlockingCall = (decltype(imports.WSACancelBlockingCall))::GetProcAddress(module, "WSACancelBlockingCall");
+  imports.WSAIsBlocking = (decltype(imports.WSAIsBlocking))::GetProcAddress(module, "WSAIsBlocking");
   imports.WSAAsyncSelect = (decltype(imports.WSAAsyncSelect))::GetProcAddress(module, "WSAAsyncSelect");
 
 #ifdef USE_WINSOCK2

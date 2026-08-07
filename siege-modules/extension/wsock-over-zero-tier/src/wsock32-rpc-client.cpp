@@ -290,6 +290,12 @@ int __stdcall siege_WSACancelBlockingCall()
   return peer->WSACancelBlockingCall();
 }
 
+BOOL __stdcall siege_WSAIsBlocking()
+{
+  ensure_peer();
+  return peer->WSAIsBlocking();
+}
+
 int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
   ensure_peer();

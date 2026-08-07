@@ -75,6 +75,7 @@ EXPORTS
 	WSASetBlockingHook=siege_WSASetBlockingHook
 	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
 	WSACancelBlockingCall=siege_WSACancelBlockingCall
+	WSAIsBlocking=siege_WSAIsBlocking
 	WSAAsyncGetHostByAddr=siege_WSAAsyncGetHostByAddr
 	siege_WSAAsyncGetHostByAddr @102
 	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName

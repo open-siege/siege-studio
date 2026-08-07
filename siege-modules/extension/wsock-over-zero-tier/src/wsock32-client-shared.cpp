@@ -2768,6 +2768,12 @@ auto __stdcall siege_WSACancelBlockingCall()
   get_log() << "siege_WSACancelBlockingCall " << '\n';
   return imports->WSACancelBlockingCall();
 }
+
+auto __stdcall siege_WSAIsBlocking()
+{
+  ensure_imports();
+  return imports->WSAIsBlocking();
+}
 }
 
 std::jthread& get_select_worker(worker_action action)

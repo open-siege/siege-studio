@@ -91,3 +91,5 @@ EXPORTS
 	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
 	siege_WSACancelBlockingCall @113
 	WSACancelBlockingCall=siege_WSACancelBlockingCall
+	siege_WSAIsBlocking @114
+	WSAIsBlocking=siege_WSAIsBlocking
