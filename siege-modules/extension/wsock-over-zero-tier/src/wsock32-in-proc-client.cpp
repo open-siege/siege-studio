@@ -203,19 +203,19 @@ try_again:
     FD_ZERO(&read_set);
     FD_SET(ws, &read_set);
 
-    auto wait_time = [ws]() -> std::optional<timeval> {
+    auto wait_time = [ws]() {
       DWORD timeout = 0;
       int param_size = sizeof(timeout);
       auto result = backend->getsockopt(ws, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
 
       if (result == SOCKET_ERROR || timeout == 0)
       {
-        return std::nullopt;
+        return ms_to_timeval(std::chrono::seconds{ 10 });
       }
       return ms_to_timeval(std::chrono::milliseconds{ timeout });
     }();
 
-    result = backend->select(1, &read_set, nullptr, nullptr, wait_time ? &*wait_time : nullptr);
+    result = backend->select(1, &read_set, nullptr, nullptr, &wait_time);
 
     if (result == SOCKET_ERROR)
     {
@@ -259,19 +259,19 @@ try_again:
     FD_ZERO(&write_set);
     FD_SET(ws, &write_set);
 
-    auto wait_time = [ws]() -> std::optional<timeval> {
+    auto wait_time = [ws]() {
       DWORD timeout = 0;
       int param_size = sizeof(timeout);
       auto result = backend->getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
 
       if (result == SOCKET_ERROR || timeout == 0)
       {
-        return std::nullopt;
+        return ms_to_timeval(std::chrono::seconds{ 10 });
       }
       return ms_to_timeval(std::chrono::milliseconds{ timeout });
     }();
 
-    result = backend->select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
+    result = backend->select(1, nullptr, &write_set, nullptr, &wait_time);
 
     if (result == SOCKET_ERROR)
     {
@@ -371,7 +371,8 @@ try_again:
     FD_ZERO(&read_set);
     FD_SET(ws, &read_set);
 
-    auto select_result = backend->select(1, &read_set, nullptr, nullptr, nullptr);
+    auto timeout = ms_to_timeval(std::chrono::seconds{ 10 });
+    auto select_result = backend->select(1, &read_set, nullptr, nullptr, &timeout);
 
     if (select_result == SOCKET_ERROR)
     {
@@ -416,19 +417,19 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
     FD_ZERO(&write_set);
     FD_SET(ws, &write_set);
 
-    auto wait_time = [ws]() -> std::optional<timeval> {
+    auto wait_time = [ws]() {
       DWORD timeout = 0;
       int param_size = sizeof(timeout);
       auto result = backend->getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
 
       if (result == SOCKET_ERROR || timeout == 0)
       {
-        return std::nullopt;
+        return ms_to_timeval(std::chrono::seconds{ 10 });
       }
       return ms_to_timeval(std::chrono::milliseconds{ timeout });
     }();
 
-    result = backend->select(1, nullptr, &write_set, nullptr, wait_time ? &*wait_time : nullptr);
+    result = backend->select(1, nullptr, &write_set, nullptr, &wait_time);
 
     if (result == SOCKET_ERROR)
     {
