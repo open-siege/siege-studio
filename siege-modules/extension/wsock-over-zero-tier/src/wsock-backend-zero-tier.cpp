@@ -1036,8 +1036,8 @@ hostent* __stdcall backend_gethostbyname(const char* name)
   };
 
 
-  static std::array<char, sizeof(in_addr)> raw_ip{};
-  static std::map<std::string, packed_hostent> host_cache;
+  thread_local std::array<char, sizeof(in_addr)> raw_ip{};
+  thread_local std::map<std::string, packed_hostent> host_cache;
 
   get_log() << "Calling zts_bsd_gethostbyname\n";
   auto result = zts_bsd_gethostbyname(name);

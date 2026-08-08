@@ -1158,8 +1158,9 @@ hostent* __stdcall siege_gethostbyname(const char* name) noexcept
       result.h_addrtype = storage.address_type;
       result.h_length = storage.address_size;
       
+      addresses.clear();
       addresses.reserve(storage.addresses_length);
-
+      
       for (auto i = 0; i < storage.addresses_length; i++)
       {
         addresses.emplace_back(storage.addresses[i].data());
