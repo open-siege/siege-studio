@@ -170,6 +170,11 @@ export struct socket_handle_info
       return false;
     }
 
+    if (item->second.is_closed)
+    {
+        return false;
+    }
+
     return item->second.is_virtual_blocking;
   }
 

@@ -283,12 +283,15 @@ int __stdcall siege_WSACleanup()
   ensure_imports();
   get_log() << "siege_WSACleanup";
 
-  if (use_custom_backend())
+  if (!use_custom_backend())
   {
-    return 0;
+    return imports->WSACleanup();
   }
 
-  return imports->WSACleanup();
+  get_select_worker().request_stop();
+  get_overlapped_worker().request_stop();
+
+  return 0;
 }
 
 SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
