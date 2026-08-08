@@ -750,7 +750,9 @@ try_again:
   {
     auto parent_overlapped_state = get_socket_handles().is_overlapped(ws);
 
-    get_socket_handles().insert(result, SOCK_STREAM, parent_overlapped_state, socket_handle_info::client_socket_state::accepted);
+    auto& handles = get_socket_handles();
+    handles.insert(result, SOCK_STREAM, parent_overlapped_state, socket_handle_info::client_socket_state::accepted);
+    handles.set_virtual_blocking(result, handles.is_virtual_blocking(ws));
   }
 
   return result;

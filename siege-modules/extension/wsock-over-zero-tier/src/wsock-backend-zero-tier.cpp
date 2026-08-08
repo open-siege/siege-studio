@@ -777,7 +777,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
     return zt_result;
   }
 
-  auto zt_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), nullptr, 0);
+  auto zt_result = zts_bsd_send(to_zts(ws), buf, len, to_zt_msg_flags(flags));
 
   if (zt_result < 0)
   {
