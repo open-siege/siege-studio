@@ -762,6 +762,8 @@ try_again:
   return result;
 }
 
+int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set) noexcept;
+
 int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
   if (!use_custom_backend())
@@ -789,51 +791,56 @@ int __stdcall siege_connect(SOCKET ws, const sockaddr* name, int namelen)
 
   auto result = do_connect();
   auto last_error = imports->WSAGetLastError();
-  auto is_pending = last_error == WSAEWOULDBLOCK || last_error == WSAEINPROGRESS || last_error == WSAEALREADY;
+  auto is_pending = last_error == WSAEWOULDBLOCK || last_error == WSAEALREADY;
 
-  if (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && is_pending)
+  auto wait_time = [ws]() {
+    DWORD timeout = 0;
+    int param_size = sizeof(timeout);
+    auto result = get_socket_handles().is_virtual_blocking(ws) ? siege_getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size)
+                                                               : SOCKET_ERROR;
+
+    if (result == SOCKET_ERROR || timeout == 0)
+    {
+      return ms_to_timeval(std::chrono::seconds{ 10 });
+    }
+    return ms_to_timeval(std::chrono::milliseconds{ timeout });
+  }();
+
+  while (get_socket_handles().is_virtual_blocking(ws) && result == SOCKET_ERROR && is_pending)
   {
     fd_set write_set;
+    fd_set except_set;
+
     FD_ZERO(&write_set);
+    FD_ZERO(&except_set);
     FD_SET(ws, &write_set);
+    FD_SET(ws, &except_set);
 
-    auto wait_time = [ws]() {
-      DWORD timeout = 0;
-      int param_size = sizeof(timeout);
-      auto result = siege_getsockopt(ws, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), &param_size);
+    auto pending = siege_select(1, nullptr, &write_set, &except_set, &wait_time);
 
-      if (result == SOCKET_ERROR || timeout == 0)
-      {
-        return ms_to_timeval(std::chrono::seconds{ 10 });
-      }
-      return ms_to_timeval(std::chrono::milliseconds{ timeout });
-    }();
-
-    result = siege_select(1, nullptr, &write_set, nullptr, &wait_time);
-
-    if (result == SOCKET_ERROR)
+    if (pending == SOCKET_ERROR)
     {
-      return result;
-    }
-
-    int socket_error = 0;
-    int socket_size = sizeof(socket_error);
-    result = siege_getsockopt(ws, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&socket_error), &socket_size);
-
-    if (result != 0)
-    {
-      return result;
-    }
-
-    if (socket_error != 0)
-    {
-      get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::unconnected);
-      imports->WSASetLastError(socket_error);
       return SOCKET_ERROR;
     }
 
-    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connected);
-    return 0;
+    if (pending == 0)
+    {
+      continue;
+    }
+
+    if (siege___WSAFDIsSet(ws, &write_set))
+    {
+      get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::connected);
+      return 0;
+    }
+
+    int socket_error = WSAENOTSOCK;
+    int socket_size = sizeof(socket_error);
+    siege_getsockopt(ws, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&socket_error), &socket_size);
+
+    get_socket_handles().set_client_socket_state(ws, socket_handle_info::client_socket_state::unconnected);
+    imports->WSASetLastError(socket_error);
+    return SOCKET_ERROR;
   }
 
   if (result == 0)
@@ -1094,7 +1101,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
   return 0;
 }
 
-int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set)
+int __stdcall siege___WSAFDIsSet(SOCKET ws, fd_set* set) noexcept
 {
   if (use_custom_backend())
   {
