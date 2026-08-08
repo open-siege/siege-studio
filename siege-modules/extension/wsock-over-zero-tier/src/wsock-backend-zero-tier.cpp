@@ -58,6 +58,7 @@ std::shared_ptr<char> get_shared_current_ip_address_storage();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
 std::set<std::uint32_t>& get_fallback_broadcast_addresses();
+std::set<std::uint32_t>& get_directed_broadcasts();
 
 int to_zt_msg_flags(int flags);
 zts_sockaddr_in to_zts(sockaddr_in addr);
@@ -676,14 +677,14 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
   {
     auto address_and_size = copy_address(to, tolen);
 
-    auto is_broadcast_address = [&]() {
-      in_addr addr{};
-      addr.S_un.S_addr = address_and_size.first.sin_addr.S_addr;
+    auto dest = address_and_size.first.sin_addr.S_addr;
 
-      return addr.S_un.S_un_b.s_b1 == 255 || addr.S_un.S_un_b.s_b2 == 255 || addr.S_un.S_un_b.s_b3 == 255 || addr.S_un.S_un_b.s_b4 == 255;
+    auto is_broadcast_address = [&]() {
+      // limited broadcast, or a ZT subnet directed broadcast (e.g. 10.147.17.255)
+      return dest == ZTS_IPADDR_BROADCAST || get_directed_broadcasts().contains(dest);
     };
 
-    if (address_and_size.first.sin_addr.S_addr == ZTS_IPADDR_BROADCAST || is_broadcast_address())
+    if (is_broadcast_address())
     {
       get_log() << "Trying to broadcast\n";
 
@@ -1200,6 +1201,58 @@ std::set<std::uint32_t>& get_fallback_broadcast_addresses()
   }();
 
   return addresses;
+}
+
+// ZT stashes the subnet prefix length in the assigned address' port field
+// (network byte order). We derive the directed broadcast from it so
+// subnet-constrained-broadcast games match without treating every address
+// with a 255 octet as broadcast.
+std::set<std::uint32_t>& get_directed_broadcasts()
+{
+  static std::set<std::uint32_t> result = []() -> std::set<std::uint32_t> {
+    std::set<std::uint32_t> broadcasts;
+
+    auto net_id = get_zero_tier_network_id();
+    if (!net_id)
+    {
+      return broadcasts;
+    }
+
+    std::array<zts_sockaddr_storage, ZTS_MAX_ASSIGNED_ADDRESSES> addresses{};
+    unsigned int count = ZTS_MAX_ASSIGNED_ADDRESSES;
+
+    if (zts_addr_get_all(*net_id, addresses.data(), &count) != ZTS_ERR_OK)
+    {
+      return broadcasts;
+    }
+
+    for (auto i = 0u; i < count; ++i)
+    {
+      auto* in4 = reinterpret_cast<zts_sockaddr_in*>(&addresses[i]);
+
+      if (in4->sin_family != ZTS_AF_INET)
+      {
+        continue;
+      }
+
+      auto prefix = imports->ntohs(in4->sin_port);
+
+      // port empty when only the address is available; /24 matches the usual ZT assignment
+      if (prefix == 0 || prefix > 32)
+      {
+        prefix = 24;
+      }
+
+      auto addr_host = imports->ntohl(in4->sin_addr.S_addr);
+      std::uint32_t host_mask = prefix == 32 ? 0u : ((1u << (32 - prefix)) - 1u);
+      broadcasts.emplace(imports->htonl(addr_host | host_mask));
+    }
+
+    get_log() << "Computed " << broadcasts.size() << " directed broadcast address(es)";
+    return broadcasts;
+  }();
+
+  return result;
 }
 
 std::optional<std::uint64_t> get_zero_tier_network_id()
