@@ -217,7 +217,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       auto* func = message == bind_params::bind_message_id ? backend->bind : backend->connect;
 
       sockaddr* address = params.address_size == 0 ? nullptr : (sockaddr*)&params.address;
-      
+
       auto result = func((SOCKET)wparam, address, params.address_size);
       ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
       return result;
@@ -327,9 +327,9 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       if (result && result->h_name)
       {
-        params.has_result = true;
-        auto len = std::min(params.result.host_name.size(), std::strlen(result->h_name));
+        auto len = std::min(params.result.host_name.size() - 1, std::strlen(result->h_name));
         std::memcpy(params.result.host_name.data(), result->h_name, len);
+        params.result.host_name[len] = '\0';
 
         if (result->h_addr_list)
         {
@@ -343,7 +343,6 @@ struct wsock_window : win32::basic_window<wsock_window>
             {
               break;
             }
-
             if (result->h_length == sizeof(in_addr))
             {
               std::memcpy(params.result.addresses[i].data(), result->h_addr_list[i], sizeof(in_addr));
@@ -355,9 +354,11 @@ struct wsock_window : win32::basic_window<wsock_window>
               params.result.addresses_length++;
             }
           }
+
+          params.has_result = params.result.addresses_length > 0;
         }
 
-        return 1;
+        return params.has_result ? 1 : 0;
       }
       params.has_result = false;
       return 0;
@@ -565,7 +566,7 @@ void load_local_wsock()
   HMODULE ws2_32 = nullptr;
   if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, L"ws2_32.dll", &ws2_32))
   {
-    // may not be loaded yes, so we force load it. 
+    // may not be loaded yes, so we force load it.
     ws2_32 = ::LoadLibraryExW(L"ws2_32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
   }
 

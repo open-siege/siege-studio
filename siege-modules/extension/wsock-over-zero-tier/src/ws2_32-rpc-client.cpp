@@ -1134,33 +1134,40 @@ hostent* __stdcall siege_gethostbyname(const char* name) noexcept
   thread_local hostent result{};
   thread_local hostbyname_params::hostinfo storage{};
   thread_local std::vector<char*> addresses;
+  thread_local char* empty_aliases[1] = { nullptr };
+
+  result = {};
+  addresses.clear();
+  addresses.emplace_back(nullptr);
+  result.h_addr_list = addresses.data();
+  result.h_aliases = empty_aliases;
 
   auto has_result = send_message_to_server<hostbyname_params, hostbyname_params::message_id>(INVALID_SOCKET, [=](void* raw) {
       auto* params = new (raw) hostbyname_params{};
 
       if (name)
       {
-        auto size = std::min(params->host_name.size(), std::strlen(name));
+        auto size = std::min(params->host_name.size() - 1, std::strlen(name));
         std::memcpy(params->host_name.data(), name, size);
+        params->host_name[size] = '\0';
       }
       return params; }, [=](hostbyname_params* params) {
-      if (!params->has_result)
+      if (!params->has_result || params->result.addresses_length <= 0)
       {
         return;
       }
 
       storage = params->result;
-
       storage.host_name.back() = '\0';
 
       result.h_name = storage.host_name.data();
-      result.h_aliases = nullptr;
+      result.h_aliases = empty_aliases;
       result.h_addrtype = storage.address_type;
       result.h_length = storage.address_size;
-      
+
       addresses.clear();
-      addresses.reserve(storage.addresses_length);
-      
+      addresses.reserve(static_cast<std::size_t>(storage.addresses_length) + 1);
+
       for (auto i = 0; i < storage.addresses_length; i++)
       {
         addresses.emplace_back(storage.addresses[i].data());
@@ -1169,7 +1176,7 @@ hostent* __stdcall siege_gethostbyname(const char* name) noexcept
 
       result.h_addr_list = addresses.data(); });
 
-  if (!has_result)
+  if (has_result != 1 || !result.h_addr_list || !result.h_addr_list[0])
   {
     imports->WSASetLastError(WSAHOST_NOT_FOUND);
     return nullptr;
