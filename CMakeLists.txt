@@ -12,6 +12,7 @@ if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libzt)
     # libzt is third-party and still declares VERSION 3.0; CMake 4.x requires >= 3.5
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
     add_subdirectory(libzt)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/libzt-lwip-overrides.cmake)
 endif()
 
 add_subdirectory(siege-modules)
