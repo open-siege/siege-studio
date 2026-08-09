@@ -57,7 +57,9 @@ std::optional<std::string> get_peer_id_and_public_key();
 std::shared_ptr<char> get_shared_current_ip_address_storage();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
-std::set<std::uint32_t>& get_fallback_broadcast_addresses();
+
+bool fallback_broadcast_sorter(std::uint32_t, std::uint32_t);
+std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broadcast_addresses();
 std::set<std::uint32_t>& get_directed_broadcasts();
 
 int to_zt_msg_flags(int flags);
@@ -695,11 +697,13 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
 
       if (auto ips = get_fallback_broadcast_addresses(); !ips.empty())
       {
-        auto index = 0;
+        std::array<char, 16> ip_str{};
 
         for (auto ip : ips)
         {
-          get_log() << "Trying broadcast fallback to direct IP " << index << ".\n";
+          in_addr addr{ .S_un = { .S_addr = ip } };
+          imports->inet_ntop(AF_INET, &addr, ip_str.data(), ip_str.size());
+          get_log() << "Trying broadcast fallback to direct IP " << ip_str.data() << ".\n";
           address_and_size.first.sin_addr.S_addr = ip;
 
           zts_fd_set set{};
@@ -710,7 +714,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
 
           if (is_ready && ZTS_FD_ISSET(to_zts(ws), &set))
           {
-            get_log() << "Socket ready, doing broadcast " << index++ << ".\n";
+            get_log() << "Socket ready, doing broadcast " << ip_str.data() << ".\n";
             broadcast_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
             if (broadcast_result > sent)
@@ -724,7 +728,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
           }
           else
           {
-            get_log() << "Socket not ready, trying next IP " << index++ << ".\n";
+            get_log() << "Socket not ready, trying next IP.\n";
           }
         }
       }
@@ -1185,16 +1189,60 @@ std::optional<in_addr> get_fallback_broadcast_ip_v4()
   return result;
 }
 
-std::set<std::uint32_t>& get_fallback_broadcast_addresses()
+bool fallback_broadcast_sorter(std::uint32_t a, std::uint32_t b)
 {
-  static std::set<std::uint32_t> addresses = [] {
-    std::set<std::uint32_t> initial;
+  if (a == b)
+  {
+    return false;
+  }
+
+  if (auto primary = get_fallback_broadcast_ip_v4())
+  {
+    if (a == primary->S_un.S_addr)
+    {
+      return true;
+    }
+
+    if (b == primary->S_un.S_addr)
+    {
+      return false;
+    }
+  }
+
+  return a < b;
+}
+
+std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broadcast_addresses()
+{
+  static std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*> addresses = [] {
+    std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*> initial{ fallback_broadcast_sorter };
 
     auto env_addr = get_fallback_broadcast_ip_v4();
 
     if (env_addr)
     {
       initial.emplace(env_addr->S_un.S_addr);
+    }
+
+    auto zt_id = get_network_id();
+
+    if (!zt_id)
+    {
+      return initial;
+    }
+
+    char ipstr[ZTS_IP_MAX_STR_LEN] = { 0 };
+
+    if (zts_addr_get_str(*zt_id, ZTS_AF_INET, ipstr, ZTS_IP_MAX_STR_LEN) < 0)
+    {
+      return initial;
+    }
+
+    auto ip_int = imports->inet_addr(ipstr);
+
+    if (ip_int)
+    {
+      initial.emplace(ip_int);
     }
 
     return initial;
