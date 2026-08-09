@@ -60,7 +60,9 @@ int zt_to_winsock_result(int code);
 
 bool fallback_broadcast_sorter(std::uint32_t, std::uint32_t);
 std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broadcast_addresses();
+std::map<std::uint32_t, std::uint32_t>& get_subnets();
 std::set<std::uint32_t>& get_directed_broadcasts();
+void rewrite_if_foreign(zts_sockaddr_in&);
 
 int to_zt_msg_flags(int flags);
 zts_sockaddr_in to_zts(sockaddr_in addr);
@@ -629,6 +631,7 @@ int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen)
   if (name)
   {
     auto address_and_size = copy_address(name, namelen);
+    rewrite_if_foreign(address_and_size.first);
     auto zt_result = zts_bsd_connect(to_zts(ws), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
     return zt_to_winsock_result(zt_result);
@@ -678,6 +681,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
   if (to)
   {
     auto address_and_size = copy_address(to, tolen);
+    rewrite_if_foreign(address_and_size.first);
 
     auto dest = address_and_size.first.sin_addr.S_addr;
 
@@ -1252,18 +1256,16 @@ std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broa
 }
 
 // ZT stashes the subnet prefix length in the assigned address' port field
-// (network byte order). We derive the directed broadcast from it so
-// subnet-constrained-broadcast games match without treating every address
-// with a 255 octet as broadcast.
-std::set<std::uint32_t>& get_directed_broadcasts()
+// (network byte order). network → mask, both in network byte order.
+std::map<std::uint32_t, std::uint32_t>& get_subnets()
 {
-  static std::set<std::uint32_t> result = []() -> std::set<std::uint32_t> {
-    std::set<std::uint32_t> broadcasts;
+  static std::map<std::uint32_t, std::uint32_t> result = []() -> std::map<std::uint32_t, std::uint32_t> {
+    std::map<std::uint32_t, std::uint32_t> subnets;
 
     auto net_id = get_network_id();
     if (!net_id)
     {
-      return broadcasts;
+      return subnets;
     }
 
     std::array<zts_sockaddr_storage, ZTS_MAX_ASSIGNED_ADDRESSES> addresses{};
@@ -1271,7 +1273,7 @@ std::set<std::uint32_t>& get_directed_broadcasts()
 
     if (zts_addr_get_all(*net_id, addresses.data(), &count) != ZTS_ERR_OK)
     {
-      return broadcasts;
+      return subnets;
     }
 
     for (auto i = 0u; i < count; ++i)
@@ -1291,9 +1293,26 @@ std::set<std::uint32_t>& get_directed_broadcasts()
         prefix = 24;
       }
 
-      auto addr_host = imports->ntohl(in4->sin_addr.S_addr);
       std::uint32_t host_mask = prefix == 32 ? 0u : ((1u << (32 - prefix)) - 1u);
-      broadcasts.emplace(imports->htonl(addr_host | host_mask));
+      auto mask = imports->htonl(~host_mask);
+      subnets.emplace(in4->sin_addr.S_addr & mask, mask);
+    }
+
+    get_log() << "Computed " << subnets.size() << " subnet(s)";
+    return subnets;
+  }();
+
+  return result;
+}
+
+std::set<std::uint32_t>& get_directed_broadcasts()
+{
+  static std::set<std::uint32_t> result = []() -> std::set<std::uint32_t> {
+    std::set<std::uint32_t> broadcasts;
+
+    for (auto [network, mask] : get_subnets())
+    {
+      broadcasts.emplace(network | ~mask);
     }
 
     get_log() << "Computed " << broadcasts.size() << " directed broadcast address(es)";
@@ -1301,6 +1320,47 @@ std::set<std::uint32_t>& get_directed_broadcasts()
   }();
 
   return result;
+}
+
+// Games that probe a real NIC IP (bypassing our stack) get remapped to the
+// configured ZT fallback host. Port is left alone.
+void rewrite_if_foreign(zts_sockaddr_in& addr)
+{
+  if (addr.sin_family != ZTS_AF_INET)
+  {
+    return;
+  }
+
+  auto ip = addr.sin_addr.S_addr;
+
+  if (ip == ZTS_IPADDR_BROADCAST || get_directed_broadcasts().contains(ip))
+  {
+    return;
+  }
+
+  auto& subnets = get_subnets();
+
+  if (subnets.empty())
+  {
+    return;
+  }
+
+  for (auto [network, mask] : subnets)
+  {
+    if ((ip & mask) == network)
+    {
+      return;
+    }
+  }
+
+  auto fallback = get_fallback_broadcast_ip_v4();
+
+  if (!fallback)
+  {
+    return;
+  }
+
+  addr.sin_addr.S_addr = fallback->S_un.S_addr;
 }
 
 std::optional<std::uint64_t> get_network_id()
