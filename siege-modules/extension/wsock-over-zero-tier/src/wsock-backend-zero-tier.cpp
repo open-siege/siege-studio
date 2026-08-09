@@ -46,14 +46,14 @@ private:
   mutable std::shared_mutex mutex;
 };
 
-socket_handle_info& get_zero_tier_handles()
+socket_handle_info& get_socket_handles()
 {
   static socket_handle_info info{};
   return info;
 }
 
-std::optional<std::uint64_t> get_zero_tier_network_id();
-std::optional<std::string> get_zero_tier_peer_id_and_public_key();
+std::optional<std::uint64_t> get_network_id();
+std::optional<std::string> get_peer_id_and_public_key();
 std::shared_ptr<char> get_shared_current_ip_address_storage();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
@@ -79,7 +79,7 @@ int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
   get_log("backend.zero-tier") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
   auto result = imports->WSAStartup(version, data);
 
-  if (auto network_id = get_zero_tier_network_id())
+  if (auto network_id = get_network_id())
   {
     if (result == 0)
     {
@@ -90,7 +90,7 @@ int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
 
     if (!get_node_online_status())
     {
-      if (auto node_id_and_key = get_zero_tier_peer_id_and_public_key(); node_id_and_key)
+      if (auto node_id_and_key = get_peer_id_and_public_key(); node_id_and_key)
       {
         auto init_result = zts_init_from_memory(node_id_and_key->data(), (unsigned int)node_id_and_key->size());
         if (init_result == 0)
@@ -164,7 +164,7 @@ int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
 
       if (auto storage = get_shared_current_ip_address_storage(); storage)
       {
-        zts_addr_get_str(*get_zero_tier_network_id(), ZTS_AF_INET, storage.get(), ZTS_IP_MAX_STR_LEN);
+        zts_addr_get_str(*get_network_id(), ZTS_AF_INET, storage.get(), ZTS_IP_MAX_STR_LEN);
       }
     }
 
@@ -245,7 +245,7 @@ SOCKET __stdcall backend_socket(int af, int type, int protocol)
     }
 
     get_log() << "Created zero tier socket successfully (" << socket << ")";
-    get_zero_tier_handles().insert(socket);
+    get_socket_handles().insert(socket);
 
 
     int value = 1;
@@ -279,7 +279,7 @@ static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall backend_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
   get_log() << "siege_setsockopt: " << ws << " " << optname;
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -331,7 +331,7 @@ int __stdcall backend_setsockopt(SOCKET ws, int level, int optname, const char* 
 int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
   get_log() << "siege_getsockopt" << to_zts(ws) << " " << optname;
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -414,7 +414,7 @@ int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval
 int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
   imports->WSASetLastError(0);
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -456,7 +456,7 @@ int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockadd
 int __stdcall backend_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getsockname\n";
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -491,7 +491,7 @@ int __stdcall backend_getsockname(SOCKET ws, sockaddr* name, int* length)
 int __stdcall backend_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
   get_log() << "siege_getpeername\n";
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -537,7 +537,7 @@ int __stdcall backend_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
     get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
   }
 
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -553,7 +553,7 @@ int __stdcall backend_listen(SOCKET ws, int backlog)
 {
   get_log() << "siege_listen\n";
 
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -571,7 +571,7 @@ int __stdcall backend_listen(SOCKET ws, int backlog)
 SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
   log_sampled_check() << "siege_accept\n";
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -607,7 +607,7 @@ SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
     return INVALID_SOCKET;
   }
 
-  get_zero_tier_handles().insert(zt_result);
+  get_socket_handles().insert(zt_result);
   return from_zts(zt_result);
 }
 
@@ -615,7 +615,7 @@ int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
   get_log() << "siege_connect " << to_zts(ws);
 
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -641,7 +641,7 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
   get_log() << "siege_bind " << ws << std::endl;
 
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -666,7 +666,7 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
 
 int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -729,7 +729,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
         }
       }
 
-      if (zts_net_get_broadcast(*get_zero_tier_network_id()))
+      if (zts_net_get_broadcast(*get_network_id()))
       {
         zts_fd_set set{};
         zts_timeval zero{ .tv_usec = 1000 };
@@ -796,7 +796,7 @@ static_assert(SD_BOTH == ZTS_SHUT_RDWR);
 int __stdcall backend_shutdown(SOCKET ws, int how)
 {
   get_log() << "siege_shutdown\n";
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -813,7 +813,7 @@ int __stdcall backend_shutdown(SOCKET ws, int how)
 int __stdcall backend_closesocket(SOCKET ws)
 {
   get_log() << "siege_closesocket\n";
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -823,7 +823,7 @@ int __stdcall backend_closesocket(SOCKET ws)
   get_log() << "zts_bsd_close\n";
   auto zt_result = zts_bsd_close(to_zts(ws));
 
-  get_zero_tier_handles().erase(to_zts(ws));
+  get_socket_handles().erase(to_zts(ws));
 
   return zt_to_winsock_result(zt_result);
 }
@@ -838,7 +838,7 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
     for (auto i = 0; i < source.fd_count; ++i)
     {
       auto zts = to_zts(source.fd_array[i]);
-      if (!get_zero_tier_handles().contains(zts))
+      if (!get_socket_handles().contains(zts))
       {
         get_log() << "Non Zero Tier handle detected " << zts;
         continue;
@@ -895,7 +895,7 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
     for (auto i = 0; i < dest.fd_count; ++i)
     {
       auto zts = to_zts(dest.fd_array[i]);
-      if (!get_zero_tier_handles().contains(zts))
+      if (!get_socket_handles().contains(zts))
       {
         get_log() << "Non Zero Tier handle detected " << zts;
         continue;
@@ -960,7 +960,7 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
 
 int __stdcall backend___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
-  if (!get_zero_tier_handles().contains(to_zts(ws)))
+  if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
@@ -974,7 +974,7 @@ int __stdcall backend___WSAFDIsSet(SOCKET ws, fd_set* set)
     for (auto i = 0; i < set->fd_count; ++i)
     {
       auto zts = to_zts(set->fd_array[i]);
-      if (get_zero_tier_handles().contains(zts))
+      if (get_socket_handles().contains(zts))
       {
         ZTS_FD_SET(zts, &zt_set);
       }
@@ -1001,7 +1001,7 @@ hostent* __stdcall backend_gethostbyname(const char* name)
     return imports->gethostbyname(nullptr);
   }
 
-  auto zt_id = get_zero_tier_network_id();
+  auto zt_id = get_network_id();
 
   if (!zt_id)
   {
@@ -1155,10 +1155,10 @@ std::shared_ptr<char> get_shared_current_ip_address_storage()
   }
 }
 
-std::optional<in_addr> get_zero_tier_fallback_broadcast_ip_v4()
+std::optional<in_addr> get_fallback_broadcast_ip_v4()
 {
   static std::optional<in_addr> result = []() -> std::optional<in_addr> {
-    get_log() << "get_zero_tier_fallback_broadcast_ip_v4\n";
+    get_log() << "get_fallback_broadcast_ip_v4\n";
 
 
     if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr, 0); env_size >= 1)
@@ -1190,7 +1190,7 @@ std::set<std::uint32_t>& get_fallback_broadcast_addresses()
   static std::set<std::uint32_t> addresses = [] {
     std::set<std::uint32_t> initial;
 
-    auto env_addr = get_zero_tier_fallback_broadcast_ip_v4();
+    auto env_addr = get_fallback_broadcast_ip_v4();
 
     if (env_addr)
     {
@@ -1212,7 +1212,7 @@ std::set<std::uint32_t>& get_directed_broadcasts()
   static std::set<std::uint32_t> result = []() -> std::set<std::uint32_t> {
     std::set<std::uint32_t> broadcasts;
 
-    auto net_id = get_zero_tier_network_id();
+    auto net_id = get_network_id();
     if (!net_id)
     {
       return broadcasts;
@@ -1255,12 +1255,12 @@ std::set<std::uint32_t>& get_directed_broadcasts()
   return result;
 }
 
-std::optional<std::uint64_t> get_zero_tier_network_id()
+std::optional<std::uint64_t> get_network_id()
 {
   static std::optional<std::uint64_t> result = []() -> std::optional<std::uint64_t> {
     try
     {
-      get_log() << "get_zero_tier_network_id\n";
+      get_log() << "get_network_id\n";
 
 
       if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
@@ -1284,10 +1284,10 @@ std::optional<std::uint64_t> get_zero_tier_network_id()
   return result;
 }
 
-std::optional<std::string> get_zero_tier_peer_id_and_public_key()
+std::optional<std::string> get_peer_id_and_public_key()
 {
   static std::optional<std::string> result = []() -> std::optional<std::string> {
-    get_log() << "get_zero_tier_network_id\n";
+    get_log() << "get_peer_id_and_public_key\n";
 
     if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", nullptr, 0); env_size >= 1)
     {
