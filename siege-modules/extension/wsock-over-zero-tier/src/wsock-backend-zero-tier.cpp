@@ -60,8 +60,8 @@ int zt_to_winsock_result(int code);
 
 bool fallback_broadcast_sorter(std::uint32_t, std::uint32_t);
 std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broadcast_addresses();
-std::map<std::uint32_t, std::uint32_t>& get_subnets();
-std::set<std::uint32_t>& get_directed_broadcasts();
+const std::map<std::uint32_t, std::uint32_t>& get_subnets();
+const std::set<std::uint32_t>& get_directed_broadcasts();
 void rewrite_if_foreign(zts_sockaddr_in&);
 
 int to_zt_msg_flags(int flags);
@@ -1218,7 +1218,9 @@ bool fallback_broadcast_sorter(std::uint32_t a, std::uint32_t b)
 
 std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broadcast_addresses()
 {
-  static std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*> addresses = [] {
+  // static would be nice, but most games have a dedicated thread or the main thread for
+  // networking, and we will almost always have our default fallback ip anyway.
+  thread_local std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*> addresses = [] {
     std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*> initial{ fallback_broadcast_sorter };
 
     auto env_addr = get_fallback_broadcast_ip_v4();
@@ -1257,7 +1259,7 @@ std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broa
 
 // ZT stashes the subnet prefix length in the assigned address' port field
 // (network byte order). network → mask, both in network byte order.
-std::map<std::uint32_t, std::uint32_t>& get_subnets()
+const std::map<std::uint32_t, std::uint32_t>& get_subnets()
 {
   static std::map<std::uint32_t, std::uint32_t> result = []() -> std::map<std::uint32_t, std::uint32_t> {
     std::map<std::uint32_t, std::uint32_t> subnets;
@@ -1305,7 +1307,7 @@ std::map<std::uint32_t, std::uint32_t>& get_subnets()
   return result;
 }
 
-std::set<std::uint32_t>& get_directed_broadcasts()
+const std::set<std::uint32_t>& get_directed_broadcasts()
 {
   static std::set<std::uint32_t> result = []() -> std::set<std::uint32_t> {
     std::set<std::uint32_t> broadcasts;
