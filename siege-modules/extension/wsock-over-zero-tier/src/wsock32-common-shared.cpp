@@ -291,62 +291,130 @@ export void ensure_imports()
   }
 }
 
-export std::ostream& get_log(std::string_view log_prefix = "networking")
+export struct safe_log
 {
-  static const std::string stored_log_prefix = std::string{ log_prefix } + ":";
+  std::ostream* stream = nullptr;
 
-  struct debug_string_buf : public std::stringbuf
+  template<class T>
+  safe_log& operator<<(T&& value)
   {
-  protected:
-    int sync() override
+    try
     {
-      constexpr auto small_string_size = std::string{}.capacity();
-
-      auto current_view = view();
-
-      if (!current_view.empty() && current_view.size() <= small_string_size)
+      if (stream)
       {
-        std::string temp(current_view.data(), current_view.size());
-        ::OutputDebugStringA(temp.c_str());
-        str("");
+        *stream << std::forward<T>(value);
       }
-      else if (!current_view.empty())
-      {
-        thread_local std::string temp;
-        temp.reserve(current_view.size());
-        temp.assign(current_view);
-        ::OutputDebugStringA(temp.c_str());
-        str("");
-      }
-      return 0;
     }
-  };
-
-  thread_local debug_string_buf buffer{};
-  thread_local std::ostream debug_log{ &buffer };
-
-  if (!buffer.view().empty() && buffer.view().back() != '\n')
-  {
-    debug_log << '\n';
+    catch (...)
+    {
+    }
+    return *this;
   }
 
-
-  if (buffer.view().size() > 64)
+  safe_log& operator<<(std::ostream& (*manip)(std::ostream&))
   {
-    debug_log.flush();
+    try
+    {
+      if (stream && manip)
+      {
+        *stream << manip;
+      }
+    }
+    catch (...)
+    {
+    }
+    return *this;
   }
 
-  debug_log << stored_log_prefix;
-  return debug_log;
-}
+  void flush()
+  {
+    try
+    {
+      if (stream)
+      {
+        stream->flush();
+      }
+    }
+    catch (...)
+    {
+    }
+  }
+};
 
-std::ostream& null_log()
+export safe_log get_log(std::string_view log_prefix = "networking")
 {
-  static thread_local std::ostream stream(nullptr);
-  return stream;
+  try
+  {
+    static const std::string stored_log_prefix = std::string{ log_prefix } + ":";
+
+    struct debug_string_buf : public std::stringbuf
+    {
+    protected:
+      int sync() override
+      {
+        try
+        {
+          constexpr auto small_string_size = std::string{}.capacity();
+
+          auto current_view = view();
+
+          if (!current_view.empty() && current_view.size() <= small_string_size)
+          {
+            std::string temp(current_view.data(), current_view.size());
+            ::OutputDebugStringA(temp.c_str());
+            str("");
+          }
+          else if (!current_view.empty())
+          {
+            thread_local std::string temp;
+            temp.reserve(current_view.size());
+            temp.assign(current_view);
+            ::OutputDebugStringA(temp.c_str());
+            str("");
+          }
+        }
+        catch (...)
+        {
+          try
+          {
+            str("");
+          }
+          catch (...)
+          {
+          }
+        }
+        return 0;
+      }
+    };
+
+    thread_local debug_string_buf buffer{};
+    thread_local std::ostream debug_log{ &buffer };
+
+    if (!buffer.view().empty() && buffer.view().back() != '\n')
+    {
+      debug_log << '\n';
+    }
+
+    if (buffer.view().size() > 64)
+    {
+      debug_log.flush();
+    }
+
+    debug_log << stored_log_prefix;
+    return safe_log{ &debug_log };
+  }
+  catch (...)
+  {
+    return safe_log{};
+  }
 }
 
-std::ostream& log_sampled(std::atomic<std::uint64_t>& counter, std::uint64_t count)
+safe_log null_log()
+{
+  return safe_log{};
+}
+
+safe_log log_sampled(std::atomic<std::uint64_t>& counter, std::uint64_t count)
 {
   if (counter.fetch_add(1, std::memory_order_relaxed) % count == 0)
   {
@@ -355,21 +423,21 @@ std::ostream& log_sampled(std::atomic<std::uint64_t>& counter, std::uint64_t cou
   return null_log();
 }
 
-export std::ostream& log_sampled_read()
+export safe_log log_sampled_read()
 {
   static std::atomic<std::uint64_t> counter{};
-  
+
   return log_sampled(counter, 20011);
 }
 
-export std::ostream& log_sampled_write()
+export safe_log log_sampled_write()
 {
   static std::atomic<std::uint64_t> counter{};
 
   return log_sampled(counter, 5003);
 }
 
-export std::ostream& log_sampled_check()
+export safe_log log_sampled_check()
 {
   static std::atomic<std::uint64_t> counter{};
 
