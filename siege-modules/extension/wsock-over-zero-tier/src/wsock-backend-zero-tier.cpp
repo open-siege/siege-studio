@@ -659,6 +659,40 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
   {
     auto address_and_size = copy_address(addr, namelen);
 
+    // computing a fallback in the rare case the IP comes from a real adapter
+    if (auto& subnets = get_subnets(); address_and_size.first.sin_family == ZTS_AF_INET && 
+        address_and_size.first.sin_addr.S_addr != ZTS_INADDR_ANY &&
+        !subnets.empty())
+    {
+      auto ip = address_and_size.first.sin_addr.S_addr;
+      bool on_network = false;
+      for (auto [network, mask] : subnets)
+      {
+        if ((ip & mask) == network)
+        {
+          on_network = true;
+          break;
+        }
+      }
+      if (!on_network)
+      {
+        auto zt_id = get_network_id();
+
+        if (zt_id)
+        {
+          char ipstr[ZTS_IP_MAX_STR_LEN] = { 0 };
+          zts_addr_get_str(*zt_id, ZTS_AF_INET, ipstr, ZTS_IP_MAX_STR_LEN);
+
+          auto zt_addr = imports->inet_addr(ipstr);
+          address_and_size.first.sin_addr.S_addr = zt_addr == INADDR_NONE ? ZTS_INADDR_ANY : zt_addr;
+        }
+        else
+        {
+          address_and_size.first.sin_addr.S_addr = ZTS_INADDR_ANY;
+        }
+      }
+    }
+
     auto zt_result = zts_bsd_bind(to_zts(ws), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
     return zt_to_winsock_result(zt_result);

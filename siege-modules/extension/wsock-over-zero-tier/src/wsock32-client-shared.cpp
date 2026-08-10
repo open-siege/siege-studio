@@ -1674,10 +1674,8 @@ int __stdcall siege_WSAIoctl(SOCKET s, DWORD controlCode, LPVOID inBuffer, DWORD
 
 SOCKET __stdcall siege_WSAAccept(SOCKET s, sockaddr* addr, LPINT addrlen, LPCONDITIONPROC lpfnCondition, DWORD_PTR dwCallbackData)
 {
-
   if (!use_custom_backend())
   {
-
     return imports->WSAAccept(s, addr, addrlen, lpfnCondition, dwCallbackData);
   }
 
@@ -1898,6 +1896,165 @@ auto __stdcall siege_inet_ntop(int family, const void* addr, char* buf, std::siz
   return imports->inet_ntop(family, addr, buf, buf_size);
 }
 
+auto __stdcall siege_inet_pton(int family, char* source, void* target)
+{
+  ensure_imports();
+  get_log() << "siege_inet_pton " << '\n';
+  return imports->inet_pton(family, source, target);
+}
+
+int __stdcall siege_getnameinfo(const sockaddr* address, socklen_t address_length, char* host, DWORD host_length, char* service, DWORD service_length, int flags)
+{
+  ensure_imports();
+  if (!use_custom_backend())
+  {
+    return imports->getnameinfo(address, address_length, host, host_length, service, service_length, flags);
+  }
+
+  if (!address || address_length < static_cast<socklen_t>(sizeof(sockaddr_in)) || address->sa_family != AF_INET)
+  {
+    if (address && address->sa_family != AF_INET && imports->getnameinfo)
+    {
+      return imports->getnameinfo(address, address_length, host, host_length, service, service_length, flags);
+    }
+    imports->WSASetLastError(WSAEAFNOSUPPORT);
+    return WSAEAFNOSUPPORT;
+  }
+
+  const auto* in4 = reinterpret_cast<const sockaddr_in*>(address);
+
+  if (host && host_length > 0)
+  {
+    host[0] = '\0';
+    const bool want_numeric = (flags & NI_NUMERICHOST) != 0;
+    bool wrote_name = false;
+
+    if (!want_numeric)
+    {
+      auto* reverse = siege_gethostbyaddr(reinterpret_cast<const char*>(&in4->sin_addr), static_cast<int>(sizeof(in4->sin_addr)), AF_INET);
+      if (reverse && reverse->h_name && *reverse->h_name)
+      {
+        std::string_view name = reverse->h_name;
+        if ((flags & NI_NOFQDN) != 0)
+        {
+          if (auto dot = name.find('.'); dot != std::string_view::npos)
+          {
+            name = name.substr(0, dot);
+          }
+        }
+        if (name.size() >= host_length)
+        {
+          imports->WSASetLastError(WSAEFAULT);
+          return WSAEFAULT;
+        }
+        std::memcpy(host, name.data(), name.size());
+        host[name.size()] = '\0';
+        wrote_name = true;
+      }
+      else if ((flags & NI_NAMEREQD) != 0)
+      {
+        imports->WSASetLastError(WSAHOST_NOT_FOUND);
+        return WSAHOST_NOT_FOUND;
+      }
+    }
+
+    if (!wrote_name)
+    {
+      if (!imports->inet_ntop(AF_INET, &in4->sin_addr, host, host_length))
+      {
+        auto error = imports->WSAGetLastError();
+        return error != 0 ? error : WSAEINVAL;
+      }
+    }
+  }
+
+  if (service && service_length > 0)
+  {
+    service[0] = '\0';
+    const bool want_numeric = (flags & NI_NUMERICSERV) != 0;
+    bool wrote_service = false;
+
+    if (!want_numeric)
+    {
+      const char* proto = (flags & NI_DGRAM) != 0 ? "udp" : "tcp";
+      if (auto* entry = siege_getservbyport(in4->sin_port, proto); entry && entry->s_name && *entry->s_name)
+      {
+        auto name = std::string_view{ entry->s_name };
+        if (name.size() >= service_length)
+        {
+          imports->WSASetLastError(WSAEFAULT);
+          return WSAEFAULT;
+        }
+        std::memcpy(service, name.data(), name.size());
+        service[name.size()] = '\0';
+        wrote_service = true;
+      }
+    }
+
+    if (!wrote_service)
+    {
+      auto port = imports->ntohs(in4->sin_port);
+      auto written = std::snprintf(service, service_length, "%u", static_cast<unsigned>(port));
+      if (written < 0 || static_cast<DWORD>(written) >= service_length)
+      {
+        imports->WSASetLastError(WSAEFAULT);
+        return WSAEFAULT;
+      }
+    }
+  }
+
+  imports->WSASetLastError(0);
+  return 0;
+}
+
+int __stdcall siege_GetNameInfoW(const sockaddr* address, socklen_t address_length, wchar_t* host, DWORD host_length, wchar_t* service, DWORD service_length, int flags)
+{
+  ensure_imports();
+  if (!use_custom_backend())
+  {
+    if (imports->GetNameInfoW)
+    {
+      return imports->GetNameInfoW(address, address_length, host, host_length, service, service_length, flags);
+    }
+  }
+
+  std::array<char, NI_MAXHOST> host_a{};
+  std::array<char, NI_MAXSERV> service_a{};
+  char* host_ptr = host && host_length > 0 ? host_a.data() : nullptr;
+  char* service_ptr = service && service_length > 0 ? service_a.data() : nullptr;
+  DWORD host_a_len = host_ptr ? static_cast<DWORD>(host_a.size()) : 0;
+  DWORD service_a_len = service_ptr ? static_cast<DWORD>(service_a.size()) : 0;
+
+  auto result = siege_getnameinfo(address, address_length, host_ptr, host_a_len, service_ptr, service_a_len, flags);
+  if (result != 0)
+  {
+    return result;
+  }
+
+  if (host && host_length > 0)
+  {
+    auto needed = ::MultiByteToWideChar(CP_ACP, 0, host_a.data(), -1, host, static_cast<int>(host_length));
+    if (needed == 0)
+    {
+      imports->WSASetLastError(WSAEFAULT);
+      return WSAEFAULT;
+    }
+  }
+
+  if (service && service_length > 0)
+  {
+    auto needed = ::MultiByteToWideChar(CP_ACP, 0, service_a.data(), -1, service, static_cast<int>(service_length));
+    if (needed == 0)
+    {
+      imports->WSASetLastError(WSAEFAULT);
+      return WSAEFAULT;
+    }
+  }
+
+  imports->WSASetLastError(0);
+  return 0;
+}
+
 
 auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, WSAOVERLAPPED* overlapped, DWORD* transferred, BOOL wait, DWORD* flags)
 {
@@ -1974,7 +2131,7 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
     return imports->WSARecvFrom(socket, buffers, buffer_count, bytes_received, flags, from, from_len, overlapped, completion_handler);
   }
 
-  get_log() << "siege_WSARecvFrom called.\n";
+  log_sampled_read() << "siege_WSARecvFrom called.\n";
 
   if (!flags)
   {

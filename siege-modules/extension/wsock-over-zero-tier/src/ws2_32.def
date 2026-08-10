@@ -76,6 +76,7 @@ EXPORTS
 	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
 	WSACancelBlockingCall=siege_WSACancelBlockingCall
 	WSAIsBlocking=siege_WSAIsBlocking
+	siege_WSAIsBlocking @114
 	WSAAsyncGetHostByAddr=siege_WSAAsyncGetHostByAddr
 	siege_WSAAsyncGetHostByAddr @102
 	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
@@ -113,3 +114,7 @@ EXPORTS
 	freeaddrinfo=siege_freeaddrinfo
 	siege_freeaddrinfo @97
 	inet_ntop=siege_inet_ntop
+	inet_pton=siege_inet_pton
+	getnameinfo=siege_getnameinfo
+	GetNameInfoA=siege_getnameinfo
+	GetNameInfoW=siege_GetNameInfoW

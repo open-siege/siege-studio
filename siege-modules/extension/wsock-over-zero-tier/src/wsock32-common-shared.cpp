@@ -110,6 +110,9 @@ export struct wsock_imports
   decltype(::getaddrinfo)* getaddrinfo = nullptr;
   decltype(::freeaddrinfo)* freeaddrinfo = nullptr;
   decltype(::inet_ntop)* inet_ntop = nullptr;
+  decltype(::inet_pton)* inet_pton = nullptr;
+  decltype(::getnameinfo)* getnameinfo = nullptr;
+  decltype(::GetNameInfoW)* GetNameInfoW = nullptr;
 #endif
 };
 
@@ -189,6 +192,9 @@ export wsock_imports load_wsock_imports(HMODULE module)
   imports.getaddrinfo = (decltype(imports.getaddrinfo))::GetProcAddress(module, "getaddrinfo");
   imports.freeaddrinfo = (decltype(imports.freeaddrinfo))::GetProcAddress(module, "freeaddrinfo");
   imports.inet_ntop = (decltype(imports.inet_ntop))::GetProcAddress(module, "inet_ntop");
+  imports.inet_pton = (decltype(imports.inet_pton))::GetProcAddress(module, "inet_pton");
+  imports.getnameinfo = (decltype(imports.getnameinfo))::GetProcAddress(module, "getnameinfo");
+  imports.GetNameInfoW = (decltype(imports.GetNameInfoW))::GetProcAddress(module, "GetNameInfoW");
 #endif
 
   return imports;
