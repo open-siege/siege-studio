@@ -52,6 +52,12 @@ socket_handle_info& get_socket_handles()
   return info;
 }
 
+auto zt_lock()
+{
+  static std::mutex main;
+  return std::lock_guard<std::mutex>{ main };
+}
+
 std::optional<std::uint64_t> get_network_id();
 std::optional<std::string> get_peer_id_and_public_key();
 std::shared_ptr<char> get_shared_current_ip_address_storage();
@@ -81,6 +87,7 @@ int to_zts(SOCKET);
 extern "C" {
 int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
 {
+  auto _ = zt_lock();
   ensure_imports();
   get_log("backend.zero-tier") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
   auto result = imports->WSAStartup(version, data);
@@ -183,6 +190,7 @@ int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
 
 int __stdcall backend_WSACleanup()
 {
+  auto _ = zt_lock();
   ensure_imports();
   get_log() << "siege_WSACleanup";
 
@@ -209,6 +217,7 @@ static_assert(IPPROTO_RAW == ZTS_IPPROTO_RAW);
 static_assert(AF_INET == ZTS_AF_INET);
 SOCKET __stdcall backend_socket(int af, int type, int protocol)
 {
+  auto _ = zt_lock();
   ensure_imports();
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
@@ -284,6 +293,7 @@ static_assert(SO_LINGER == ZTS_SO_LINGER);
 static_assert(SOL_SOCKET != ZTS_SOL_SOCKET);
 int __stdcall backend_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
 {
+  auto _ = zt_lock();
   get_log() << "siege_setsockopt: " << ws << " " << optname;
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -336,6 +346,7 @@ int __stdcall backend_setsockopt(SOCKET ws, int level, int optname, const char* 
 
 int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval, int* optlen)
 {
+  auto _ = zt_lock();
   get_log() << "siege_getsockopt" << to_zts(ws) << " " << optname;
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -419,6 +430,7 @@ int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval
 
 int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr* from, int* fromLen) noexcept
 {
+  auto _ = zt_lock();
   imports->WSASetLastError(0);
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -467,6 +479,7 @@ int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockadd
 
 int __stdcall backend_getsockname(SOCKET ws, sockaddr* name, int* length)
 {
+  auto _ = zt_lock();
   get_log() << "siege_getsockname\n";
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -502,6 +515,7 @@ int __stdcall backend_getsockname(SOCKET ws, sockaddr* name, int* length)
 
 int __stdcall backend_getpeername(SOCKET ws, sockaddr* name, int* length)
 {
+  auto _ = zt_lock();
   get_log() << "siege_getpeername\n";
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -544,6 +558,7 @@ static_assert(IOC_IN == ZTS_IOC_IN);
 static_assert(IOC_INOUT == ZTS_IOC_INOUT);
 int __stdcall backend_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 {
+  auto _ = zt_lock();
   if (cmd != FIONREAD)
   {
     get_log() << "siege_ioctlsocket, cmd: " << ioctl_cmd_to_string(cmd);
@@ -563,6 +578,7 @@ int __stdcall backend_ioctlsocket(SOCKET ws, long cmd, u_long* argp)
 
 int __stdcall backend_listen(SOCKET ws, int backlog)
 {
+  auto _ = zt_lock();
   get_log() << "siege_listen\n";
 
   if (!get_socket_handles().contains(to_zts(ws)))
@@ -582,6 +598,7 @@ int __stdcall backend_listen(SOCKET ws, int backlog)
 
 SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
 {
+  auto _ = zt_lock();
   log_sampled_check() << "siege_accept\n";
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -625,6 +642,7 @@ SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
 
 int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen)
 {
+  auto _ = zt_lock();
   get_log() << "siege_connect " << to_zts(ws);
 
   if (!get_socket_handles().contains(to_zts(ws)))
@@ -654,6 +672,7 @@ int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen)
 
 int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {
+  auto _ = zt_lock();
   get_log() << "siege_bind " << ws << std::endl;
 
   if (!get_socket_handles().contains(to_zts(ws)))
@@ -721,6 +740,7 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
 
 int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {
+  auto _ = zt_lock();
   if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
@@ -852,6 +872,7 @@ static_assert(SD_BOTH == ZTS_SHUT_RDWR);
 #endif
 int __stdcall backend_shutdown(SOCKET ws, int how)
 {
+  auto _ = zt_lock();
   get_log() << "siege_shutdown\n";
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -869,6 +890,7 @@ int __stdcall backend_shutdown(SOCKET ws, int how)
 
 int __stdcall backend_closesocket(SOCKET ws)
 {
+  auto _ = zt_lock();
   get_log() << "siege_closesocket\n";
   if (!get_socket_handles().contains(to_zts(ws)))
   {
@@ -887,6 +909,9 @@ int __stdcall backend_closesocket(SOCKET ws)
 
 int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
+  // TODO we actually need to do shorter selects and lock between each so that
+  // other threads have a chance to keep doing socket work
+  auto _ = zt_lock();
   zts_fd_set zt_read{};
   zts_fd_set* final_read = nullptr;
 
@@ -1017,6 +1042,7 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
 
 int __stdcall backend___WSAFDIsSet(SOCKET ws, fd_set* set)
 {
+  auto _ = zt_lock();
   if (!get_socket_handles().contains(to_zts(ws)))
   {
     get_log() << "Non zero tier socket passed in" << std::endl;
@@ -1043,6 +1069,7 @@ int __stdcall backend___WSAFDIsSet(SOCKET ws, fd_set* set)
 
 hostent* __stdcall backend_gethostbyname(const char* name)
 {
+  auto _ = zt_lock();
   ensure_imports();
   if (name)
   {
