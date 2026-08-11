@@ -2578,7 +2578,7 @@ namespace siege::views
 
       if (dir_entry.is_directory())
       {
-        for (auto const& sub_entry : fs::directory_iterator{ self.loaded_path.parent_path() })
+        for (auto const& sub_entry : fs::directory_iterator{ dir_entry.path() })
         {
           process_entry(sub_entry);
         }
