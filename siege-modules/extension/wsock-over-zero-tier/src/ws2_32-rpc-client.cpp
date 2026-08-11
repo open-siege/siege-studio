@@ -113,14 +113,12 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
 }
 
 template<typename TParam, int MessageId, typename TReturn = int>
-TReturn send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, std::function<void(TParam*)> on_finish = nullptr)
+TReturn send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init, std::function<void(LRESULT, TParam*)> on_finish = nullptr)
 {
   auto data = get_global_memory(sizeof(TParam));
   auto* params = init(data->second.data());
-  auto atom = data->first;
   DWORD_PTR return_value = 0;
   auto result = ::SendMessageTimeoutW(server_info.server, MessageId, (WPARAM)socket, (LPARAM)data->first, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
-  data.reset();
 
   if (!result)
   {
@@ -131,9 +129,9 @@ TReturn send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init
   if (return_value == SOCKET_ERROR)
   {
     int last_error = WSAESOCKTNOSUPPORT;
-    if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
+    if (params->last_error)
     {
-      last_error = server_last_error;
+      last_error = params->last_error;
     }
     imports->WSASetLastError(last_error);
     return SOCKET_ERROR;
@@ -143,9 +141,8 @@ TReturn send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init
 
   if (on_finish)
   {
-    auto data = get_global_memory(sizeof(TParam), atom);
     auto* params = (TParam*)data->second.data();
-    on_finish(params);
+    on_finish(static_cast<LRESULT>(return_value), params);
   }
 
   return static_cast<TReturn>(return_value);
@@ -305,38 +302,12 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
 
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
-  socket_params params{ .address_family = af, .type = type, .protocol = protocol };
-
-  auto data = get_global_memory(sizeof(params));
-  std::memcpy(data->second.data(), &params, sizeof(params));
-  DWORD_PTR new_socket = 0;
-  auto result = ::SendMessageTimeoutW(server_info.server, socket_params::message_id, 0, (LPARAM)data->first, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &new_socket);
-  data.reset();
-
-  if (!result)
-  {
-    get_log() << "Did not receive a successful result";
-    imports->WSASetLastError(WSAESOCKTNOSUPPORT);
-    return INVALID_SOCKET;
-  }
-
-  if ((SOCKET)new_socket == INVALID_SOCKET)
-  {
-    get_log() << "Received invalid socket";
-    int last_error = WSAESOCKTNOSUPPORT;
-    if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
-    {
-      last_error = server_last_error;
-    }
-    imports->WSASetLastError(last_error);
-    return INVALID_SOCKET;
-  }
-
-
-  get_socket_handles().insert(new_socket, type, socket_handle_info::overlapped_state::overlapped);
-  imports->WSASetLastError(0);
-  get_log() << "Returning new socket " << (std::size_t)new_socket;
-  return (SOCKET)new_socket;
+  return send_message_to_server<socket_params, socket_params::message_id, SOCKET>(0, [=](void* raw) {
+    return new (raw) socket_params{ .address_family = af, .type = type, .protocol = protocol };
+  }, [=](LRESULT new_socket, socket_params*) {
+    get_socket_handles().insert(new_socket, type, socket_handle_info::overlapped_state::overlapped);
+    get_log() << "Returning new socket " << (std::size_t)new_socket;
+  });
 }
 
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
@@ -452,7 +423,7 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
         auto len = std::clamp<int>(*optlen, 0, params->option_data.size());
         params->option_length = len;
       }
-      return params; }, [=](sockopt_params* params) {
+      return params; }, [=](LRESULT, sockopt_params* params) {
 
           if (optval && optlen)
           {
@@ -508,7 +479,7 @@ int __stdcall siege_ioctlsocket(SOCKET ws, long cmd, u_long* argp) noexcept
       {
         params->argument = *argp;
       } 
-      return params; }, [=](ioctl_params* params) { if (argp)
+      return params; }, [=](LRESULT, ioctl_params* params) { if (argp)
       {
         *argp = params->argument;
         } });
@@ -556,10 +527,11 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
         std::memcpy(&params->from_address, from, params->from_address_size);
       }
 
-      return params; }, [&](recvfrom_params* params) {
-      if (buf && len && buffer_memory)
+      return params; }, [&](LRESULT received, recvfrom_params* params) {
+      if (buf && len && buffer_memory && received > 0)
       {
-        std::memcpy(buf, buffer_memory->second.data(), params->buffer_length);
+        auto size = std::min({ static_cast<std::size_t>(received), static_cast<std::size_t>(len), buffer_memory->second.size() });
+        std::memcpy(buf, buffer_memory->second.data(), size);
       }
 
       if (from && fromLen)
@@ -620,7 +592,7 @@ int __stdcall siege_getsockname(SOCKET ws, sockaddr* name, int* length)
         params->address_size = std::clamp<int>(*length, 0, sizeof(params->address));
       }
 
-      return params; }, [=](sockname_params* params) {
+      return params; }, [=](LRESULT, sockname_params* params) {
           
       if (name && length)
       {
@@ -646,7 +618,7 @@ int __stdcall siege_getpeername(SOCKET ws, sockaddr* name, int* length) noexcept
         params->address_size = std::clamp<int>(*length, 0, sizeof(params->address));
       }
 
-      return params; }, [=](sockname_params* params) {
+      return params; }, [=](LRESULT, sockname_params* params) {
           
       if (name && length)
       {
@@ -699,7 +671,7 @@ SOCKET __stdcall siege_accept(SOCKET ws, sockaddr* from, int* fromLen) noexcept
         std::memcpy(&params->from_address, from, params->from_address_size);
       }
 
-      return params; }, [=](accept_params* params) {
+      return params; }, [=](LRESULT, accept_params* params) {
       if (from && fromLen)
       {
         auto len = std::clamp<int>(params->from_address_size, 0, *fromLen);
@@ -922,27 +894,9 @@ int __stdcall siege_shutdown(SOCKET ws, int how)
   get_log() << "siege_shutdown";
   if (use_custom_backend())
   {
-    DWORD_PTR return_value{};
-    auto result = ::SendMessageTimeoutW(server_info.server, general_params::shutdown_message_id, (WPARAM)ws, (LPARAM)how, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
-
-    if (!result)
-    {
-      imports->WSASetLastError(WSAESOCKTNOSUPPORT);
-      return SOCKET_ERROR;
-    }
-
-    if (return_value == SOCKET_ERROR)
-    {
-      int last_error = WSAESOCKTNOSUPPORT;
-      if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
-      {
-        last_error = server_last_error;
-      }
-      imports->WSASetLastError(last_error);
-      return SOCKET_ERROR;
-    }
-
-    return (int)return_value;
+    return send_message_to_server<general_params, general_params::shutdown_message_id>(ws, [=](void* raw) {
+      return new (raw) general_params{ .how = how };
+    });
   }
   return imports->shutdown(ws, how);
 }
@@ -957,28 +911,16 @@ int __stdcall siege_closesocket(SOCKET ws)
     return imports->closesocket(ws);
   }
 
-  DWORD_PTR return_value{};
-  auto result = ::SendMessageTimeoutW(server_info.server, general_params::close_message_id, (WPARAM)ws, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_NOTIMEOUTIFNOTHUNG, 1000, &return_value);
+  auto result = send_message_to_server<general_params, general_params::close_message_id>(ws, [](void* raw) {
+    return new (raw) general_params{};
+  });
 
-  if (!result)
+  if (result != SOCKET_ERROR)
   {
-    imports->WSASetLastError(WSAESOCKTNOSUPPORT);
-    return SOCKET_ERROR;
+    get_socket_handles().close(ws);
   }
 
-  if (return_value == SOCKET_ERROR)
-  {
-    int last_error = WSAESOCKTNOSUPPORT;
-    if (auto server_last_error = (int)::GetPropW(server_info.server, L"LastError"); server_last_error)
-    {
-      last_error = server_last_error;
-    }
-    imports->WSASetLastError(last_error);
-    return SOCKET_ERROR;
-  }
-
-  get_socket_handles().close(ws);
-  return (int)return_value;
+  return result;
 }
 
 int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout) noexcept
@@ -1031,7 +973,7 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
       {
         params->except_set = *except;
       }
-      return params; }, [&](select_params* params) {
+      return params; }, [&](LRESULT, select_params* params) {
       staging_read = params->read_set;
       staging_write = params->write_set;
       staging_except = params->except_set; });
@@ -1079,6 +1021,21 @@ int __stdcall siege_select(int value, fd_set* read, fd_set* write, fd_set* excep
     std::this_thread::sleep_for(sleep_time);
 
   } while (std::chrono::steady_clock::now() < end);
+
+  if (read)
+  {
+    *read = staging_read;
+  }
+
+  if (write)
+  {
+    *write = staging_write;
+  }
+
+  if (except)
+  {
+    *except = staging_except;
+  }
 
   return 0;
 }
@@ -1133,7 +1090,7 @@ hostent* __stdcall siege_gethostbyname(const char* name) noexcept
         std::memcpy(params->host_name.data(), name, size);
         params->host_name[size] = '\0';
       }
-      return params; }, [=](hostbyname_params* params) {
+      return params; }, [=](LRESULT, hostbyname_params* params) {
       if (!params->has_result || params->result.addresses_length <= 0)
       {
         return;

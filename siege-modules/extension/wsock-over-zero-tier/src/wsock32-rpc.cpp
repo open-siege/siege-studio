@@ -11,9 +11,12 @@ export struct general_params
 {
   constexpr static auto shutdown_message_id = WM_APP + 1;
   constexpr static auto close_message_id = shutdown_message_id + 1;
+  int last_error;
+  int how; // shutdown only
 };
+static_assert(std::is_trivially_copyable_v<general_params>);
 
-export struct socket_params
+export struct socket_params : general_params
 {
   constexpr static auto message_id = general_params::close_message_id + 1;
 
@@ -23,7 +26,7 @@ export struct socket_params
 };
 static_assert(std::is_trivially_copyable_v<socket_params>);
 
-export struct ioctl_params
+export struct ioctl_params : general_params
 {
   constexpr static auto message_id = socket_params::message_id + 1;
 
@@ -32,7 +35,7 @@ export struct ioctl_params
 };
 static_assert(std::is_trivially_copyable_v<ioctl_params>);
 
-export struct sockopt_params
+export struct sockopt_params : general_params
 {
   constexpr static auto get_message_id = ioctl_params::message_id + 1;
   constexpr static auto set_message_id = get_message_id + 1;
@@ -44,7 +47,7 @@ export struct sockopt_params
 };
 static_assert(std::is_trivially_copyable_v<sockopt_params>);
 
-export struct bind_params
+export struct bind_params : general_params
 {
   constexpr static auto bind_message_id = sockopt_params::set_message_id + 1;
   constexpr static auto connect_message_id = bind_message_id + 1;
@@ -55,7 +58,7 @@ export struct bind_params
 static_assert(std::is_trivially_copyable_v<bind_params>);
 
 
-export struct listen_params
+export struct listen_params : general_params
 {
   constexpr static auto message_id = bind_params::connect_message_id + 1;
 
@@ -63,7 +66,7 @@ export struct listen_params
 };
 static_assert(std::is_trivially_copyable_v<listen_params>);
 
-export struct accept_params
+export struct accept_params : general_params
 {
   constexpr static auto message_id = listen_params::message_id + 1;
 
@@ -73,7 +76,7 @@ export struct accept_params
 static_assert(std::is_trivially_copyable_v<accept_params>);
 
 
-export struct sendto_params
+export struct sendto_params : general_params
 {
   constexpr static auto message_id = accept_params::message_id + 1;
 
@@ -85,7 +88,7 @@ export struct sendto_params
 };
 static_assert(std::is_trivially_copyable_v<sendto_params>);
 
-export struct recvfrom_params
+export struct recvfrom_params : general_params
 {
   constexpr static auto message_id = sendto_params::message_id + 1;
 
@@ -97,7 +100,7 @@ export struct recvfrom_params
 };
 static_assert(std::is_trivially_copyable_v<recvfrom_params>);
 
-export struct select_params
+export struct select_params : general_params
 {
   constexpr static auto message_id = recvfrom_params::message_id + 1;
 
@@ -108,7 +111,7 @@ export struct select_params
 };
 static_assert(std::is_trivially_copyable_v<select_params>);
 
-export struct isset_params
+export struct isset_params : general_params
 {
   constexpr static auto message_id = select_params::message_id + 1;
   fd_set set_to_check;
@@ -116,7 +119,7 @@ export struct isset_params
 
 static_assert(std::is_trivially_copyable_v<recvfrom_params>);
 
-export struct sockname_params
+export struct sockname_params : general_params
 {
   constexpr static auto sock_name_message_id = isset_params::message_id + 1;
   constexpr static auto peer_name_message_id = sock_name_message_id + 1;
@@ -126,7 +129,7 @@ export struct sockname_params
 };
 static_assert(std::is_trivially_copyable_v<sockname_params>);
 
-export struct hostbyname_params
+export struct hostbyname_params : general_params
 {
   constexpr static auto message_id = sockname_params::peer_name_message_id + 1;
 

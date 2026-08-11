@@ -20,7 +20,7 @@ inline static bool keep_alive_timer_started = false;
 std::optional<backend_imports> backend;
 decltype(::WSAGetLastError)* wsock_WSAGetLastError = nullptr;
 
-std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
+std::expected<std::span<char>, LRESULT> get_value([[maybe_unused]] HWND window, LPARAM lparam)
 {
   static std::array<wchar_t, 256> temp{};
 
@@ -36,7 +36,6 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
   std::fill(temp.begin(), temp.end(), '\0');
   if (::GlobalGetAtomNameW((ATOM)lparam, temp.data(), (int)temp.size()) == 0)
   {
-    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     return std::unexpected(SOCKET_ERROR);
   }
 
@@ -53,7 +52,6 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
 
   if (!shared_memory)
   {
-    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     return std::unexpected(SOCKET_ERROR);
   }
 
@@ -65,7 +63,6 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
 
   if (!data)
   {
-    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     return std::unexpected(SOCKET_ERROR);
   }
 
@@ -74,7 +71,6 @@ std::expected<std::span<char>, LRESULT> get_value(HWND window, LPARAM lparam)
 
   if (query_result == 0)
   {
-    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     ::UnmapViewOfFile(data);
     return std::unexpected(SOCKET_ERROR);
   }
@@ -92,13 +88,11 @@ std::expected<TParam*, LRESULT> get_value(HWND window, LPARAM lparam)
 
   if (!result)
   {
-    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     return std::unexpected(SOCKET_ERROR);
   }
 
   if (result->size() < sizeof(TParam))
   {
-    ::SetPropW(window, L"LastError", (HANDLE)WSA_INVALID_PARAMETER);
     return std::unexpected(SOCKET_ERROR);
   }
 
@@ -149,7 +143,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       // backend always creates sockets as non-blocking by default
       auto result = backend->socket(params.address_family, params.type, params.protocol);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
 
       return result;
     }
@@ -167,7 +161,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       auto& params = *value.value();
 
       auto result = backend->ioctlsocket((SOCKET)wparam, params.command, &params.argument);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -183,7 +177,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       auto& params = *value.value();
 
       auto result = backend->getsockopt((SOCKET)wparam, params.level, params.optname, params.option_data.data(), &params.option_length);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -199,7 +193,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       auto& params = *value.value();
 
       auto result = backend->setsockopt((SOCKET)wparam, params.level, params.optname, params.option_data.data(), params.option_length);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -219,7 +213,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       sockaddr* address = params.address_size == 0 ? nullptr : (sockaddr*)&params.address;
 
       auto result = func((SOCKET)wparam, address, params.address_size);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -234,7 +228,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto& params = *value.value();
       auto result = backend->listen((SOCKET)wparam, params.backlog);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -254,7 +248,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto result = backend->accept((SOCKET)wparam, address, address_size);
 
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -279,7 +273,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       sockaddr* address = params.to_address_size == 0 ? nullptr : (sockaddr*)&params.to_address;
 
       auto result = backend->sendto((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, params.to_address_size);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -305,7 +299,7 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       auto result = backend->recvfrom((SOCKET)wparam, data->data(), params.buffer_length, params.flags, address, address_size);
 
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -323,7 +317,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       params.host_name.back() = '\0';
 
       auto result = backend->gethostbyname(params.host_name.data());
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
 
       if (result && result->h_name)
       {
@@ -378,21 +372,37 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       timeval zero{};
       auto result = backend->select(params.fd_set_count, &params.read_set, &params.write_set, &params.except_set, &zero);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
     if (message == general_params::close_message_id)
     {
+      auto value = get_value<general_params>(*this, lparam);
+
+      if (!value)
+      {
+        return value.error();
+      }
+
+      auto& params = *value.value();
       auto result = backend->closesocket((SOCKET)wparam);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
     if (message == general_params::shutdown_message_id)
     {
-      auto result = backend->shutdown((SOCKET)wparam, (int)lparam);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      auto value = get_value<general_params>(*this, lparam);
+
+      if (!value)
+      {
+        return value.error();
+      }
+
+      auto& params = *value.value();
+      auto result = backend->shutdown((SOCKET)wparam, params.how);
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -408,7 +418,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       auto& params = *value.value();
 
       auto result = backend->__WSAFDIsSet((SOCKET)wparam, &params.set_to_check);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
@@ -428,13 +438,12 @@ struct wsock_window : win32::basic_window<wsock_window>
       int* address_size = params.address_size == 0 ? nullptr : &params.address_size;
 
       auto result = func((SOCKET)wparam, address, address_size);
-      ::SetPropW(*this, L"LastError", (HANDLE)wsock_WSAGetLastError());
+      params.last_error = wsock_WSAGetLastError();
       return result;
     }
 
     if (message == WM_DESTROY)
     {
-      ::RemovePropW(*this, L"LastError");
       ::RemovePropW(*this, L"IsOnline");
       ::PostQuitMessage(0);
     }
