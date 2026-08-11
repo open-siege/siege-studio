@@ -7,23 +7,24 @@ EXPORTS
 	closesocket=siege_closesocket
 	siege_connect @4
 	connect=siege_connect
-	siege_getsockname @6
-	getsockname=siege_getsockname
 	siege_getpeername @5
 	getpeername=siege_getpeername
+	siege_getsockname @6
+	getsockname=siege_getsockname
+	siege_getsockopt @7
+	getsockopt=siege_getsockopt
 	siege_htonl @8
 	htonl=siege_htonl
 	siege_htons @9
 	htons=siege_htons
+	siege_ioctlsocket @10
+	ioctlsocket=siege_ioctlsocket
 	siege_inet_addr @11
 	inet_addr=siege_inet_addr
 	siege_inet_ntoa @12
 	inet_ntoa=siege_inet_ntoa
-	siege_ioctlsocket @10
-	siege_gethostbyaddr @51
-	gethostbyaddr=siege_gethostbyaddr
-	ioctlsocket=siege_ioctlsocket
-	WSAIoctl=siege_WSAIoctl
+	siege_listen @13
+	listen=siege_listen
 	siege_ntohl @14
 	ntohl=siege_ntohl
 	siege_ntohs @15
@@ -32,8 +33,6 @@ EXPORTS
 	recv=siege_recv
 	siege_recvfrom @17
 	recvfrom=siege_recvfrom
-	siege_listen @13
-	listen=siege_listen
 	siege_select @18
 	select=siege_select
 	siege_send @19
@@ -42,16 +41,24 @@ EXPORTS
 	sendto=siege_sendto
 	siege_setsockopt @21
 	setsockopt=siege_setsockopt
-	siege_getsockopt @7
-	getsockopt=siege_getsockopt
+	siege_shutdown @22
 	shutdown=siege_shutdown
 	siege_socket @23
 	socket=siege_socket
-	WSASocketW=siege_WSASocketW
-	WSASocketA=siege_WSASocketA
+	siege_GetNameInfoW @33
+	GetNameInfoW=siege_GetNameInfoW
+	siege_WSAAccept @41
+	WSAAccept=siege_WSAAccept
+	siege_WSAAddressToStringA @42
+	WSAAddressToStringA=siege_WSAAddressToStringA
+	siege_WSACloseEvent @45
+	WSACloseEvent=siege_WSACloseEvent
+	siege_WSACreateEvent @50
+	WSACreateEvent=siege_WSACreateEvent
+	siege_gethostbyaddr @51
+	gethostbyaddr=siege_gethostbyaddr
 	siege_gethostbyname @52
 	gethostbyname=siege_gethostbyname
-	gethostbyaddr=siege_gethostbyaddr
 	siege_getprotobyname @53
 	getprotobyname=siege_getprotobyname
 	siege_getprotobynumber @54
@@ -62,59 +69,76 @@ EXPORTS
 	getservbyport=siege_getservbyport
 	siege_gethostname @57
 	gethostname=siege_gethostname
+	siege_WSAEnumNetworkEvents @64
+	WSAEnumNetworkEvents=siege_WSAEnumNetworkEvents
+	siege_WSAEventSelect @67
+	WSAEventSelect=siege_WSAEventSelect
+	siege_WSAGetOverlappedResult @68
+	WSAGetOverlappedResult=siege_WSAGetOverlappedResult
+	siege_WSAIoctl @78
+	WSAIoctl=siege_WSAIoctl
+	siege_WSARecv @91
+	WSARecv=siege_WSARecv
+	siege_WSARecvFrom @93
+	WSARecvFrom=siege_WSARecvFrom
+	siege_WSAResetEvent @95
+	WSAResetEvent=siege_WSAResetEvent
+	siege_WSASend @96
+	WSASend=siege_WSASend
+	siege_WSASendTo @99
+	WSASendTo=siege_WSASendTo
+	siege_WSASetEvent @100
+	WSASetEvent=siege_WSASetEvent
+	siege_WSAAsyncSelect @101
+	WSAAsyncSelect=siege_WSAAsyncSelect
+	siege_WSAAsyncGetHostByAddr @102
+	WSAAsyncGetHostByAddr=siege_WSAAsyncGetHostByAddr
+	siege_WSAAsyncGetHostByName @103
+	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
+	siege_WSAAsyncGetProtoByNumber @104
+	WSAAsyncGetProtoByNumber=siege_WSAAsyncGetProtoByNumber
+	siege_WSAAsyncGetProtoByName @105
+	WSAAsyncGetProtoByName=siege_WSAAsyncGetProtoByName
+	siege_WSAAsyncGetServByPort @106
+	WSAAsyncGetServByPort=siege_WSAAsyncGetServByPort
+	siege_WSAAsyncGetServByName @107
+	WSAAsyncGetServByName=siege_WSAAsyncGetServByName
+	siege_WSACancelAsyncRequest @108
+	WSACancelAsyncRequest=siege_WSACancelAsyncRequest
+	siege_WSASetBlockingHook @109
+	WSASetBlockingHook=siege_WSASetBlockingHook
+	siege_WSAUnhookBlockingHook @110
+	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
 	siege_WSAGetLastError @111
 	WSAGetLastError=siege_WSAGetLastError
-	WSASetLastError=siege_WSASetLastError
 	siege_WSASetLastError @112
+	WSASetLastError=siege_WSASetLastError
+	siege_WSACancelBlockingCall @113
+	WSACancelBlockingCall=siege_WSACancelBlockingCall
+	siege_WSAIsBlocking @114
+	WSAIsBlocking=siege_WSAIsBlocking
 	siege_WSAStartup @115
 	WSAStartup=siege_WSAStartup
 	siege_WSACleanup @116
 	WSACleanup=siege_WSACleanup
+	siege_WSASocketA @119
+	WSASocketA=siege_WSASocketA
+	siege_WSASocketW @120
+	WSASocketW=siege_WSASocketW
+	siege_WSAStringToAddressA @121
+	WSAStringToAddressA=siege_WSAStringToAddressA
+	siege_WSAWaitForMultipleEvents @124
+	WSAWaitForMultipleEvents=siege_WSAWaitForMultipleEvents
 	siege___WSAFDIsSet @151
 	__WSAFDIsSet=siege___WSAFDIsSet
-	WSASetBlockingHook=siege_WSASetBlockingHook
-	WSAUnhookBlockingHook=siege_WSAUnhookBlockingHook
-	WSACancelBlockingCall=siege_WSACancelBlockingCall
-	WSAIsBlocking=siege_WSAIsBlocking
-	siege_WSAIsBlocking @114
-	WSAAsyncGetHostByAddr=siege_WSAAsyncGetHostByAddr
-	siege_WSAAsyncGetHostByAddr @102
-	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
-	siege_WSAAsyncGetHostByName @103
-	WSAAsyncGetProtoByName=siege_WSAAsyncGetProtoByName
-	siege_WSAAsyncGetProtoByName @104
-	WSAAsyncGetProtoByNumber=siege_WSAAsyncGetProtoByNumber
-	siege_WSAAsyncGetProtoByNumber @105
-	WSAAsyncGetServByName=siege_WSAAsyncGetServByName
-	siege_WSAAsyncGetServByName @106
-	WSAAsyncGetServByPort=siege_WSAAsyncGetServByPort
-	siege_WSAAsyncGetServByPort @107
-	WSACancelAsyncRequest=siege_WSACancelAsyncRequest
-	siege_WSACancelAsyncRequest @108
-	WSAAsyncSelect=siege_WSAAsyncSelect
-	WSAStringToAddressA=siege_WSAStringToAddressA
-	WSAAddressToStringA=siege_WSAAddressToStringA
-	WSAAccept=siege_WSAAccept
-	WSAGetOverlappedResult=siege_WSAGetOverlappedResult
-	WSACreateEvent=siege_WSACreateEvent
-	WSAResetEvent=siege_WSAResetEvent
-	WSASetEvent=siege_WSASetEvent
-	WSACloseEvent=siege_WSACloseEvent
-	WSAWaitForMultipleEvents=siege_WSAWaitForMultipleEvents
-	WSASendTo=siege_WSASendTo
-	WSASend=siege_WSASend
-	WSAEventSelect=siege_WSAEventSelect
-	WSAEnumNetworkEvents=siege_WSAEnumNetworkEvents
-	WSARecvFrom=siege_WSARecvFrom
-	siege_WSARecvFrom @93
-	WSARecv=siege_WSARecv
-	siege_WSARecv @91
-	getaddrinfo=siege_getaddrinfo
-	siege_getaddrinfo @98
+	siege_freeaddrinfo @176
 	freeaddrinfo=siege_freeaddrinfo
-	siege_freeaddrinfo @97
-	inet_ntop=siege_inet_ntop
-	inet_pton=siege_inet_pton
+	siege_getaddrinfo @177
+	getaddrinfo=siege_getaddrinfo
+	siege_getnameinfo @178
 	getnameinfo=siege_getnameinfo
 	GetNameInfoA=siege_getnameinfo
-	GetNameInfoW=siege_GetNameInfoW
+	siege_inet_ntop @179
+	inet_ntop=siege_inet_ntop
+	siege_inet_pton @180
+	inet_pton=siege_inet_pton

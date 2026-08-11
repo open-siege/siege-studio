@@ -2460,7 +2460,7 @@ namespace siege::views
     };
 
     result.wsock_32 = supports_name("wsock32");
-    result.ws2_32 = supports_name("ws2_32");
+    result.ws2_32 = supports_name("ws2_32") || supports_name("snmpapi") || supports_name("inetmib1");
     result.dplayx = supports_name("dplayx");
 
     if (!result.dplayx)

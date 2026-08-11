@@ -65,14 +65,14 @@ EXPORTS
 	WSAAsyncGetHostByAddr=siege_WSAAsyncGetHostByAddr
 	siege_WSAAsyncGetHostByName @103
 	WSAAsyncGetHostByName=siege_WSAAsyncGetHostByName
-	siege_WSAAsyncGetProtoByName @104
-	WSAAsyncGetProtoByName=siege_WSAAsyncGetProtoByName
-	siege_WSAAsyncGetProtoByNumber @105
+	siege_WSAAsyncGetProtoByNumber @104
 	WSAAsyncGetProtoByNumber=siege_WSAAsyncGetProtoByNumber
-	siege_WSAAsyncGetServByName @106
-	WSAAsyncGetServByName=siege_WSAAsyncGetServByName
-	siege_WSAAsyncGetServByPort @107
+	siege_WSAAsyncGetProtoByName @105
+	WSAAsyncGetProtoByName=siege_WSAAsyncGetProtoByName
+	siege_WSAAsyncGetServByPort @106
 	WSAAsyncGetServByPort=siege_WSAAsyncGetServByPort
+	siege_WSAAsyncGetServByName @107
+	WSAAsyncGetServByName=siege_WSAAsyncGetServByName
 	siege_WSACancelAsyncRequest @108
 	WSACancelAsyncRequest=siege_WSACancelAsyncRequest
 	siege_WSAGetLastError @111
