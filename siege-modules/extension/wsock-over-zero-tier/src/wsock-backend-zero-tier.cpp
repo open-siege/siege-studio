@@ -55,7 +55,7 @@ socket_handle_info& get_socket_handles()
 auto zt_lock()
 {
   static std::mutex main;
-  return std::lock_guard<std::mutex>{ main };
+  return std::unique_lock<std::mutex>{ main };
 }
 
 std::optional<std::uint64_t> get_network_id();
@@ -907,17 +907,30 @@ int __stdcall backend_closesocket(SOCKET ws)
   return zt_to_winsock_result(zt_result);
 }
 
-int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
+int __stdcall backend_select([[maybe_unused]] int value, fd_set* read, fd_set* write, fd_set* except, const timeval* timeout)
 {
-  // TODO we actually need to do shorter selects and lock between each so that
-  // other threads have a chance to keep doing socket work
-  auto _ = zt_lock();
-  zts_fd_set zt_read{};
-  zts_fd_set* final_read = nullptr;
+  fd_set original_read{};
+  fd_set original_write{};
+  fd_set original_except{};
+
+  if (read)
+  {
+    original_read = *read;
+  }
+
+  if (write)
+  {
+    original_write = *write;
+  }
+
+  if (except)
+  {
+    original_except = *except;
+  }
 
   auto transfer_set_zts = [](auto& source, auto& dest) {
     ZTS_FD_ZERO(&dest);
-    for (auto i = 0; i < source.fd_count; ++i)
+    for (auto i = 0u; i < source.fd_count; ++i)
     {
       auto zts = to_zts(source.fd_array[i]);
       if (!get_socket_handles().contains(zts))
@@ -929,52 +942,9 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
     }
   };
 
-  if (read && read->fd_count)
-  {
-    transfer_set_zts(*read, zt_read);
-    final_read = &zt_read;
-  }
-
-  zts_fd_set zt_write{};
-  zts_fd_set* final_write = nullptr;
-
-  if (write && write->fd_count)
-  {
-    transfer_set_zts(*write, zt_write);
-    final_write = &zt_write;
-  }
-
-  zts_fd_set zt_except{};
-  zts_fd_set* final_except = nullptr;
-
-  if (except && except->fd_count)
-  {
-    transfer_set_zts(*except, zt_except);
-    final_except = &zt_except;
-  }
-
-  zts_timeval timeval{};
-
-  zts_timeval* final_timeval = nullptr;
-
-  if (timeout)
-  {
-    timeval.tv_sec = timeout->tv_sec;
-    timeval.tv_usec = timeout->tv_usec;
-
-    final_timeval = &timeval;
-  }
-
-  auto count = zts_bsd_select(ZTS_FD_SETSIZE, final_read, final_write, final_except, final_timeval);
-
-  if (count == ZTS_ERR_SOCKET || count == ZTS_ERR_SERVICE)
-  {
-    return zt_to_winsock_result(count);
-  }
-
   auto transfer_set_win32 = [](zts_fd_set& source, fd_set& dest) {
     fd_set temp{};
-    for (auto i = 0; i < dest.fd_count; ++i)
+    for (auto i = 0u; i < dest.fd_count; ++i)
     {
       auto zts = to_zts(dest.fd_array[i]);
       if (!get_socket_handles().contains(zts))
@@ -992,52 +962,160 @@ int __stdcall backend_select(int value, fd_set* read, fd_set* write, fd_set* exc
     std::memcpy(&dest, &temp, sizeof(dest));
   };
 
-  if (final_read)
-  {
-    assert(read != nullptr);
-    transfer_set_win32(*final_read, *read);
-  }
-
-  if (final_write)
-  {
-    assert(write != nullptr);
-    transfer_set_win32(*final_write, *write);
-  }
-
-  if (final_except)
-  {
-    assert(except != nullptr);
-    transfer_set_win32(*final_except, *except);
-  }
-
-  // Winsock: connect failure is except-only. lwIP reports failure as write+except.
-  if (write && except && write->fd_count && except->fd_count)
-  {
-    fd_set kept_write{};
-    for (u_int i = 0; i < write->fd_count; ++i)
+  auto finish_ready = [&](zts_fd_set* final_read, zts_fd_set* final_write, zts_fd_set* final_except) {
+    if (read)
     {
-      if (!FD_ISSET(write->fd_array[i], except))
+      *read = original_read;
+      if (final_read)
       {
-        FD_SET(write->fd_array[i], &kept_write);
+        transfer_set_win32(*final_read, *read);
       }
     }
-    *write = kept_write;
+
+    if (write)
+    {
+      *write = original_write;
+      if (final_write)
+      {
+        transfer_set_win32(*final_write, *write);
+      }
+    }
+
+    if (except)
+    {
+      *except = original_except;
+      if (final_except)
+      {
+        transfer_set_win32(*final_except, *except);
+      }
+    }
+
+    // Winsock: connect failure is except-only. lwIP reports failure as write+except.
+    if (write && except && write->fd_count && except->fd_count)
+    {
+      fd_set kept_write{};
+      for (u_int i = 0; i < write->fd_count; ++i)
+      {
+        if (!FD_ISSET(write->fd_array[i], except))
+        {
+          FD_SET(write->fd_array[i], &kept_write);
+        }
+      }
+      *write = kept_write;
+    }
+
+    int count = 0;
+    if (read)
+    {
+      count += static_cast<int>(read->fd_count);
+    }
+    if (write)
+    {
+      count += static_cast<int>(write->fd_count);
+    }
+    if (except)
+    {
+      count += static_cast<int>(except->fd_count);
+    }
+    return count;
+  };
+
+  constexpr auto slice = std::chrono::milliseconds{ 1 };
+  std::optional<std::chrono::steady_clock::time_point> end;
+  if (timeout)
+  {
+    end = std::chrono::steady_clock::now() + timeval_to_ms(*timeout);
   }
 
-  count = 0;
+  auto lock = zt_lock();
+
+  do
+  {
+    zts_fd_set zt_read{};
+    zts_fd_set* final_read = nullptr;
+
+    if (read && original_read.fd_count)
+    {
+      transfer_set_zts(original_read, zt_read);
+      final_read = &zt_read;
+    }
+
+    zts_fd_set zt_write{};
+    zts_fd_set* final_write = nullptr;
+
+    if (write && original_write.fd_count)
+    {
+      transfer_set_zts(original_write, zt_write);
+      final_write = &zt_write;
+    }
+
+    zts_fd_set zt_except{};
+    zts_fd_set* final_except = nullptr;
+
+    if (except && original_except.fd_count)
+    {
+      transfer_set_zts(original_except, zt_except);
+      final_except = &zt_except;
+    }
+
+    auto wait = std::chrono::duration_cast<std::chrono::microseconds>(slice);
+    if (end)
+    {
+      auto remaining = *end - std::chrono::steady_clock::now();
+      if (remaining <= std::chrono::steady_clock::duration::zero())
+      {
+        wait = {};
+      }
+      else
+      {
+        wait = std::min(wait, std::chrono::duration_cast<std::chrono::microseconds>(remaining));
+      }
+    }
+
+    zts_timeval slice_time{
+      .tv_sec = static_cast<long>(std::chrono::duration_cast<std::chrono::seconds>(wait).count()),
+      .tv_usec = static_cast<long>((wait % std::chrono::seconds{ 1 }).count())
+    };
+
+    auto count = zts_bsd_select(ZTS_FD_SETSIZE, final_read, final_write, final_except, &slice_time);
+
+    if (count == ZTS_ERR_SOCKET || count == ZTS_ERR_SERVICE)
+    {
+      return zt_to_winsock_result(count);
+    }
+
+    if (count > 0)
+    {
+      return finish_ready(final_read, final_write, final_except);
+    }
+
+    if (end && std::chrono::steady_clock::now() >= *end)
+    {
+      break;
+    }
+
+    // Drop the backend lock between slices so other threads can use ZeroTier.
+    lock.unlock();
+    std::this_thread::yield();
+    lock.lock();
+  } while (!end || std::chrono::steady_clock::now() < *end);
+
   if (read)
   {
-    count += static_cast<int>(read->fd_count);
+    FD_ZERO(read);
   }
+
   if (write)
   {
-    count += static_cast<int>(write->fd_count);
+    FD_ZERO(write);
   }
+
   if (except)
   {
-    count += static_cast<int>(except->fd_count);
+    FD_ZERO(except);
   }
-  return count;
+
+  return 0;
 }
 
 int __stdcall backend___WSAFDIsSet(SOCKET ws, fd_set* set)
