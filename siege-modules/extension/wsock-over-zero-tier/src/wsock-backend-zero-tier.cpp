@@ -72,6 +72,8 @@ sockaddr_in from_zts(zts_sockaddr_in zt_addr);
 hostent from_zts(zts_hostent zt_host);
 void copy_address(zts_sockaddr_in addr, sockaddr* name, int* length);
 std::pair<zts_sockaddr_in, zts_socklen_t> copy_address(const sockaddr* name, int length);
+std::string_view format_ipv4(std::array<char, 16>& out, std::uint32_t addr_nbo);
+std::string_view format_ipv4_port(std::array<char, 32>& out, std::uint32_t addr_nbo, std::uint16_t port_nbo);
 
 SOCKET from_zts(int);
 int to_zts(SOCKET);
@@ -447,6 +449,12 @@ int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockadd
     return zt_to_winsock_result(zt_result);
   }
 
+  if (from && zt_result >= 0)
+  {
+    std::array<char, 32> from_addr{};
+    log_sampled_read() << "zts_bsd_recvfrom from " << format_ipv4_port(from_addr, zt_addr.sin_addr.S_addr, zt_addr.sin_port) << "\n";
+  }
+
   if (zt_addr.sin_addr.S_addr)
   {
     get_fallback_broadcast_addresses().emplace(zt_addr.sin_addr.S_addr);
@@ -626,16 +634,18 @@ int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen)
     return SOCKET_ERROR;
   }
 
-  get_log() << "zts_bsd_connect\n";
-
   if (name)
   {
     auto address_and_size = copy_address(name, namelen);
+    std::array<char, 32> requested{};
+    get_log() << "zts_bsd_connect requested " << format_ipv4_port(requested, address_and_size.first.sin_addr.S_addr, address_and_size.first.sin_port) << "\n";
     rewrite_if_foreign(address_and_size.first);
     auto zt_result = zts_bsd_connect(to_zts(ws), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
     return zt_to_winsock_result(zt_result);
   }
+
+  get_log() << "zts_bsd_connect with no address\n";
 
   auto zt_result = zts_bsd_connect(to_zts(ws), nullptr, namelen);
 
@@ -653,11 +663,12 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
     return SOCKET_ERROR;
   }
 
-  get_log() << "zts_bsd_bind\n";
-
   if (addr)
   {
     auto address_and_size = copy_address(addr, namelen);
+    std::array<char, 32> requested{};
+    auto requested_view = format_ipv4_port(requested, address_and_size.first.sin_addr.S_addr, address_and_size.first.sin_port);
+    get_log() << "zts_bsd_bind requested " << requested_view << "\n";
 
     // computing a fallback in the rare case the IP comes from a real adapter
     if (auto& subnets = get_subnets(); address_and_size.first.sin_family == ZTS_AF_INET && 
@@ -690,6 +701,9 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
         {
           address_and_size.first.sin_addr.S_addr = ZTS_INADDR_ANY;
         }
+
+        std::array<char, 32> rewritten{};
+        get_log() << "bind rewrite " << requested_view << " -> " << format_ipv4_port(rewritten, address_and_size.first.sin_addr.S_addr, address_and_size.first.sin_port) << "\n";
       }
     }
 
@@ -697,6 +711,8 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
 
     return zt_to_winsock_result(zt_result);
   }
+
+  get_log() << "zts_bsd_bind with no address\n";
 
   auto zt_result = zts_bsd_bind(to_zts(ws), nullptr, 0);
 
@@ -718,6 +734,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
     rewrite_if_foreign(address_and_size.first);
 
     auto dest = address_and_size.first.sin_addr.S_addr;
+    const auto dest_port = address_and_size.first.sin_port;
 
     auto is_broadcast_address = [&]() {
       // limited broadcast, or a ZT subnet directed broadcast (e.g. 10.147.17.255)
@@ -726,7 +743,8 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
 
     if (is_broadcast_address())
     {
-      get_log() << "Trying to broadcast\n";
+      std::array<char, 32> broadcast_addr{};
+      get_log() << "Trying to broadcast " << format_ipv4_port(broadcast_addr, address_and_size.first.sin_addr.S_addr, address_and_size.first.sin_port) << "\n";
 
       int sent = 0;
       int broadcast_result = 0;
@@ -735,13 +753,10 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
 
       if (auto ips = get_fallback_broadcast_addresses(); !ips.empty())
       {
-        std::array<char, 16> ip_str{};
-
         for (auto ip : ips)
         {
-          in_addr addr{ .S_un = { .S_addr = ip } };
-          imports->inet_ntop(AF_INET, &addr, ip_str.data(), ip_str.size());
-          get_log() << "Trying broadcast fallback to direct IP " << ip_str.data() << ".\n";
+          std::array<char, 32> fallback_addr{};
+          get_log() << "Trying broadcast fallback to direct IP " << format_ipv4_port(fallback_addr, ip, dest_port) << ".\n";
           address_and_size.first.sin_addr.S_addr = ip;
 
           zts_fd_set set{};
@@ -752,7 +767,7 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
 
           if (is_ready && ZTS_FD_ISSET(to_zts(ws), &set))
           {
-            get_log() << "Socket ready, doing broadcast " << ip_str.data() << ".\n";
+            get_log() << "Socket ready, doing broadcast " << format_ipv4_port(fallback_addr, ip, dest_port) << ".\n";
             broadcast_result = zts_bsd_sendto(to_zts(ws), buf, len, to_zt_msg_flags(flags), (zts_sockaddr*)&address_and_size.first, address_and_size.second);
 
             if (broadcast_result > sent)
@@ -1334,7 +1349,13 @@ const std::map<std::uint32_t, std::uint32_t>& get_subnets()
       subnets.emplace(in4->sin_addr.S_addr & mask, mask);
     }
 
-    get_log() << "Computed " << subnets.size() << " subnet(s)";
+    get_log() << "Computed " << subnets.size() << " subnet(s)\n";
+    for (auto [network, mask] : subnets)
+    {
+      std::array<char, 16> network_str{};
+      std::array<char, 16> mask_str{};
+      get_log() << "  subnet " << format_ipv4(network_str, network) << " mask " << format_ipv4(mask_str, mask) << "\n";
+    }
     return subnets;
   }();
 
@@ -1351,7 +1372,12 @@ const std::set<std::uint32_t>& get_directed_broadcasts()
       broadcasts.emplace(network | ~mask);
     }
 
-    get_log() << "Computed " << broadcasts.size() << " directed broadcast address(es)";
+    get_log() << "Computed " << broadcasts.size() << " directed broadcast address(es)\n";
+    for (auto broadcast : broadcasts)
+    {
+      std::array<char, 16> broadcast_str{};
+      get_log() << "  directed broadcast " << format_ipv4(broadcast_str, broadcast) << "\n";
+    }
     return broadcasts;
   }();
 
@@ -1396,7 +1422,11 @@ void rewrite_if_foreign(zts_sockaddr_in& addr)
     return;
   }
 
+  std::array<char, 32> from{};
+  auto from_view = format_ipv4_port(from, addr.sin_addr.S_addr, addr.sin_port);
   addr.sin_addr.S_addr = fallback->S_un.S_addr;
+  std::array<char, 32> to{};
+  get_log() << "rewrote foreign address " << from_view << " -> " << format_ipv4_port(to, addr.sin_addr.S_addr, addr.sin_port) << "\n";
 }
 
 std::optional<std::uint64_t> get_network_id()
@@ -1694,6 +1724,31 @@ zts_sockaddr_in to_zts(sockaddr_in addr)
   std::memcpy(&zt_addr.sin_addr, &addr.sin_addr, sizeof(zt_addr.sin_addr));
   std::memcpy(&zt_addr.sin_zero, &addr.sin_zero, sizeof(zt_addr.sin_zero));
   return zt_addr;
+}
+
+std::string_view format_ipv4(std::array<char, 16>& out, std::uint32_t addr_nbo)
+{
+  in_addr address{ .S_un = { .S_addr = addr_nbo } };
+  if (!imports->inet_ntop(AF_INET, &address, out.data(), out.size()))
+  {
+    out[0] = '?';
+    out[1] = '\0';
+  }
+  return out.data();
+}
+
+std::string_view format_ipv4_port(std::array<char, 32>& out, std::uint32_t addr_nbo, std::uint16_t port_nbo)
+{
+  std::array<char, 16> ip{};
+  auto ip_view = format_ipv4(ip, addr_nbo);
+  auto written = std::snprintf(out.data(), out.size(), "%.*s:%u", static_cast<int>(ip_view.size()), ip_view.data(), static_cast<unsigned>(imports->ntohs(port_nbo)));
+  if (written < 0)
+  {
+    out[0] = '?';
+    out[1] = '\0';
+    return out.data();
+  }
+  return { out.data(), static_cast<std::size_t>(written) };
 }
 
 static_assert(sizeof(sockaddr) >= sizeof(sockaddr_in));

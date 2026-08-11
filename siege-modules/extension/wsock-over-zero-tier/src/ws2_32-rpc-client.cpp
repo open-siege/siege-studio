@@ -530,27 +530,9 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
     return imports->recvfrom(ws, buf, len, flags, from, fromLen);
   }
 
-  if (from)
+  if (flags & MSG_PEEK)
   {
-    if (flags & MSG_PEEK)
-    {
-      log_sampled_check() << "siege_recvfrom MSG_PEEK from address " << af_to_string(from->sa_family);
-    }
-    else
-    {
-      log_sampled_read() << "siege_recvfrom with from address " << af_to_string(from->sa_family);
-    }
-  }
-  else
-  {
-    if (flags & MSG_PEEK)
-    {
-      log_sampled_check() << "siege_recvfrom MSG_PEEK without address";
-    }
-    else
-    {
-      log_sampled_read() << "siege_recvfrom with without address";
-    }
+    log_sampled_check() << "siege_recvfrom MSG_PEEK\n";
   }
 
   // TODO add SEH here for bad buffers
