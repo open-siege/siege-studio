@@ -28,7 +28,8 @@ namespace siege::views
     std::uint32_t zero_tier_enabled;
 
     // has to be 384 for zero tier to work
-    std::array<char, 384> last_zero_tier_node_id_and_private_key;
+    std::array<char, 384> last_zero_tier_client_node_id_and_private_key;
+    std::array<char, 384> last_zero_tier_server_node_id_and_private_key;
   };
 
   struct networking_support
@@ -346,6 +347,13 @@ namespace siege::views
     return lib_formats;
   }
 
+  constexpr static auto pref_options_keys = std::array<std::wstring_view, 4>{ { L"nothing", L"connect", L"listen", L"dedicated" } };
+
+  bool has_client_preference(const std::any& state);
+  std::wstring get_preferred_zt_node_id(const std::any& state, std::optional<bool> for_client = std::nullopt);
+  std::wstring get_preferred_last_ip(const std::any& state, std::wstring zt_node_id);
+
+  bool links_to_networking_libraries(exe_state& self);
   bool has_extension_module(const std::any& state) { return get(state).matching_extension.has_value(); }
   siege::platform::game_extension_module& get_extension(std::any& state) { return *get(state).matching_extension; }
   const siege::platform::game_extension_module& get_extension(const std::any& state) { return *get(state).matching_extension; }
@@ -359,7 +367,7 @@ namespace siege::views
   {
     constexpr auto hosting_pref_name = L"MULTIPLAYER_HOSTING_PREFERENCE";
     constexpr static auto pref_options = std::array<std::wstring_view, 4>{ { L"Use Game UI", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
-    constexpr static auto pref_options_keys = std::array<std::wstring_view, 4>{ { L"nothing", L"connect", L"listen", L"dedicated" } };
+    constexpr static auto pref_options_no_ext = std::array<std::wstring_view, 4>{ { L"None", L"Is Client", L"Is Server", L"Is Dedicated Server" } };
 
     siege::platform::game_command_line_caps empty_caps{};
 
@@ -371,10 +379,9 @@ namespace siege::views
     self.listen_setting_multiple_predefined = false;
     auto& caps = self.matching_extension && self.matching_extension->caps ? *self.matching_extension->caps : empty_caps;
 
-    bool has_ip = (caps.ip_connect_setting == nullptr || !std::wstring_view(caps.ip_connect_setting).empty());
-    bool has_listen = (caps.listen_setting == nullptr || !std::wstring_view(caps.listen_setting).empty());
-    bool has_dedicated = (caps.dedicated_setting == nullptr || !std::wstring_view(caps.dedicated_setting).empty());
-
+    bool has_ip = caps.ip_connect_setting && !std::wstring_view(caps.ip_connect_setting).empty();
+    bool has_listen = caps.listen_setting && !std::wstring_view(caps.listen_setting).empty();
+    bool has_dedicated = caps.dedicated_setting && !std::wstring_view(caps.dedicated_setting).empty();
 
 #ifdef _DEBUG
     if (self.matching_extension)
@@ -390,24 +397,34 @@ namespace siege::views
 #endif
 
     std::vector<std::wstring_view> real_options;
-    real_options.reserve(4);
-    for (auto i = 0; i < pref_options.size(); ++i)
-    {
-      if (i == 1 && !has_ip)
-      {
-        continue;
-      }
 
-      if (i == 2 && !has_listen)
+    if (self.matching_extension)
+    {
+      real_options.reserve(4);
+      for (auto i = 0; i < pref_options.size(); ++i)
       {
-        continue;
+        if (i == 1 && !has_ip)
+        {
+          continue;
+        }
+
+        if (i == 2 && !has_listen)
+        {
+          continue;
+        }
+        if (i == 3 && !has_dedicated)
+        {
+          continue;
+        }
+        real_options.emplace_back(pref_options[i]);
       }
-      if (i == 3 && !has_dedicated)
-      {
-        continue;
-      }
-      real_options.emplace_back(pref_options[i]);
     }
+    else
+    {
+      real_options = { pref_options_no_ext[1],
+        pref_options_no_ext[2] };
+    }
+
 
     auto persist_ip_address = [&self]() {
       if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
@@ -434,7 +451,7 @@ namespace siege::views
       }
     };
 
-    auto has_networking = has_ip || has_listen || has_dedicated;
+    auto has_networking = has_ip || has_listen || has_dedicated || links_to_networking_libraries(self);
 
     if (has_networking)
     {
@@ -450,7 +467,7 @@ namespace siege::views
       self.launch_settings.emplace_back(game_setting{
         .setting_name = hosting_pref_name,
         .type = extension_setting_type::env_setting,
-        .value = std::wstring{ pref_options[index] },
+        .value = has_extension_module(state) ? std::wstring{ pref_options[index] } : std::wstring{ pref_options_no_ext[index] },
         .display_name = L"Hosting",
         .group_id = 1,
         .get_predefined_string = [real_options = std::move(real_options), results = std::vector<predefined_string>{}](auto name) mutable -> std::span<const siege::platform::predefined_string> {
@@ -472,120 +489,160 @@ namespace siege::views
           return std::span<const predefined_string>{};
         },
         .persist = [&self, &state]() {
-          siege::platform::game_command_line_caps default_caps{};
-          auto& caps = has_extension_module(state) && get_extension(state).caps ? *get_extension(state).caps : default_caps;
+          auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+            return setting.setting_name == hosting_pref_name;
+          });
 
-          std::wstring_view ip_setting = caps.ip_connect_setting ? caps.ip_connect_setting : L"";
+          if (setting_iter == self.launch_settings.end())
+          {
+            return;
+          }
 
-          if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                return setting.setting_name == hosting_pref_name;
+          auto _ = std::shared_ptr<void>{
+            nullptr, [&self, &state](...) {
+              
+              auto zt_node_id = get_preferred_zt_node_id(state);
+              
+              auto peer_iter = stl::find_if(self.launch_settings, [](auto& setting) {
+                return setting.setting_name == L"ZERO_TIER_PEER_ID";
               });
-            setting_iter != self.launch_settings.end())
+
+              if (peer_iter != self.launch_settings.end())
+              {
+                peer_iter->update_value(zt_node_id);
+              }
+
+              auto last_ip_iter = stl::find_if(self.launch_settings, [](auto& setting) {
+                return setting.setting_name == L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS";
+              });
+
+              if (last_ip_iter != self.launch_settings.end())
+              {
+                last_ip_iter->update_value(get_preferred_last_ip(state, std::move(zt_node_id)));
+              }
+            }
+          };
+
+          if (!has_extension_module(state))
           {
             auto value = std::visit(convert_to_string, setting_iter->value);
 
-            auto key = std::find(pref_options.begin(), pref_options.end(), value);
+            auto key = std::find(pref_options_no_ext.begin(), pref_options_no_ext.end(), value);
 
-            if (key != pref_options.end())
+            if (key != pref_options_no_ext.end())
             {
-              auto index = std::distance(pref_options.begin(), key);
+              auto index = std::distance(pref_options_no_ext.begin(), key);
               decltype(setting_iter->value) temp = std::wstring(pref_options_keys[index]);
               copy_to_array(temp, self.registry_data.last_hosting_preference);
             }
+            return;
+          }
 
-            if (caps.ip_connect_setting)
+          siege::platform::game_command_line_caps default_caps{};
+          auto& caps = has_extension_module(state) && get_extension(state).caps ? *get_extension(state).caps : default_caps;
+
+          auto value = std::visit(convert_to_string, setting_iter->value);
+
+          auto key = std::find(pref_options.begin(), pref_options.end(), value);
+
+          if (key != pref_options.end())
+          {
+            auto index = std::distance(pref_options.begin(), key);
+            decltype(setting_iter->value) temp = std::wstring(pref_options_keys[index]);
+            copy_to_array(temp, self.registry_data.last_hosting_preference);
+          }
+
+          if (caps.ip_connect_setting)
+          {
+            auto connect_setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+              return setting.type == extension_setting_type::string_setting && setting.setting_name == caps.ip_connect_setting;
+            });
+
+            auto connect_flag = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+              return setting.type == extension_setting_type::flag_setting && setting.setting_name == caps.ip_connect_setting;
+            });
+
+            auto should_connect = value == pref_options[1];// connect to server
+
+            if (connect_setting != self.launch_settings.end())
             {
-              auto connect_setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                return setting.type == extension_setting_type::string_setting && setting.setting_name == caps.ip_connect_setting;
-              });
+              connect_setting->enabled = should_connect;
 
-              auto connect_flag = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                return setting.type == extension_setting_type::flag_setting && setting.setting_name == caps.ip_connect_setting;
-              });
+              auto value = std::visit(convert_to_string, connect_setting->value);
 
-              auto should_connect = value == pref_options[1];// connect to server
-
-              if (connect_setting != self.launch_settings.end())
+              if (should_connect && (value.empty() || value == L"0.0.0.0" || value == L"127.0.0.1"))
               {
-                connect_setting->enabled = should_connect;
-
-                auto value = std::visit(convert_to_string, connect_setting->value);
-
-                if (should_connect && (value.empty() || value == L"0.0.0.0" || value == L"127.0.0.1"))
-                {
-                  connect_setting->value = self.registry_data.last_ip_address.data();
-                }
-
-                if (connect_setting->persist)
-                {
-                  connect_setting->persist();
-                }
+                connect_setting->value = self.registry_data.last_ip_address.data();
               }
-              else if (connect_flag != self.launch_settings.end())
+
+              if (connect_setting->persist)
               {
-                connect_flag->enabled = should_connect;
-                connect_flag->value = should_connect;
-
-                if (connect_flag->persist)
-                {
-                  connect_flag->persist();
-                }
-
+                connect_setting->persist();
               }
             }
-
-            auto listen_and_connect_are_same = caps.listen_setting && caps.ip_connect_setting && std::wstring_view(caps.listen_setting) == caps.ip_connect_setting;
-
-            if (self.listen_setting_type && caps.listen_setting && !self.listen_setting_multiple_predefined)
+            else if (connect_flag != self.launch_settings.end())
             {
-              auto listen_setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                return setting.setting_name == caps.listen_setting;
-              });
+              connect_flag->enabled = should_connect;
+              connect_flag->value = should_connect;
 
-              bool enabled = value == pref_options[2];
-
-              if (enabled)
+              if (connect_flag->persist)
               {
-                if (listen_setting != self.launch_settings.end())
-                {
-                  enable_setting(*listen_setting);
-                  listen_setting->enabled = enabled;
-                  if (listen_setting->persist)
-                  {
-                    listen_setting->persist();
-                  }
-                }
+                connect_flag->persist();
               }
-              else if (!listen_and_connect_are_same)
+            }
+          }
+
+          auto listen_and_connect_are_same = caps.listen_setting && caps.ip_connect_setting && std::wstring_view(caps.listen_setting) == caps.ip_connect_setting;
+
+          if (self.listen_setting_type && caps.listen_setting && !self.listen_setting_multiple_predefined)
+          {
+            auto listen_setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+              return setting.setting_name == caps.listen_setting;
+            });
+
+            bool enabled = value == pref_options[2];
+
+            if (enabled)
+            {
+              if (listen_setting != self.launch_settings.end())
               {
-                if (listen_setting != self.launch_settings.end())
+                enable_setting(*listen_setting);
+                listen_setting->enabled = enabled;
+                if (listen_setting->persist)
                 {
-                  disable_setting(*listen_setting);
-                  listen_setting->enabled = enabled;
-                  if (listen_setting->persist)
-                  {
-                    listen_setting->persist();
-                  }
+                  listen_setting->persist();
                 }
               }
             }
-
-            if (self.dedicated_setting_type && caps.dedicated_setting)// dedicated
+            else if (!listen_and_connect_are_same)
             {
-              auto dedicated_setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                return setting.setting_name == caps.dedicated_setting;
-              });
-
-              auto enabled = value == pref_options[3];
-
-              if (dedicated_setting != self.launch_settings.end())
+              if (listen_setting != self.launch_settings.end())
               {
-                enabled ? enable_setting(*dedicated_setting) : disable_setting(*dedicated_setting);
-
-                if (dedicated_setting->persist)
+                disable_setting(*listen_setting);
+                listen_setting->enabled = enabled;
+                if (listen_setting->persist)
                 {
-                  dedicated_setting->persist();
+                  listen_setting->persist();
                 }
+              }
+            }
+          }
+
+          if (self.dedicated_setting_type && caps.dedicated_setting)// dedicated
+          {
+            auto dedicated_setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+              return setting.setting_name == caps.dedicated_setting;
+            });
+
+            auto enabled = value == pref_options[3];
+
+            if (dedicated_setting != self.launch_settings.end())
+            {
+              enabled ? enable_setting(*dedicated_setting) : disable_setting(*dedicated_setting);
+
+              if (dedicated_setting->persist)
+              {
+                dedicated_setting->persist();
               }
             }
           } } });
@@ -632,7 +689,8 @@ namespace siege::views
             self.registry_data.zero_tier_enabled = std::visit(convert_to_bool, setting_iter->value);
           } } });
 
-      auto network_id = std::wstring{ settings.last_zero_tier_network_id.data() };
+      auto network_id = settings.last_zero_tier_network_id.back() == L'\0' ? std::wstring{ settings.last_zero_tier_network_id.data() }
+                                                                           : std::wstring{ settings.last_zero_tier_network_id.data(), settings.last_zero_tier_network_id.size() };
 
       constexpr static std::wstring_view zt_network_id = L"ZERO_TIER_NETWORK_ID";
 
@@ -652,27 +710,25 @@ namespace siege::views
           }
         } });
 
+      auto zt_node_id = get_preferred_zt_node_id(state);
 
-      self.launch_settings.emplace_back(game_setting{
-        .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
-        .type = extension_setting_type::computed_setting,
-        .value = settings.last_zero_tier_ip_addresses.contains(network_id) ? settings.last_zero_tier_ip_addresses.at(network_id) : std::wstring(),
-        .display_name = L"Zero Tier Last Network IP Address",
-        .group_id = 1,
-      });
-
-      std::string_view zt_node_id = settings.last_zero_tier_node_id_and_private_key.data();
-
-      if (zt_node_id.contains(':'))
+      if (!zt_node_id.empty())
       {
-        zt_node_id = zt_node_id.substr(0, zt_node_id.find(':'));
-
         self.launch_settings.emplace_back(game_setting{
           .setting_name = L"ZERO_TIER_PEER_ID",
           .type = extension_setting_type::computed_setting,
-          .value = std::wstring(zt_node_id.begin(), zt_node_id.end()),
+          .value = zt_node_id,
           .display_name = L"Zero Tier Node ID",
           .group_id = 1 });
+
+
+        self.launch_settings.emplace_back(game_setting{
+          .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
+          .type = extension_setting_type::computed_setting,
+          .value = get_preferred_last_ip(state, std::move(zt_node_id)),
+          .display_name = L"Zero Tier Last Network IP Address",
+          .group_id = 1,
+        });
       }
 
       if (!has_ip)
@@ -2133,9 +2189,11 @@ namespace siege::views
   bool set_registry_data(std::any& state, const registry_settings& settings)
   {
     auto& self = get(state);
-    auto node_id_and_private_key = self.registry_data.last_zero_tier_node_id_and_private_key;
+    auto client_node_id_and_private_key = self.registry_data.last_zero_tier_client_node_id_and_private_key;
+    auto server_node_id_and_private_key = self.registry_data.last_zero_tier_server_node_id_and_private_key;
     self.registry_data = settings;
-    self.registry_data.last_zero_tier_node_id_and_private_key = node_id_and_private_key;
+    self.registry_data.last_zero_tier_client_node_id_and_private_key = client_node_id_and_private_key;
+    self.registry_data.last_zero_tier_server_node_id_and_private_key = server_node_id_and_private_key;
 
     store_registry_data(state);
     return false;
@@ -2192,8 +2250,11 @@ namespace siege::views
       std::memcpy(raw_bytes.data(), data.data(), raw_bytes.size());
       result = result && ::RegSetValueExA(main_key, "LastZeroTierIpAddressesForNetwork", 0, REG_SZ, raw_bytes.data(), raw_bytes.size()) == ERROR_SUCCESS;
 
-      std::string_view key_str = settings.last_zero_tier_node_id_and_private_key.data();
-      result = result && ::RegSetValueExA(main_key, "LastZeroTierNodeIdAndPrivateKey", 0, REG_SZ, (BYTE*)key_str.data(), key_str.size()) == ERROR_SUCCESS;
+      std::string_view key_str = settings.last_zero_tier_client_node_id_and_private_key.data();
+      result = result && ::RegSetValueExA(main_key, "LastZeroTierClientNodeIdAndPrivateKey", 0, REG_SZ, (BYTE*)key_str.data(), key_str.size()) == ERROR_SUCCESS;
+
+      key_str = settings.last_zero_tier_server_node_id_and_private_key.data();
+      result = result && ::RegSetValueExA(main_key, "LastZeroTierServerNodeIdAndPrivateKey", 0, REG_SZ, (BYTE*)key_str.data(), key_str.size()) == ERROR_SUCCESS;
 
       raw_bytes.resize(settings.last_hosting_preference.size() * char_size);
       std::memcpy(raw_bytes.data(), settings.last_hosting_preference.data(), raw_bytes.size());
@@ -2304,8 +2365,13 @@ namespace siege::views
       size = game_settings.last_zero_tier_network_id.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastZeroTierNetworkId", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_network_id.data(), &size);
 
-      size = game_settings.last_zero_tier_node_id_and_private_key.size();
-      ::RegGetValueA(main_key, nullptr, "LastZeroTierNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_node_id_and_private_key.data(), &size);
+      size = game_settings.last_zero_tier_client_node_id_and_private_key.size();
+      ::RegGetValueA(main_key, nullptr, "LastZeroTierNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_client_node_id_and_private_key.data(), &size);
+      ::RegGetValueA(main_key, nullptr, "LastZeroTierClientNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_client_node_id_and_private_key.data(), &size);
+
+      size = game_settings.last_zero_tier_server_node_id_and_private_key.size();
+      ::RegGetValueA(main_key, nullptr, "LastZeroTierServerNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_server_node_id_and_private_key.data(), &size);
+
 
       size = game_settings.last_hosting_preference.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastHostingPreference", RRF_RT_REG_SZ, &type, game_settings.last_hosting_preference.data(), &size);
@@ -2352,34 +2418,49 @@ namespace siege::views
       ::GetUserNameW(self.registry_data.last_player_name.data(), &size);
     }
 
-    auto has_node_id = !std::all_of(self.registry_data.last_zero_tier_node_id_and_private_key.begin(), self.registry_data.last_zero_tier_node_id_and_private_key.end(), [](auto item) { return item == 0; });
+    auto generate_id = [&]() -> std::optional<decltype(self.registry_data.last_zero_tier_client_node_id_and_private_key)> {
+      if (has_extension_module(state))
+      {
+        std::string extension_path = get_extension(state).GetModuleFileName<char>();
+        auto zt_path = fs::path(extension_path).parent_path() / "wsock-backend-zero-tier.dll";
+        return generate_zero_tier_node_id(zt_path);
+      }
+      else
+      {
+        std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
+        auto zt_path = fs::path(extension_path).parent_path() / "wsock-backend-zero-tier.dll";
+        return generate_zero_tier_node_id(zt_path);
+      }
+      return std::nullopt;
+    };
 
-    if (has_node_id)
+    auto has_client_node_id = !stl::all_of(self.registry_data.last_zero_tier_client_node_id_and_private_key, [](auto item) { return item == 0; });
+    auto has_server_node_id = !stl::all_of(self.registry_data.last_zero_tier_server_node_id_and_private_key, [](auto item) { return item == 0; });
+
+    if (!has_client_node_id)
     {
-      ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_node_id_and_private_key.data());
+      if (auto new_id = generate_id())
+      {
+        self.registry_data.last_zero_tier_client_node_id_and_private_key = *new_id;
+      }
     }
-    else if (has_extension_module(state))
+
+    if (!has_server_node_id)
     {
-      std::string extension_path = get_extension(state).GetModuleFileName<char>();
-      auto zt_path = fs::path(extension_path).parent_path() / "wsock-backend-zero-tier.dll";
-      self.registry_data.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
-      ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_node_id_and_private_key.data());
-    }
-    else
-    {
-      std::string extension_path = win32::module_ref::current_module().GetModuleFileName<char>();
-      auto zt_path = fs::path(extension_path).parent_path() / "wsock-backend-zero-tier.dll";
-      self.registry_data.last_zero_tier_node_id_and_private_key = generate_zero_tier_node_id(zt_path);
-      ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_node_id_and_private_key.data());
+      if (auto new_id = generate_id())
+      {
+        self.registry_data.last_zero_tier_server_node_id_and_private_key = *new_id;
+      }
     }
 
     return self.registry_data;
   }
 
-  void set_ip_for_current_network(std::any& state, std::string ip_address)
+  void set_ip_for_current_network(std::any& state, std::string ip_address, bool for_client)
   {
     auto& self = get(state);
-    std::wstring_view network_id = self.registry_data.last_zero_tier_network_id.data();
+    std::wstring_view network_id =
+      self.registry_data.last_zero_tier_network_id.back() == '\0' ? self.registry_data.last_zero_tier_network_id.data() : std::wstring_view{ self.registry_data.last_zero_tier_network_id.data(), self.registry_data.last_zero_tier_network_id.size() };
 
     if (!network_id.empty() && !ip_address.empty())
     {
@@ -2387,7 +2468,15 @@ namespace siege::views
       temp.reserve(ip_address.size());
       std::transform(ip_address.begin(), ip_address.end(), std::back_inserter(temp), [](auto value) { return (wchar_t)value; });
 
-      self.registry_data.last_zero_tier_ip_addresses[std::wstring(network_id)] = temp;
+      auto zt_node_id = get_preferred_zt_node_id(state, for_client);
+
+      if (zt_node_id.empty())
+      {
+        return;
+      }
+
+      auto key = std::wstring(network_id) + L':' + zt_node_id;
+      self.registry_data.last_zero_tier_ip_addresses[key] = temp;
     }
 
     store_registry_data(state);
@@ -2847,6 +2936,15 @@ namespace siege::views
             return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
           }))
       {
+        if (has_client_preference(state))
+        {
+          ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_client_node_id_and_private_key.data());
+        }
+        else
+        {
+          ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_server_node_id_and_private_key.data());
+        }
+
         auto ext_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / "runtime-extensions";
 
         fs::remove_all(ext_path, last_errorc);
@@ -2922,6 +3020,7 @@ namespace siege::views
         ::SetEnvironmentVariableW(L"ZERO_TIER_ENABLED", nullptr);
         ::SetEnvironmentVariableW(L"ZERO_TIER_NETWORK_ID", nullptr);
         ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr);
+        ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", nullptr);
       }
 
       ::SetEnvironmentVariableW(L"Path", current_path.c_str());
@@ -3132,5 +3231,59 @@ namespace siege::views
       auto last_error = ::GetLastError();
       return HRESULT_FROM_WIN32(last_error);
     }
+  }
+
+  bool has_client_preference(const std::any& state)
+  {
+    auto& self = get(state);
+
+    siege::fs_string_view hosting_pref{ self.registry_data.last_hosting_preference.data() };
+
+    // negative check because unknown values should still
+    // keep us as a client because it was the default before.
+    return hosting_pref != pref_options_keys[2] && hosting_pref != pref_options_keys[3];
+  }
+
+  std::wstring get_preferred_zt_node_id(const std::any& state, std::optional<bool> for_client)
+  {
+    auto& self = get(state);
+
+    if (!for_client.has_value())
+    {
+      for_client = has_client_preference(state);
+    }
+    std::span<const char> zt_node_id = *for_client ? self.registry_data.last_zero_tier_client_node_id_and_private_key : self.registry_data.last_zero_tier_server_node_id_and_private_key;
+
+    auto iter = stl::find(zt_node_id, ':');
+
+    if (iter == zt_node_id.end())
+    {
+      return std::wstring{};
+    }
+
+    zt_node_id = zt_node_id.subspan(0, std::distance(zt_node_id.begin(), iter));
+    return std::wstring(zt_node_id.begin(), zt_node_id.end());
+  }
+
+  std::wstring get_preferred_last_ip(const std::any& state, std::wstring zt_node_id)
+  {
+    auto& self = get(state);
+
+    auto network_id = self.registry_data.last_zero_tier_network_id.back() == L'\0' ? std::wstring{ self.registry_data.last_zero_tier_network_id.data() }
+                                                                                   : std::wstring{ self.registry_data.last_zero_tier_network_id.data(), self.registry_data.last_zero_tier_network_id.size() };
+    auto new_key = network_id + L':' + zt_node_id;
+    std::wstring last_ip;
+
+    if (self.registry_data.last_zero_tier_ip_addresses.contains(new_key))
+    {
+      last_ip = self.registry_data.last_zero_tier_ip_addresses.at(new_key);
+    }
+    // for old data before the new update (we assume that the old zt info was for the client)
+    else if (has_client_preference(state) && self.registry_data.last_zero_tier_ip_addresses.contains(network_id))
+    {
+      last_ip = self.registry_data.last_zero_tier_ip_addresses.at(network_id);
+    }
+
+    return last_ip;
   }
 }// namespace siege::views

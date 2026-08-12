@@ -225,7 +225,7 @@ namespace siege::views
   bool is_vkey_for_controller(WORD vkey);
   std::optional<std::reference_wrapper<game_setting>> get_game_setting(std::any& state, std::size_t index);
 
-  void set_ip_for_current_network(std::any& state, std::string ip_address);
+  void set_ip_for_current_network(std::any& state, std::string ip_address, bool for_client);
 
   bool controller_can_be_toggled(std::any& state);
 
@@ -235,6 +235,7 @@ namespace siege::views
   bool is_exe_or_lib(std::istream& stream) noexcept;
   siege::platform::owning_packaged_args get_packaged_args(std::any& state);
 
+  bool has_client_preference(const std::any& state);
   HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept;
 }// namespace siege::views
 

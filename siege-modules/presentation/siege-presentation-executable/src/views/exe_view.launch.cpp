@@ -479,17 +479,19 @@ namespace siege::views
       existing_state &= ~TBSTATE_ENABLED;
       exe_actions.SetState(this->launch.launch_selected_id, existing_state);
 
+      auto ip_name = has_client_preference(state) ? L"ZeroTierCurrentClientIpGlobalHandle" : L"ZeroTierCurrentServerIpGlobalHandle";
+
       auto global = ::CreateFileMappingW(
         INVALID_HANDLE_VALUE,// use paging file
         NULL,// default security
         PAGE_READWRITE,// read/write access
         0,// maximum object size (high-order DWORD)
         256,// maximum object size (low-order DWORD)
-        L"ZeroTierCurrentIpGlobalHandle");
+        ip_name);
 
       if (global)
       {
-        ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", L"ZeroTierCurrentIpGlobalHandle");
+        ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", ip_name);
       }
 
       auto game_args = get_packaged_args(state);
@@ -497,7 +499,7 @@ namespace siege::views
       game_args.controller_to_send_input_mappings = controller_to_send_input_mappings;
       game_args.controller_to_send_input_mappings.resize(256);
 
-      this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, existing_state, global] mutable {
+      this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, existing_state, global, for_client = has_client_preference(state)] mutable {
                                                     existing_state |= TBSTATE_ENABLED;
                                                     this->exe_actions.SetState(this->launch.launch_selected_id, existing_state);
                                                     auto _ = std::shared_ptr<void>{
@@ -509,7 +511,6 @@ namespace siege::views
                                                     {
                                                       return;
                                                     } 
-
                                                       auto data = ::MapViewOfFile(global, FILE_MAP_READ, 0, 0, 256);
 
                                                       if (data)
@@ -527,7 +528,7 @@ namespace siege::views
 
                                                         if (ip_address.contains("."))
                                                         {
-                                                          set_ip_for_current_network(state, ip_address);
+                                                          set_ip_for_current_network(state, ip_address, for_client);
                                                         }
 
                                                         ::UnmapViewOfFile(data);
