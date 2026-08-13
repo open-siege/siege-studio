@@ -72,7 +72,7 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
     // TODO once more than one client are supported,
     // there will need to be better tracking of the
     // individual clients that are loaded per process.
-    auto new_name = dll_stem + L"_rpc_data" + std::to_wstring(cache.size() + used_globals.size());
+    auto new_name = dll_stem + L"_rpc_data-" + std::to_wstring(::GetCurrentProcessId()) + L'-' + std::to_wstring(cache.size() + used_globals.size());
 
     auto out_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, size, new_name.c_str());
 
@@ -284,6 +284,10 @@ int __stdcall siege_WSACleanup()
   {
     return imports->WSACleanup();
   }
+
+  send_message_to_server<general_params, general_params::cleanup_message_id>(INVALID_SOCKET, [=](void* raw) {
+    return new (raw) general_params{ .how = static_cast<int>(::GetCurrentProcessId()) };
+  });
 
   get_select_worker().request_stop();
   get_overlapped_worker().request_stop();

@@ -11,14 +11,15 @@ export struct general_params
 {
   constexpr static auto shutdown_message_id = WM_APP + 1;
   constexpr static auto close_message_id = shutdown_message_id + 1;
+  constexpr static auto cleanup_message_id = close_message_id + 1;
   int last_error;
-  int how; // shutdown only
+  int how; // how for shutdown - process ID for cleanup
 };
 static_assert(std::is_trivially_copyable_v<general_params>);
 
 export struct socket_params : general_params
 {
-  constexpr static auto message_id = general_params::close_message_id + 1;
+  constexpr static auto message_id = general_params::cleanup_message_id + 1;
 
   int address_family;
   int type;

@@ -20,18 +20,29 @@ inline static bool keep_alive_timer_started = false;
 std::optional<backend_imports> backend;
 decltype(::WSAGetLastError)* wsock_WSAGetLastError = nullptr;
 
-std::expected<std::span<char>, LRESULT> get_value([[maybe_unused]] HWND window, LPARAM lparam)
+struct mapped_cache
 {
-  static std::array<wchar_t, 256> temp{};
+  std::set<std::wstring> keys;
+  std::map<std::wstring_view, std::span<char>> already_mapped_data;
+};
 
-  static std::set<std::wstring> keys;
-  static std::map<std::wstring_view, std::span<char>> already_mapped_data;
+auto& get_cache()
+{
+  static mapped_cache cache{};
+
   static std::shared_ptr<void> deferred_unmap = { nullptr, [](...) {
-                                                   for (auto& item : already_mapped_data)
+                                                   for (auto& item : cache.already_mapped_data)
                                                    {
                                                      ::UnmapViewOfFile(item.second.data());
                                                    }
                                                  } };
+  return cache;
+}
+
+std::expected<std::span<char>, LRESULT> get_value([[maybe_unused]] HWND window, LPARAM lparam)
+{
+  static std::array<wchar_t, 256> temp{};
+  auto& cache = get_cache();
 
   std::fill(temp.begin(), temp.end(), '\0');
   if (::GlobalGetAtomNameW((ATOM)lparam, temp.data(), (int)temp.size()) == 0)
@@ -41,9 +52,9 @@ std::expected<std::span<char>, LRESULT> get_value([[maybe_unused]] HWND window, 
 
   std::wstring_view key = temp.data();
 
-  auto iter = already_mapped_data.find(key);
+  auto iter = cache.already_mapped_data.find(key);
 
-  if (iter != already_mapped_data.end())
+  if (iter != cache.already_mapped_data.end())
   {
     return iter->second;
   }
@@ -75,8 +86,8 @@ std::expected<std::span<char>, LRESULT> get_value([[maybe_unused]] HWND window, 
     return std::unexpected(SOCKET_ERROR);
   }
 
-  auto new_key = keys.emplace(key);
-  auto new_data = already_mapped_data.emplace(*new_key.first, std::span<char>((char*)data, info.RegionSize));
+  auto new_key = cache.keys.emplace(key);
+  auto new_data = cache.already_mapped_data.emplace(*new_key.first, std::span<char>((char*)data, info.RegionSize));
 
   return new_data.first->second;
 }
@@ -129,6 +140,45 @@ struct wsock_window : win32::basic_window<wsock_window>
       }
       return 0;
     }
+
+
+    if (message == general_params::cleanup_message_id)
+    {
+      auto value = get_value<general_params>(*this, lparam);
+
+      if (!value)
+      {
+        return value.error();
+      }
+
+      auto& params = *value.value();
+
+      auto process_id = L"-" + std::to_wstring(params.how) + L"-";
+
+      auto& cache = get_cache();
+
+      for (auto iter = cache.keys.begin(); iter != cache.keys.end();)
+      {
+        if (!iter->contains(process_id))
+        {
+          ++iter;
+          continue;
+        }
+
+        auto cached_value = cache.already_mapped_data.find(*iter);
+
+        if (cached_value != cache.already_mapped_data.end())
+        {
+          ::UnmapViewOfFile(cached_value->second.data());
+          cache.already_mapped_data.erase(cached_value);
+        }
+
+        iter = cache.keys.erase(iter);
+      }
+
+      return 0;
+    }
+
 
     if (message == socket_params::message_id)
     {
