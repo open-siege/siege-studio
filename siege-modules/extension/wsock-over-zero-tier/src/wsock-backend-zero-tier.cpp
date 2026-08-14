@@ -63,6 +63,7 @@ std::optional<std::string> get_peer_id_and_public_key();
 std::shared_ptr<char> get_shared_current_ip_address_storage();
 int zt_to_winsock_error(int);
 int zt_to_winsock_result(int code);
+void wait_for_network_ready();
 
 bool fallback_broadcast_sorter(std::uint32_t, std::uint32_t);
 std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broadcast_addresses();
@@ -131,7 +132,6 @@ int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
       get_log() << "Starting node\n";
       zts_node_start();
       bool is_online = false;
-      bool is_connected = false;
 
       for (auto i = 0; i < 500; ++i)
       {
@@ -147,38 +147,15 @@ int __stdcall backend_WSAStartup(WORD version, LPWSADATA data)
         zts_util_delay(100);
       }
 
+      if (!is_online)
+      {
+        get_log() << "Node could not be started.\n";
+        return WSASYSNOTREADY;
+      }
+
       zts_net_join(*network_id);
-
       get_log() << "Joining network\n";
-      for (auto i = 0; i < 500; ++i)
-      {
-        if (zts_net_transport_is_ready(*network_id))
-        {
-          get_log() << "Joined network\n";
-          is_connected = true;
-          break;
-        }
-        zts_util_delay(100);
-      }
-
-      get_node_online_status() = is_online && is_connected;
-
-      if (is_online && !is_connected)
-      {
-        get_log() << "Node is online but could not join network. Stopping node.\n";
-        zts_node_stop();
-        return WSASYSNOTREADY;
-      }
-      else if (!is_online && !is_connected)
-      {
-        get_log() << "Node could not be started and could not join network.\n";
-        return WSASYSNOTREADY;
-      }
-
-      if (auto storage = get_shared_current_ip_address_storage(); storage)
-      {
-        zts_addr_get_str(*get_network_id(), ZTS_AF_INET, storage.get(), ZTS_IP_MAX_STR_LEN);
-      }
+      get_node_online_status() = true;
     }
 
     return 0;
@@ -439,6 +416,8 @@ int __stdcall backend_recvfrom(SOCKET ws, char* buf, int len, int flags, sockadd
     return SOCKET_ERROR;
   }
 
+  wait_for_network_ready();
+
   zts_sockaddr_in zt_addr{
     .sin_len = sizeof(zts_sockaddr_in)
   };
@@ -588,6 +567,8 @@ int __stdcall backend_listen(SOCKET ws, int backlog)
     return SOCKET_ERROR;
   }
 
+  wait_for_network_ready();
+
   if (backlog == SOMAXCONN)
   {
     backlog = ZTS_FD_SETSIZE;
@@ -606,6 +587,8 @@ SOCKET __stdcall backend_accept(SOCKET ws, sockaddr* name, int* namelen)
     imports->WSASetLastError(WSAENOTSOCK);
     return SOCKET_ERROR;
   }
+
+  wait_for_network_ready();
 
   log_sampled_check() << "zts_bsd_accept\n";
 
@@ -650,6 +633,13 @@ int __stdcall backend_connect(SOCKET ws, const sockaddr* name, int namelen)
     get_log() << "Non zero tier socket passed in" << std::endl;
     imports->WSASetLastError(WSAENOTSOCK);
     return SOCKET_ERROR;
+  }
+
+  int sock_type = 0;
+  zts_socklen_t sock_type_size = sizeof(sock_type);
+  if (zts_bsd_getsockopt(to_zts(ws), ZTS_SOL_SOCKET, ZTS_SO_TYPE, &sock_type, &sock_type_size) != 0 || sock_type != SOCK_DGRAM)
+  {
+    wait_for_network_ready();
   }
 
   if (name)
@@ -747,6 +737,8 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
     imports->WSASetLastError(WSAENOTSOCK);
     return SOCKET_ERROR;
   }
+
+  wait_for_network_ready();
 
   if (to)
   {
@@ -1169,6 +1161,8 @@ hostent* __stdcall backend_gethostbyname(const char* name)
   {
     return nullptr;
   }
+
+  wait_for_network_ready();
 
   auto get_internal_names = []() {
     std::set<std::string> internal_names;
@@ -1930,4 +1924,46 @@ bool& get_node_online_status()
 {
   static bool node_is_online = false;
   return node_is_online;
+}
+
+void wait_for_network_ready()
+{
+  static bool waited = false;
+
+  if (waited)
+  {
+    return;
+  }
+
+  waited = true;
+
+  if (!get_node_online_status())
+  {
+    return;
+  }
+
+  auto network_id = get_network_id();
+
+  if (!network_id)
+  {
+    return;
+  }
+
+  for (auto i = 0; i < 500; ++i)
+  {
+    if (zts_net_transport_is_ready(*network_id))
+    {
+      get_log() << "Joined network\n";
+
+      if (auto storage = get_shared_current_ip_address_storage(); storage)
+      {
+        zts_addr_get_str(*network_id, ZTS_AF_INET, storage.get(), ZTS_IP_MAX_STR_LEN);
+      }
+
+      return;
+    }
+    zts_util_delay(100);
+  }
+
+  get_log() << "Network transport not ready before timeout\n";
 }
