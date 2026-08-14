@@ -7,6 +7,40 @@ export module wsock32.rpc;
 
 import std;
 
+export std::optional<std::wstring> get_rpc_server_window_name()
+{
+  auto read_env = [](const wchar_t* name) -> std::optional<std::wstring> {
+    auto size = ::GetEnvironmentVariableW(name, nullptr, 0);
+    if (size <= 1)
+    {
+      return std::nullopt;
+    }
+
+    std::wstring value(size - 1, L'\0');
+    if (::GetEnvironmentVariableW(name, value.data(), size) == 0)
+    {
+      return std::nullopt;
+    }
+
+    if (value.empty())
+    {
+      return std::nullopt;
+    }
+
+    return value;
+  };
+
+  auto node_id = read_env(L"SIEGE_WSOCK_NODE_ID");
+  auto network_id = read_env(L"SIEGE_WSOCK_NETWORK_ID");
+
+  if (!node_id || !network_id)
+  {
+    return std::nullopt;
+  }
+
+  return L"ws2_32-rpc:" + *node_id + L':' + *network_id;
+}
+
 export struct general_params
 {
   constexpr static auto shutdown_message_id = WM_APP + 1;

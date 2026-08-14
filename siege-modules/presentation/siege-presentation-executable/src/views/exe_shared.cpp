@@ -2938,11 +2938,13 @@ namespace siege::views
       {
         if (has_client_preference(state))
         {
+          ::SetEnvironmentVariableW(L"SIEGE_WSOCK_NODE_ID", get_preferred_zt_node_id(state, true).c_str());
           ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", self.registry_data.last_zero_tier_client_node_id_and_private_key.data());
         }
         else
         {
           ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", self.registry_data.last_zero_tier_server_node_id_and_private_key.data());
+          ::SetEnvironmentVariableW(L"SIEGE_WSOCK_NODE_ID", get_preferred_zt_node_id(state, false).c_str());
         }
 
         auto ext_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / "runtime-extensions";
@@ -3019,8 +3021,9 @@ namespace siege::views
       {
         ::SetEnvironmentVariableW(L"ZERO_TIER_ENABLED", nullptr);
         ::SetEnvironmentVariableW(L"SIEGE_WSOCK_NETWORK_ID", nullptr);
-        ::SetEnvironmentVariableW(L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", nullptr);
         ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", nullptr);
+        ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_ID", nullptr);
+        ::SetEnvironmentVariableW(L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", nullptr);
       }
 
       ::SetEnvironmentVariableW(L"Path", current_path.c_str());

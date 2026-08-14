@@ -130,12 +130,18 @@ TEST_CASE("wsock32-rpc-client", "[wsock32][rpc]")
     // Restart so the server process inherits SIEGE_WSOCK_BACKEND.
     terminate_rpc_server_if_running();
     ::SetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", "wsock-backend-ws2_32.dll");
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_ID", "test-node");
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NETWORK_ID", "test-network");
 
     auto api = load_client("wsock32-rpc-client.dll");
     test_socket_options(api, MAKEWORD(1, 1));
     test_blocking_udp(api, MAKEWORD(1, 1), 19093);
     test_nonblocking_udp_select(api, MAKEWORD(1, 1), 19193);
     test_udp_async_select(api, MAKEWORD(1, 1), 19393);
+
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", nullptr);
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_ID", nullptr);
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NETWORK_ID", nullptr);
   }
 }
 
@@ -164,6 +170,8 @@ TEST_CASE("ws2_32-rpc-client", "[ws2_32][rpc]")
   {
     terminate_rpc_server_if_running();
     ::SetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", "wsock-backend-ws2_32.dll");
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_ID", "test-node");
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NETWORK_ID", "test-network");
 
     auto api = load_client("ws2_32-rpc-client.dll");
     test_socket_options(api, MAKEWORD(2, 2));
@@ -178,6 +186,10 @@ TEST_CASE("ws2_32-rpc-client", "[ws2_32][rpc]")
     test_udp_overlapped_event_getresult(api, MAKEWORD(2, 2), 19595);
     test_udp_overlapped_event_wait(api, MAKEWORD(2, 2), 19596);
     test_udp_overlapped_apc(api, MAKEWORD(2, 2), 19597);
+
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", nullptr);
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_ID", nullptr);
+    ::SetEnvironmentVariableA("SIEGE_WSOCK_NETWORK_ID", nullptr);
   }
 }
 
@@ -1109,6 +1121,7 @@ void terminate_rpc_server_if_running()
 {
   for (;;)
   {
+    // Match any helper for this class; titles are node+network specific.
     HWND server = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
     if (!server)
     {

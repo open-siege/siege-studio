@@ -524,6 +524,18 @@ void load_local_wsock();
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
+  auto window_name = get_rpc_server_window_name();
+
+  if (!window_name)
+  {
+    return -1;
+  }
+
+  if (::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", window_name->c_str()))
+  {
+    return -1;
+  }
+
   auto atom = wsock_window::register_class(hInstance);
 
   if (!atom)
@@ -533,7 +545,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
   auto window = win32::CreateWindowExW(CREATESTRUCTW{
     .hwndParent = HWND_MESSAGE,
-    .lpszName = L"Siege Network Helper",
+    .lpszName = window_name->c_str(),
     .lpszClass = MAKEINTATOM(atom),
   });
 

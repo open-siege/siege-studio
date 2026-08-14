@@ -202,12 +202,20 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     }
   };
 
+  auto window_name = get_rpc_server_window_name();
+
+  if (!window_name)
+  {
+    get_log() << "Missing SIEGE_WSOCK_NODE_ID or SIEGE_WSOCK_NETWORK_ID";
+    return WSASYSNOTREADY;
+  }
+
   HWND server_window = nullptr;
 
   get_log() << "Finding existing server window";
   for (auto i = 0; i < 3; ++i)
   {
-    server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
+    server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", window_name->c_str());
     if (server_window)
     {
       server_info.server = server_window;
@@ -246,7 +254,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 
   for (auto i = 0; i < 3; ++i)
   {
-    server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
+    server_window = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", window_name->c_str());
     if (server_window)
     {
       break;
