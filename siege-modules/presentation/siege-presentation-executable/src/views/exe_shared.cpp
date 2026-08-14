@@ -2717,7 +2717,7 @@ namespace siege::views
       auto wsock_path = parent_path / "wsock32-in-proc-client.dll";
       auto wsock_rpc_path = parent_path / "wsock32-rpc-client.dll";
       auto ws2_rpc_path = parent_path / "ws2_32-rpc-client.dll";
-      auto wsock_rpc_server_path = parent_path / "wsock32-rpc-server.exe";
+      auto wsock_rpc_server_path = parent_path / "ws2_32-rpc-server.exe";
       auto zt_path = parent_path / "wsock-backend-zero-tier.dll";
       std::error_code last_errorc;
 
@@ -2967,8 +2967,8 @@ namespace siege::views
             dll_paths.emplace_back(string_cache.emplace((ext_path / "wsock32.dll").string()).first->c_str());
           }
 
-          auto wsock_rpc_server_path = *zt_ext_path / "wsock32-rpc-server.exe";
-          fs::copy_file(wsock_rpc_server_path, ext_path / "wsock32-rpc-server.exe", fs::copy_options::overwrite_existing, last_errorc);
+          auto wsock_rpc_server_path = *zt_ext_path / "ws2_32-rpc-server.exe";
+          fs::copy_file(wsock_rpc_server_path, ext_path / "ws2_32-rpc-server.exe", fs::copy_options::overwrite_existing, last_errorc);
         }
         else if (links_to_networking_libraries(self) && uses_wsock32(self))
         {

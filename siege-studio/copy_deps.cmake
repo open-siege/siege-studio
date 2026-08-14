@@ -64,7 +64,7 @@ list(APPEND EXT_TARGETS
                 wsock32-in-proc-client 
                 wsock-backend-zero-tier 
                 wsock-backend-ws2_32 
-                wsock32-rpc-server 
+                ws2_32-rpc-server 
                 wsock32-rpc-client 
                 ws2_32-rpc-client)
 

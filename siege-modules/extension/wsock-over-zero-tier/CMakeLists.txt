@@ -53,13 +53,13 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     target_compile_definitions(ws2_32-rpc-client PRIVATE USE_WINSOCK2=TRUE)
     target_link_libraries(ws2_32-rpc-client PRIVATE siege-win-core siege-extension ws2_32)
 
-    add_executable(wsock32-rpc-server WIN32 src/wsock32-common-shared.cpp src/wsock32-rpc.cpp src/wsock32-rpc-server.cpp)
-    set_target_properties(wsock32-rpc-server PROPERTIES
+    add_executable(ws2_32-rpc-server WIN32 src/wsock32-common-shared.cpp src/wsock32-rpc.cpp src/ws2_32-rpc-server.cpp)
+    set_target_properties(ws2_32-rpc-server PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_SCAN_FOR_MODULES ON
     )
-    target_link_libraries(wsock32-rpc-server PRIVATE siege-win-core ws2_32)
+    target_link_libraries(ws2_32-rpc-server PRIVATE siege-win-core ws2_32)
 
     add_executable(wsock32-tests src/wsock32.test.cpp)
     set_target_properties(wsock32-tests PROPERTIES
@@ -74,7 +74,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
         wsock32-in-proc-client
         wsock32-rpc-client
         ws2_32-rpc-client
-        wsock32-rpc-server
+        ws2_32-rpc-server
         wsock-backend-ws2_32)
 
     include(CTest)
@@ -85,6 +85,6 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-in-proc-client> $<TARGET_FILE_DIR:wsock32-tests>
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-rpc-client> $<TARGET_FILE_DIR:wsock32-tests>
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ws2_32-rpc-client> $<TARGET_FILE_DIR:wsock32-tests>
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock32-rpc-server> $<TARGET_FILE_DIR:wsock32-tests>
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:ws2_32-rpc-server> $<TARGET_FILE_DIR:wsock32-tests>
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:wsock-backend-ws2_32> $<TARGET_FILE_DIR:wsock32-tests>)
 endif()

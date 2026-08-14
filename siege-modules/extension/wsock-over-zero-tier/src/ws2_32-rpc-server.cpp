@@ -509,7 +509,7 @@ struct wsock_window : win32::basic_window<wsock_window>
       .lpfnWndProc = basic_window::window_proc,
       .cbWndExtra = sizeof(void*),
       .hInstance = module,
-      .lpszClassName = L"wsock32-rpc-server",
+      .lpszClassName = L"ws2_32-rpc-server",
 
     };
     return ::RegisterClassExW(&info);

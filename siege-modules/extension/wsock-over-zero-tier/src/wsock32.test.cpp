@@ -1109,7 +1109,7 @@ void terminate_rpc_server_if_running()
 {
   for (;;)
   {
-    HWND server = ::FindWindowExW(HWND_MESSAGE, nullptr, L"wsock32-rpc-server", nullptr);
+    HWND server = ::FindWindowExW(HWND_MESSAGE, nullptr, L"ws2_32-rpc-server", nullptr);
     if (!server)
     {
       return;
