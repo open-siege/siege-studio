@@ -195,13 +195,6 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     return WSASYSNOTREADY;
   }
 
-  // in case the game forgets
-  static auto do_cleanup = std::shared_ptr<void>{
-    nullptr, [](...) {
-      siege_WSACleanup();
-    }
-  };
-
   auto window_name = get_rpc_server_window_name();
 
   if (!window_name)
