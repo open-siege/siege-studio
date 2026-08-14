@@ -150,8 +150,10 @@ TReturn send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init
 
 
 extern "C" {
+int __stdcall siege_WSACleanup() noexcept;
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
+
   ensure_imports();
   get_log("ws2_32-rpc-client") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
   auto result = imports->WSAStartup(version, data);
@@ -192,6 +194,13 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     get_log() << "Could not preallocate memory";
     return WSASYSNOTREADY;
   }
+
+  // in case the game forgets
+  static auto do_cleanup = std::shared_ptr<void>{
+    nullptr, [](...) {
+      siege_WSACleanup();
+    }
+  };
 
   HWND server_window = nullptr;
 
@@ -275,7 +284,7 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
   return result;
 }
 
-int __stdcall siege_WSACleanup()
+int __stdcall siege_WSACleanup() noexcept
 {
   ensure_imports();
   get_log() << "siege_WSACleanup";
@@ -306,12 +315,9 @@ SOCKET __stdcall siege_socket(int af, int type, int protocol) noexcept
 
   get_log() << "siege_socket af: " << af_to_string(af) << ", type: " << type_to_string(type) << ", protocol: " << protocol_to_string(protocol) << ", thread: " << GetCurrentThreadId();
 
-  return send_message_to_server<socket_params, socket_params::message_id, SOCKET>(0, [=](void* raw) {
-    return new (raw) socket_params{ .address_family = af, .type = type, .protocol = protocol };
-  }, [=](LRESULT new_socket, socket_params*) {
+  return send_message_to_server<socket_params, socket_params::message_id, SOCKET>(0, [=](void* raw) { return new (raw) socket_params{ .address_family = af, .type = type, .protocol = protocol }; }, [=](LRESULT new_socket, socket_params*) {
     get_socket_handles().insert(new_socket, type, socket_handle_info::overlapped_state::overlapped);
-    get_log() << "Returning new socket " << (std::size_t)new_socket;
-  });
+    get_log() << "Returning new socket " << (std::size_t)new_socket; });
 }
 
 int __stdcall siege_setsockopt(SOCKET ws, int level, int optname, const char* optval, int optlen)
