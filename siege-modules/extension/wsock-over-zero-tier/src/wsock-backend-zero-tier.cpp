@@ -1387,6 +1387,7 @@ std::set<std::uint32_t, decltype(fallback_broadcast_sorter)*>& get_fallback_broa
 
     char ipstr[ZTS_IP_MAX_STR_LEN] = { 0 };
 
+    wait_for_network_ready();
     if (zts_addr_get_str(*zt_id, ZTS_AF_INET, ipstr, ZTS_IP_MAX_STR_LEN) < 0)
     {
       return initial;
@@ -1421,6 +1422,7 @@ const std::map<std::uint32_t, std::uint32_t>& get_subnets()
     std::array<zts_sockaddr_storage, ZTS_MAX_ASSIGNED_ADDRESSES> addresses{};
     unsigned int count = ZTS_MAX_ASSIGNED_ADDRESSES;
 
+    wait_for_network_ready();
     if (zts_addr_get_all(*net_id, addresses.data(), &count) != ZTS_ERR_OK)
     {
       return subnets;
