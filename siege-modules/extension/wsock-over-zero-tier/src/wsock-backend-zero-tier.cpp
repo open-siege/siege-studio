@@ -1568,11 +1568,11 @@ std::optional<std::string> get_peer_id_and_public_key()
   static std::optional<std::string> result = []() -> std::optional<std::string> {
     get_log() << "get_peer_id_and_public_key\n";
 
-    if (auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", nullptr, 0); env_size >= 1)
+    if (auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_NODE_AUTH_KEY", nullptr, 0); env_size >= 1)
     {
       std::string peer_id(env_size - 1, '\0');
 
-      ::GetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", peer_id.data(), peer_id.size() + 1);
+      ::GetEnvironmentVariableA("SIEGE_WSOCK_NODE_AUTH_KEY", peer_id.data(), peer_id.size() + 1);
 
 
       peer_id.resize(ZTS_ID_STR_BUF_LEN);
