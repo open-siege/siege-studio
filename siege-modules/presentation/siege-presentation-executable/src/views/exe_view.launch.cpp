@@ -491,7 +491,7 @@ namespace siege::views
 
       if (global)
       {
-        ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", ip_name);
+        ::SetEnvironmentVariableW(L"SIEGE_WSOCK_CURRENT_IP_GLOBAL_HANDLE", ip_name);
       }
 
       auto game_args = get_packaged_args(state);
@@ -534,7 +534,7 @@ namespace siege::views
                                                         ::UnmapViewOfFile(data);
                                                       }
                                                       ::CloseHandle(global);
-                                                      ::SetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", nullptr); }
+                                                      ::SetEnvironmentVariableW(L"SIEGE_WSOCK_CURRENT_IP_GLOBAL_HANDLE", nullptr); }
 
                                                     });
 

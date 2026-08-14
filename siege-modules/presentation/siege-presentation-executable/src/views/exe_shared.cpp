@@ -692,10 +692,10 @@ namespace siege::views
       auto network_id = settings.last_zero_tier_network_id.back() == L'\0' ? std::wstring{ settings.last_zero_tier_network_id.data() }
                                                                            : std::wstring{ settings.last_zero_tier_network_id.data(), settings.last_zero_tier_network_id.size() };
 
-      constexpr static std::wstring_view zt_network_id = L"ZERO_TIER_NETWORK_ID";
+      constexpr static std::wstring_view zt_network_id = L"SIEGE_WSOCK_NETWORK_ID";
 
       self.launch_settings.emplace_back(game_setting{
-        .setting_name = L"ZERO_TIER_NETWORK_ID",
+        .setting_name = L"SIEGE_WSOCK_NETWORK_ID",
         .type = extension_setting_type::env_setting,
         .value = network_id,
         .display_name = L"Zero Tier Network ID",
@@ -2933,16 +2933,16 @@ namespace siege::views
       auto zt_ext_path = get_zero_tier_extension_folder_path(state);
 
       if (zt_ext_path && stl::any_of(game_args.environment_settings, zt_is_enabled) && stl::any_of(game_args.environment_settings, [](auto& item) {
-            return item.name != nullptr && std::wstring_view(item.name) == L"ZERO_TIER_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
+            return item.name != nullptr && std::wstring_view(item.name) == L"SIEGE_WSOCK_NETWORK_ID" && item.value != nullptr && item.value[0] != '\0';
           }))
       {
         if (has_client_preference(state))
         {
-          ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_client_node_id_and_private_key.data());
+          ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", self.registry_data.last_zero_tier_client_node_id_and_private_key.data());
         }
         else
         {
-          ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", self.registry_data.last_zero_tier_server_node_id_and_private_key.data());
+          ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", self.registry_data.last_zero_tier_server_node_id_and_private_key.data());
         }
 
         auto ext_path = fs::path(win32::module_ref::current_module().GetModuleFileName()).parent_path() / "runtime-extensions";
@@ -2991,17 +2991,17 @@ namespace siege::views
 
             if (setting != game_args.string_settings.end())
             {
-              ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", setting->value);
+              ::SetEnvironmentVariableW(L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", setting->value);
             }
             else
             {
-              ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", self.registry_data.last_ip_address.data());
+              ::SetEnvironmentVariableW(L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", self.registry_data.last_ip_address.data());
             }
           }
         }
         else
         {
-          ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", self.registry_data.last_ip_address.data());
+          ::SetEnvironmentVariableW(L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", self.registry_data.last_ip_address.data());
         }
       }
 
@@ -3018,9 +3018,9 @@ namespace siege::views
       if (!stl::any_of(game_args.environment_settings, zt_is_enabled))
       {
         ::SetEnvironmentVariableW(L"ZERO_TIER_ENABLED", nullptr);
-        ::SetEnvironmentVariableW(L"ZERO_TIER_NETWORK_ID", nullptr);
-        ::SetEnvironmentVariableW(L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr);
-        ::SetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", nullptr);
+        ::SetEnvironmentVariableW(L"SIEGE_WSOCK_NETWORK_ID", nullptr);
+        ::SetEnvironmentVariableW(L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", nullptr);
+        ::SetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", nullptr);
       }
 
       ::SetEnvironmentVariableW(L"Path", current_path.c_str());

@@ -1275,12 +1275,12 @@ std::shared_ptr<char> get_shared_current_ip_address_storage()
 {
   try
   {
-    if (auto env_size = ::GetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", nullptr, 0); env_size >= 1)
+    if (auto env_size = ::GetEnvironmentVariableW(L"SIEGE_WSOCK_CURRENT_IP_GLOBAL_HANDLE", nullptr, 0); env_size >= 1)
     {
       std::wstring raw_handle(env_size - 1, '\0');
-      ::GetEnvironmentVariableW(L"ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE", raw_handle.data(), raw_handle.size() + 1);
+      ::GetEnvironmentVariableW(L"SIEGE_WSOCK_CURRENT_IP_GLOBAL_HANDLE", raw_handle.data(), raw_handle.size() + 1);
 
-      get_log() << "Getting ZERO_TIER_CURRENT_IP_GLOBAL_HANDLE\n";
+      get_log() << "Getting SIEGE_WSOCK_CURRENT_IP_GLOBAL_HANDLE\n";
 
       if (raw_handle.empty())
       {
@@ -1323,10 +1323,10 @@ std::optional<in_addr> get_fallback_broadcast_ip_v4()
     get_log() << "get_fallback_broadcast_ip_v4\n";
 
 
-    if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_FALLBACK_BROADCAST_IP_V4", nullptr, 0); env_size >= 1)
+    if (auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", nullptr, 0); env_size >= 1)
     {
       std::string network_ip(env_size - 1, '\0');
-      ::GetEnvironmentVariableA("ZERO_TIER_FALLBACK_BROADCAST_IP_V4", network_ip.data(), network_ip.size() + 1);
+      ::GetEnvironmentVariableA("SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", network_ip.data(), network_ip.size() + 1);
 
       get_log() << "Zero Tier fallback broadcast IP is " << network_ip;
       in_addr result{};
@@ -1542,10 +1542,10 @@ std::optional<std::uint64_t> get_network_id()
       get_log() << "get_network_id\n";
 
 
-      if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", nullptr, 0); env_size >= 1)
+      if (auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_NETWORK_ID", nullptr, 0); env_size >= 1)
       {
         std::string network_id(env_size - 1, '\0');
-        ::GetEnvironmentVariableA("ZERO_TIER_NETWORK_ID", network_id.data(), network_id.size() + 1);
+        ::GetEnvironmentVariableA("SIEGE_WSOCK_NETWORK_ID", network_id.data(), network_id.size() + 1);
 
         get_log() << "Zero Tier Network ID is " << network_id;
         return std::strtoull(network_id.data(), 0, 16);
@@ -1568,11 +1568,11 @@ std::optional<std::string> get_peer_id_and_public_key()
   static std::optional<std::string> result = []() -> std::optional<std::string> {
     get_log() << "get_peer_id_and_public_key\n";
 
-    if (auto env_size = ::GetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", nullptr, 0); env_size >= 1)
+    if (auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", nullptr, 0); env_size >= 1)
     {
       std::string peer_id(env_size - 1, '\0');
 
-      ::GetEnvironmentVariableA("ZERO_TIER_PEER_ID_AND_KEY", peer_id.data(), peer_id.size() + 1);
+      ::GetEnvironmentVariableA("SIEGE_WSOCK_NODE_KEY", peer_id.data(), peer_id.size() + 1);
 
 
       peer_id.resize(ZTS_ID_STR_BUF_LEN);

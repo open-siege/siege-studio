@@ -19,7 +19,7 @@
 
 namespace siege::views
 {
-  constexpr auto zt_fallback_ip = L"ZERO_TIER_FALLBACK_BROADCAST_IP_V4";
+  constexpr auto zt_fallback_ip = L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4";
 
   // TODO games which use winmm (and possibly also dinput)
   // rely on the first controller being used.
