@@ -1,3 +1,6 @@
+#ifdef SIEGE_ZTS_USE_CRT_ERRNO
+#include <cerrno>
+#endif
 #include <ZeroTierSockets.h>
 
 #ifdef USE_WINSOCK2
@@ -680,9 +683,7 @@ int __stdcall backend_bind(SOCKET ws, const sockaddr* addr, int namelen)
     get_log() << "zts_bsd_bind requested " << requested_view << "\n";
 
     // computing a fallback in the rare case the IP comes from a real adapter
-    if (auto& subnets = get_subnets(); address_and_size.first.sin_family == ZTS_AF_INET && 
-        address_and_size.first.sin_addr.S_addr != ZTS_INADDR_ANY &&
-        !subnets.empty())
+    if (auto& subnets = get_subnets(); address_and_size.first.sin_family == ZTS_AF_INET && address_and_size.first.sin_addr.S_addr != ZTS_INADDR_ANY && !subnets.empty())
     {
       auto ip = address_and_size.first.sin_addr.S_addr;
       bool on_network = false;
@@ -761,8 +762,6 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
       int sent = 0;
       int broadcast_result = 0;
 
-      std::set<int> errors;
-
       if (auto ips = get_fallback_broadcast_addresses(); !ips.empty())
       {
         for (auto ip : ips)
@@ -785,10 +784,6 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
             if (broadcast_result > sent)
             {
               sent = broadcast_result;
-            }
-            else if (broadcast_result <= -1)
-            {
-              errors.emplace(zts_errno);
             }
           }
           else
@@ -814,10 +809,6 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
           {
             sent = zt_result;
           }
-          else if (zt_result <= -1)
-          {
-            errors.emplace(zts_errno);
-          }
         }
       }
 
@@ -825,14 +816,10 @@ int __stdcall backend_sendto(SOCKET ws, const char* buf, int len, int flags, con
       {
         return sent;
       }
-      else if (!errors.empty())
-      {
-        imports->WSASetLastError(zt_to_winsock_error(*errors.rbegin()));
-        return SOCKET_ERROR;
-      }
+      // we always say we would block
       else
       {
-        imports->WSASetLastError(WSAEACCES);
+        imports->WSASetLastError(WSAEWOULDBLOCK);
         return SOCKET_ERROR;
       }
     }
@@ -1614,6 +1601,32 @@ int get_zts_errno()
   return zts_errno;
 }
 
+#ifdef WSA_INVALID_HANDLE
+constexpr int wsa_invalid_handle = WSA_INVALID_HANDLE;
+#else
+constexpr int wsa_invalid_handle = WSAEBADF;
+#endif
+
+#ifdef WSA_NOT_ENOUGH_MEMORY
+constexpr int wsa_not_enough_memory = WSA_NOT_ENOUGH_MEMORY;
+#else
+constexpr int wsa_not_enough_memory = WSA_QOS_TRAFFIC_CTRL_ERROR;
+#endif
+
+#ifdef WSA_INVALID_PARAMETER
+constexpr int wsa_invalid_parameter = WSA_INVALID_PARAMETER;
+#else
+constexpr int wsa_invalid_parameter = WSAEINVAL;
+#endif
+
+constexpr bool zts_errno_uses_crt =
+#ifdef SIEGE_ZTS_USE_CRT_ERRNO
+  true
+#else
+  false
+#endif
+  ;
+
 int zt_to_winsock_error(int error)
 {
   if (error == 0)
@@ -1621,187 +1634,125 @@ int zt_to_winsock_error(int error)
     return 0;
   }
 
-  switch (error)
+  if constexpr (zts_errno_uses_crt)
   {
-  case ZTS_EPERM: {
-    return WSAEACCES;
-  }
-  case ZTS_ENOENT: {
-#ifdef WSA_INVALID_HANDLE
-    return WSA_INVALID_HANDLE;
-#else
-    return WSAEBADF;
-#endif
-  }
-  case ZTS_ESRCH: {
-#ifdef WSA_INVALID_HANDLE
-    return WSA_INVALID_HANDLE;
-#else
-    return WSAEBADF;
-#endif
-  }
-  case ZTS_EINTR: {
-    return WSAEINTR;
-  }
-  case ZTS_EIO: {
-    return WSAEINPROGRESS;
-  }
-  case ZTS_ENXIO: {
-    return WSAEFAULT;
-  }
-  case ZTS_EBADF: {
-    return WSAEBADF;
-  }
-  // not documented but probably an implementation
-  // detail leaking through
-  case EWOULDBLOCK: {
-    return WSAEWOULDBLOCK;
-  }
-  case ZTS_EWOULDBLOCK: {
-    return WSAEWOULDBLOCK;
-  }
-  case ZTS_ENOMEM: {
-#ifdef WSA_NOT_ENOUGH_MEMORY
-    return WSA_NOT_ENOUGH_MEMORY;
-#else
-    return WSA_QOS_TRAFFIC_CTRL_ERROR;
-#endif
-  }
-  case ZTS_EACCES: {
-    return WSAEACCES;
-  }
-  case ZTS_EFAULT: {
-    return WSAEFAULT;
-  }
-  case ZTS_EBUSY: {
-    return WSAEACCES;
-  }
-  case ZTS_EEXIST: {
-    return WSAEACCES;
-  }
-  case ZTS_ENODEV: {
-    return WSAEACCES;
-  }
-  case ZTS_EINVAL: {
-    return WSAEINVAL;
-  }
-  case ZTS_ENFILE: {
-    return WSAEMFILE;
-  }
-  case ZTS_EMFILE: {
-    return WSAEMFILE;
-  }
-  case ZTS_ENOSYS: {
-    return WSAEACCES;
-  }
-  case ZTS_ENOTSOCK: {
-    return WSAENOTSOCK;
-  }
-  case ZTS_EDESTADDRREQ: {
-    return WSAEDESTADDRREQ;
-  }
-  case ZTS_EMSGSIZE: {
-    return WSAEMSGSIZE;
-  }
-  case EPROTOTYPE: {
-    return WSAEPROTOTYPE;
-  }
-  case ZTS_EPROTOTYPE: {
-    return WSAEPROTOTYPE;
-  }
-  case ZTS_ENOPROTOOPT: {
-    return WSAENOPROTOOPT;
-  }
-  case ZTS_EPROTONOSUPPORT: {
-    return WSAEPROTONOSUPPORT;
-  }
-  case ZTS_ESOCKTNOSUPPORT: {
-    return WSAESOCKTNOSUPPORT;
-  }
-  case EOPNOTSUPP: {
-    return WSAEOPNOTSUPP;
-  }
-  case ZTS_EOPNOTSUPP: {
-    return WSAEOPNOTSUPP;
-  }
-  case ZTS_EPFNOSUPPORT: {
-    return WSAEPFNOSUPPORT;
-  }
-  case ZTS_EAFNOSUPPORT: {
-    return WSAEAFNOSUPPORT;
-  }
-  case ZTS_EADDRINUSE: {
-    return WSAEADDRINUSE;
-  }
-  case ZTS_EADDRNOTAVAIL: {
-    return WSAEADDRNOTAVAIL;
-  }
-  case ENETDOWN: {
-    return WSAENETDOWN;
-  }
-  case ZTS_ENETDOWN: {
-    return WSAENETDOWN;
-  }
-  case ENETUNREACH: {
-    return WSAENETUNREACH;
-  }
-  case ZTS_ENETUNREACH: {
-    return WSAENETUNREACH;
-  }
-  case ZTS_ECONNABORTED: {
-    return WSAECONNABORTED;
-  }
-  case ZTS_ECONNRESET: {
-    return WSAECONNRESET;
-  }
-  case ZTS_ENOBUFS: {
-    return WSAENOBUFS;
-  }
-  case ZTS_EISCONN: {
-    return WSAEISCONN;
-  }
-  case ENOTCONN: {
-    return WSAENOTCONN;
-  }
-  case ZTS_ENOTCONN: {
-    return WSAENOTCONN;
-  }
-  case ETIMEDOUT: {
-    return WSAETIMEDOUT;
-  }
-  case ZTS_ETIMEDOUT: {
-    return WSAETIMEDOUT;
-  }
-  case ZTS_ECONNREFUSED: {
-    return WSAECONNREFUSED;
-  }
-  case ZTS_EHOSTUNREACH: {
-    return WSAEHOSTUNREACH;
-  }
-  case ZTS_EALREADY: {
-    return WSAEALREADY;
-  }
-  // not documented but probably an implementation
-  // detail leaking through
-  case EINPROGRESS: {
-    return WSAEWOULDBLOCK;
-  }
-  case ZTS_EINPROGRESS: {
+    constexpr std::pair<int, int> crt_to_wsa[] = {
+      { EPERM, WSAEACCES },
+      { ENOENT, wsa_invalid_handle },
+      { ESRCH, wsa_invalid_handle },
+      { EINTR, WSAEINTR },
+      { EIO, WSAEINPROGRESS },
+      { ENXIO, WSAEFAULT },
+      { EBADF, WSAEBADF },
+      { EWOULDBLOCK, WSAEWOULDBLOCK },
+      { EAGAIN, WSAEWOULDBLOCK },
+      { ENOMEM, wsa_not_enough_memory },
+      { EACCES, WSAEACCES },
+      { EFAULT, WSAEFAULT },
+      { EBUSY, WSAEACCES },
+      { EEXIST, WSAEACCES },
+      { ENODEV, WSAEACCES },
+      { EINVAL, WSAEINVAL },
+      { ENFILE, WSAEMFILE },
+      { EMFILE, WSAEMFILE },
+      { ENOSYS, WSAEACCES },
+      { ENOTSOCK, WSAENOTSOCK },
+      { EDESTADDRREQ, WSAEDESTADDRREQ },
+      { EMSGSIZE, WSAEMSGSIZE },
+      { EPROTOTYPE, WSAEPROTOTYPE },
+      { ENOPROTOOPT, WSAENOPROTOOPT },
+      { EPROTONOSUPPORT, WSAEPROTONOSUPPORT },
+      { EOPNOTSUPP, WSAEOPNOTSUPP },
+      { EAFNOSUPPORT, WSAEAFNOSUPPORT },
+      { EADDRINUSE, WSAEADDRINUSE },
+      { EADDRNOTAVAIL, WSAEADDRNOTAVAIL },
+      { ENETDOWN, WSAENETDOWN },
+      { ENETUNREACH, WSAENETUNREACH },
+      { ECONNABORTED, WSAECONNABORTED },
+      { ECONNRESET, WSAECONNRESET },
+      { ENOBUFS, WSAENOBUFS },
+      { EISCONN, WSAEISCONN },
+      { ENOTCONN, WSAENOTCONN },
+      { ETIMEDOUT, WSAETIMEDOUT },
+      { ECONNREFUSED, WSAECONNREFUSED },
+      { EHOSTUNREACH, WSAEHOSTUNREACH },
+      { EALREADY, WSAEALREADY },
+      // on windows, WSAEINPROGRESS means something else
+      // (it's about blocking hooks and service provider callbacks).
+      // WOULDBLOCK is dual-purpose in wsock.
+      { EINPROGRESS, WSAEWOULDBLOCK },
+    };
 
-    // on windows, WSAEINPROGRESS means something else
-    // (it's about blocking hooks and service provider callbacks).
-    // WOULDBLOCK is dual-purpose in wsock.
-    return WSAEWOULDBLOCK;
+    for (auto [from, to] : crt_to_wsa)
+    {
+      if (error == from)
+      {
+        return to;
+      }
+    }
+
+    return wsa_invalid_parameter;
   }
-  default: {
-#ifdef WSA_INVALID_PARAMETER
-    return WSA_INVALID_PARAMETER;
-#else
-    return WSAEINVAL;
-#endif
+  else
+  {
+    constexpr std::pair<int, int> zts_to_wsa[] = {
+      { ZTS_EPERM, WSAEACCES },
+      { ZTS_ENOENT, wsa_invalid_handle },
+      { ZTS_ESRCH, wsa_invalid_handle },
+      { ZTS_EINTR, WSAEINTR },
+      { ZTS_EIO, WSAEINPROGRESS },
+      { ZTS_ENXIO, WSAEFAULT },
+      { ZTS_EBADF, WSAEBADF },
+      { ZTS_EWOULDBLOCK, WSAEWOULDBLOCK },
+      { ZTS_ENOMEM, wsa_not_enough_memory },
+      { ZTS_EACCES, WSAEACCES },
+      { ZTS_EFAULT, WSAEFAULT },
+      { ZTS_EBUSY, WSAEACCES },
+      { ZTS_EEXIST, WSAEACCES },
+      { ZTS_ENODEV, WSAEACCES },
+      { ZTS_EINVAL, WSAEINVAL },
+      { ZTS_ENFILE, WSAEMFILE },
+      { ZTS_EMFILE, WSAEMFILE },
+      { ZTS_ENOSYS, WSAEACCES },
+      { ZTS_ENOTSOCK, WSAENOTSOCK },
+      { ZTS_EDESTADDRREQ, WSAEDESTADDRREQ },
+      { ZTS_EMSGSIZE, WSAEMSGSIZE },
+      { ZTS_EPROTOTYPE, WSAEPROTOTYPE },
+      { ZTS_ENOPROTOOPT, WSAENOPROTOOPT },
+      { ZTS_EPROTONOSUPPORT, WSAEPROTONOSUPPORT },
+      { ZTS_ESOCKTNOSUPPORT, WSAESOCKTNOSUPPORT },
+      { ZTS_EOPNOTSUPP, WSAEOPNOTSUPP },
+      { ZTS_EPFNOSUPPORT, WSAEPFNOSUPPORT },
+      { ZTS_EAFNOSUPPORT, WSAEAFNOSUPPORT },
+      { ZTS_EADDRINUSE, WSAEADDRINUSE },
+      { ZTS_EADDRNOTAVAIL, WSAEADDRNOTAVAIL },
+      { ZTS_ENETDOWN, WSAENETDOWN },
+      { ZTS_ENETUNREACH, WSAENETUNREACH },
+      { ZTS_ECONNABORTED, WSAECONNABORTED },
+      { ZTS_ECONNRESET, WSAECONNRESET },
+      { ZTS_ENOBUFS, WSAENOBUFS },
+      { ZTS_EISCONN, WSAEISCONN },
+      { ZTS_ENOTCONN, WSAENOTCONN },
+      { ZTS_ETIMEDOUT, WSAETIMEDOUT },
+      { ZTS_ECONNREFUSED, WSAECONNREFUSED },
+      { ZTS_EHOSTUNREACH, WSAEHOSTUNREACH },
+      { ZTS_EALREADY, WSAEALREADY },
+      // on windows, WSAEINPROGRESS means something else
+      // (it's about blocking hooks and service provider callbacks).
+      // WOULDBLOCK is dual-purpose in wsock.
+      { ZTS_EINPROGRESS, WSAEWOULDBLOCK },
+    };
+
+    for (auto [from, to] : zts_to_wsa)
+    {
+      if (error == from)
+      {
+        return to;
+      }
+    }
+
+    return wsa_invalid_parameter;
   }
-  }
-  return error;
 }
 
 SOCKET from_zts(int socket)

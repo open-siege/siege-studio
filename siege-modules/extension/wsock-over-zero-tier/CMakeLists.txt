@@ -23,9 +23,14 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
     )
     target_link_libraries(wsock-backend-ws2_32 PRIVATE siege-win-core zt-static)
 
+    option(SIEGE_ZTS_USE_CRT_ERRNO "Treat zts_errno as Windows CRT errno numbers" ON)
+
     if(TARGET zt-static)
         add_library(wsock-backend-zero-tier SHARED src/wsock32-common-shared.cpp src/wsock-backend-zero-tier.cpp src/wsock-backend-zero-tier.def)
         target_compile_definitions(wsock-backend-zero-tier PRIVATE USE_WINSOCK2=TRUE)
+        if(SIEGE_ZTS_USE_CRT_ERRNO)
+            target_compile_definitions(wsock-backend-zero-tier PRIVATE SIEGE_ZTS_USE_CRT_ERRNO)
+        endif()
         target_include_directories(wsock-backend-zero-tier PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/libzt/include)
         set_target_properties(wsock-backend-zero-tier PROPERTIES
             CXX_STANDARD 23

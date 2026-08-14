@@ -13,10 +13,12 @@ string(REPLACE "\r\n" "\n" _siege_lwipopts "${_siege_lwipopts}")
 
 set(_old
     "#define TCPIP_MBOX_SIZE                 0"
-    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   1")
+    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   1"
+    "#define LWIP_NETIF_LOOPBACK             0")
 set(_new
     "#define TCPIP_MBOX_SIZE                 256"
-    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   0")
+    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   0"
+    "#define LWIP_NETIF_LOOPBACK             1")
 
 list(LENGTH _old _siege_lwip_count)
 math(EXPR _siege_lwip_last "${_siege_lwip_count} - 1")
