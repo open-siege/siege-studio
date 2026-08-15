@@ -10,6 +10,7 @@
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/extension_module_client.hpp>
 #include <utility>
+#include <future>
 #include <fstream>
 #include <execution>
 #include <array>
@@ -737,8 +738,8 @@ namespace siege::views
       }
 
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
-      auto extensions = siege::platform::game_extension_module::load_modules(app_path);
-      auto view_modules = siege::platform::presentation_module::load_modules(app_path);
+      auto extensions = std::async(std::launch::async, [](auto app_path) { return siege::platform::game_extension_module::load_modules(app_path); }, app_path);
+      auto view_modules = std::async(std::launch::async, [](auto app_path) { return siege::platform::presentation_module::load_modules(app_path); }, app_path);
 
       std::map<fs::path, std::vector<fs::path>> roots;
 
@@ -917,7 +918,7 @@ namespace siege::views
             return;
           }
 
-          for (auto& view_module : view_modules)
+          for (auto& view_module : view_modules.get())
           {
             siege::platform::storage_info info{ .type = siege::platform::storage_info::file, .info = app_path.c_str() };
             if (!view_module.is_stream_supported(info))
@@ -984,11 +985,11 @@ namespace siege::views
         };
 
         auto process_path = [&](const auto& app_path) {
-          auto extension_iter = std::find_if(extensions.begin(), extensions.end(), [&](auto& extension) {
+          auto extension_iter = std::find_if(extensions.get().begin(), extensions.get().end(), [&](auto& extension) {
             return extension.executable_is_supported(app_path.c_str()) == true;
           });
 
-          if (extension_iter == extensions.end())
+          if (extension_iter == extensions.get().end())
           {
             return false;
           }
