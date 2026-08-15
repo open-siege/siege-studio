@@ -56,6 +56,9 @@ namespace siege::views
     std::optional<extension_setting_type> listen_setting_type{};
     bool listen_setting_multiple_predefined = false;
 
+    bool launch_enabled_for_client_process = true;
+    bool launch_enabled_for_server_process = true;
+
     std::map<fs::path, networking_support> detected_networking_support;
 
     std::vector<input_action_binding> bound_actions = { {} };
@@ -3256,6 +3259,49 @@ namespace siege::views
     // negative check because unknown values should still
     // keep us as a client because it was the default before.
     return hosting_pref != pref_options_keys[2] && hosting_pref != pref_options_keys[3];
+  }
+
+  bool can_launch_additional_instance(const std::any& state)
+  {
+    auto& self = get(state);
+
+    std::wstring_view hosting_pref = self.registry_data.last_hosting_preference.data();
+
+    if (has_extension_module(state))
+    {
+      return hosting_pref == pref_options_keys[3];
+    }
+
+    return hosting_pref == pref_options_keys[2];
+  }
+
+  bool is_launch_enabled(const std::any& state)
+  {
+    auto& self = get(state);
+
+    return can_launch_additional_instance(state) ? self.launch_enabled_for_server_process : self.launch_enabled_for_client_process;
+  }
+
+  void disable_launch(std::any& state)
+  {
+    auto& self = get(state);
+
+    if (can_launch_additional_instance(state))
+    {
+      self.launch_enabled_for_server_process = false;
+    }
+    else
+    {
+      self.launch_enabled_for_client_process = false;
+    }
+  }
+
+  void reset_launch_state(std::any& state)
+  {
+    auto& self = get(state);
+
+    self.launch_enabled_for_client_process = true;
+    self.launch_enabled_for_server_process = true;
   }
 
   std::wstring get_preferred_zt_node_id(const std::any& state, std::optional<bool> for_client)

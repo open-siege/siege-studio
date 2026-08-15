@@ -16,6 +16,8 @@ namespace stl = std::ranges;
 
 namespace siege::views
 {
+  void apply_launch_button_state(exe_view& self);
+
   decltype(exe_view::launch) exe_view::create_launch_controls()
   {
     decltype(exe_view::launch) launch{};
@@ -180,6 +182,8 @@ namespace siege::views
             {
               setting->get().update_value((int)fetched->lParam, text.data());
             }
+
+            apply_launch_button_state(*this);
           }
         });
       }
@@ -474,11 +478,6 @@ namespace siege::views
         .mask = LVIF_PARAM
       };
 
-      auto existing_state = exe_actions.GetState(this->launch.launch_selected_id);
-
-      existing_state &= ~TBSTATE_ENABLED;
-      exe_actions.SetState(this->launch.launch_selected_id, existing_state);
-
       auto ip_name = has_client_preference(state) ? L"ZeroTierCurrentClientIpGlobalHandle" : L"ZeroTierCurrentServerIpGlobalHandle";
 
       auto global = ::CreateFileMappingW(
@@ -499,9 +498,9 @@ namespace siege::views
       game_args.controller_to_send_input_mappings = controller_to_send_input_mappings;
       game_args.controller_to_send_input_mappings.resize(256);
 
-      this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, existing_state, global, for_client = has_client_preference(state)] mutable {
-                                                    existing_state |= TBSTATE_ENABLED;
-                                                    this->exe_actions.SetState(this->launch.launch_selected_id, existing_state);
+      this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, global, for_client = has_client_preference(state)] mutable {
+                                                    reset_launch_state(state);
+                                                    apply_launch_button_state(*this);
                                                     auto _ = std::shared_ptr<void>{
                                                       nullptr, [this](...) {
                                                         this->launch.injector.reset();
@@ -538,10 +537,26 @@ namespace siege::views
 
                                                     });
 
+      disable_launch(state);
+      apply_launch_button_state(*this);
 
       return true;
     });
 
     return launch;
+  }
+
+  void apply_launch_button_state(exe_view& self)
+  {
+    auto btn_state = self.exe_actions.GetState(self.launch.launch_selected_id);
+    if (is_launch_enabled(self.state))
+    {
+      btn_state |= TBSTATE_ENABLED;
+    }
+    else
+    {
+      btn_state &= ~TBSTATE_ENABLED;
+    }
+    self.exe_actions.SetState(self.launch.launch_selected_id, btn_state);
   }
 }// namespace siege::views

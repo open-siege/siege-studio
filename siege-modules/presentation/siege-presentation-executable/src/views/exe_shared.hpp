@@ -236,6 +236,10 @@ namespace siege::views
   siege::platform::owning_packaged_args get_packaged_args(std::any& state);
 
   bool has_client_preference(const std::any& state);
+  bool can_launch_additional_instance(const std::any& state);
+  bool is_launch_enabled(const std::any& state);
+  void disable_launch(std::any& state);
+  void reset_launch_state(std::any& state);
   HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept;
 }// namespace siege::views
 
