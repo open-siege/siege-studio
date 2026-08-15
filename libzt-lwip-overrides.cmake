@@ -1,6 +1,8 @@
 # Safer lwIP RX path for local broadcast storms (shadowed lwipopts.h).
 # Do not enable FULLDUPLEX/SEM_PER_THREAD here: libzt never calls
 # lwip_socket_thread_init() on game threads, so select/connect null-deref.
+# Leave LWIP_NETIF_LOOPBACK at upstream 0 — enabling it with libzt's
+# VirtualTap netif path has caused heap corruption (0xC0000374).
 if (NOT TARGET zt-static)
     return()
 endif()
@@ -13,12 +15,10 @@ string(REPLACE "\r\n" "\n" _siege_lwipopts "${_siege_lwipopts}")
 
 set(_old
     "#define TCPIP_MBOX_SIZE                 0"
-    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   1"
-    "#define LWIP_NETIF_LOOPBACK             0")
+    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   1")
 set(_new
     "#define TCPIP_MBOX_SIZE                 256"
-    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   0"
-    "#define LWIP_NETIF_LOOPBACK             1")
+    "#define LWIP_TCPIP_CORE_LOCKING_INPUT   0")
 
 list(LENGTH _old _siege_lwip_count)
 math(EXPR _siege_lwip_last "${_siege_lwip_count} - 1")
