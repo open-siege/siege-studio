@@ -2639,6 +2639,12 @@ namespace siege::views
       self.detected_networking_support.emplace(self.loaded_path, result);
     }
 
+    auto has_ws2_32 = [&self]() {
+      return stl::any_of(self.detected_networking_support, [](auto& item) {
+        return item.second.ws2_32 || item.second.dplayx;
+      });
+    };
+
     std::string_view view_data_str{ view_data };
 
     auto process_entry = [&self](auto& dir_entry) {
@@ -2663,6 +2669,11 @@ namespace siege::views
 
     for (auto const& dir_entry : fs::directory_iterator{ self.loaded_path.parent_path() })
     {
+      if (has_ws2_32())
+      {
+        break;
+      }
+
       process_entry(dir_entry);
 
       if (dir_entry.is_directory())
