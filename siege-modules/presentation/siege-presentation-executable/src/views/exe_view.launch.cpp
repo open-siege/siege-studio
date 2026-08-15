@@ -45,7 +45,7 @@ namespace siege::views
                                           .state = LVGS_COLLAPSIBLE,
                                         });
 
-    launch.launch_table_edit = *win32::CreateWindowExW<win32::edit>({ .hwndParent = *this, .style = WS_CHILD });
+    launch.launch_table_edit = *win32::CreateWindowExW<win32::edit>({ .hwndParent = *this, .style = WS_CHILD | ES_AUTOHSCROLL });
     launch.launch_table_combo = *win32::CreateWindowExW<win32::combo_box_ex>({ .hwndParent = *this, .cy = 300, .cx = 300, .style = WS_CHILD | CBS_DROPDOWNLIST });
 
     launch.launch_table_ip_address = *win32::CreateWindowExW<win32::ip_address_edit>({ .hwndParent = *this, .cy = 100, .cx = 300, .style = WS_CHILD });
@@ -86,7 +86,8 @@ namespace siege::views
         return;
       }
 
-      static std::array<wchar_t, 256> text{};
+      // Large enough for long launch arg strings (CreateProcess limit is ~32K).
+      static std::array<wchar_t, 4096> text{};
 
       ::LVITEMW item{
         .mask = LVIF_PARAM,
