@@ -6,6 +6,7 @@
 #include <codecvt>
 #include <winreg.h>
 #include <detours.h>
+#include <imagehlp.h>
 #include <nlohmann/json.hpp>
 #include "exe_shared.hpp"
 
@@ -2886,6 +2887,22 @@ namespace siege::views
     copy(old_args.controller_to_send_input_mappings, game_args.controller_to_send_input_mappings, std::clamp<std::size_t>(old_args.controller_to_send_input_mappings.size(), 0, game_args.controller_to_send_input_mappings.size()));
   }
 
+  bool uses_console_subsystem(const fs::path& exe_path)
+  {
+    LOADED_IMAGE image{};
+    auto name = exe_path.filename().string();
+    auto dir = exe_path.parent_path().string();
+
+    if (!::MapAndLoad(name.c_str(), dir.c_str(), &image, FALSE, TRUE))
+    {
+      return false;
+    }
+
+    const bool is_console = image.FileHeader->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI;
+    ::UnMapAndLoad(&image);
+    return is_console;
+  }
+
   HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept
   {
     auto& self = get(state);
@@ -3177,8 +3194,9 @@ namespace siege::views
       }
 
       auto deferred = configure_environment();
+      auto creation_flags = uses_console_subsystem(exe_path) ? CREATE_NEW_CONSOLE : DETACHED_PROCESS;
 
-      if (dll_paths.empty() && ::CreateProcessW(exe_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, self.loaded_path.parent_path().c_str(), &startup_info, process_info))
+      if (dll_paths.empty() && ::CreateProcessW(exe_path.c_str(), args.data(), nullptr, nullptr, FALSE, creation_flags, nullptr, self.loaded_path.parent_path().c_str(), &startup_info, process_info))
       {
         return S_OK;
       }
@@ -3187,7 +3205,7 @@ namespace siege::views
                  nullptr,
                  nullptr,
                  FALSE,
-                 DETACHED_PROCESS,
+                 creation_flags,
                  nullptr,
                  self.loaded_path.parent_path().c_str(),
                  &startup_info,
@@ -3223,8 +3241,9 @@ namespace siege::views
       }
 
       auto deferred = configure_environment();
+      auto creation_flags = uses_console_subsystem(self.loaded_path) ? CREATE_NEW_CONSOLE : DETACHED_PROCESS;
 
-      if (dll_paths.empty() && ::CreateProcessW(self.loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, self.loaded_path.parent_path().c_str(), &startup_info, process_info))
+      if (dll_paths.empty() && ::CreateProcessW(self.loaded_path.c_str(), args.data(), nullptr, nullptr, FALSE, creation_flags, nullptr, self.loaded_path.parent_path().c_str(), &startup_info, process_info))
       {
         return S_OK;
       }
@@ -3233,7 +3252,7 @@ namespace siege::views
                  nullptr,
                  nullptr,
                  FALSE,
-                 DETACHED_PROCESS,
+                 creation_flags,
                  nullptr,
                  self.loaded_path.parent_path().c_str(),
                  &startup_info,
