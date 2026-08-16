@@ -1,9 +1,12 @@
-# Siege Studio + Siege Launcher 26.27 Development Release
+# Siege Studio + Siege Launcher 26.33 Development Release
+* Fixed crash/issue launching partially supported games.
 * Fixed SiN launching with Zero Tier enabled on AMD GPUs.
 * Host name look-up implemented for games using WinSock2, which enables more games to work with the Zero Tier wrapper.
-* Fixed crash/issue launching partially supported games.
 * Zero Tier networking library now logs data which can be viewed by tools such as DebugView.
 * Fixed discovery and connection issues in Quake, HeXen II and Laser Arena.
+* Faster loading of default view and certain games with networking support.
+* Dedicated server hosting and partially supported server hosting has its own Zero Tier ID and IP.
+* Many more games work with Zero Tier enabled. Mostly DirectPlay games still don't work as expected.
 
 # Siege Studio + Siege Launcher 26.23 Development Release
 * Various fixes and improvements for Medal of Honor - Allied Assault and it's expansions.
