@@ -738,8 +738,8 @@ namespace siege::views
       }
 
       std::filesystem::path app_path = std::filesystem::path(win32::module_ref::current_module().GetModuleFileName()).parent_path();
-      auto extensions = std::async(std::launch::async, [](auto app_path) { return siege::platform::game_extension_module::load_modules(app_path); }, app_path);
-      auto view_modules = std::async(std::launch::async, [](auto app_path) { return siege::platform::presentation_module::load_modules(app_path); }, app_path);
+      auto extensions = std::async(std::launch::async, [](auto app_path) { return siege::platform::game_extension_module::load_modules(app_path); }, app_path).share();
+      auto view_modules = std::async(std::launch::async, [](auto app_path) { return siege::platform::presentation_module::load_modules(app_path); }, app_path).share();
 
       std::map<fs::path, std::vector<fs::path>> roots;
 
