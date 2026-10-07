@@ -114,16 +114,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 7> va
   { "joyadvaxisv"sv, "joyadvaxisv"sv },
 } };
 
-std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
-{
-  return siege::get_name_ranges(function_name_ranges, length, data, saved);
-}
-
-std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
-{
-  return siege::get_name_ranges(variable_name_ranges, length, data, saved);
-}
-
 std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   if (filename)

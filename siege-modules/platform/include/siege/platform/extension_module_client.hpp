@@ -7,8 +7,6 @@
 namespace siege::platform
 {
   using executable_is_supported = std::errc(const siege::fs_char* filename) noexcept;
-  using get_function_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
-  using get_variable_name_ranges = std::errc(std::size_t, std::array<const char*, 2>*, std::size_t*) noexcept;
   using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
   using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
   using get_predefined_string_command_line_settings = predefined_string*(const siege::fs_char* name) noexcept;
@@ -31,8 +29,6 @@ namespace siege::platform
   {
     using base = win32::module;
     executable_is_supported* executable_is_supported_proc = nullptr;
-    get_function_name_ranges* get_function_name_ranges_proc = nullptr;
-    get_variable_name_ranges* get_variable_name_ranges_proc = nullptr;
     init_keyboard_inputs* init_keyboard_inputs_proc = nullptr;
     init_mouse_inputs* init_mouse_inputs_proc = nullptr;
     init_controller_inputs* init_controller_inputs_proc = nullptr;
@@ -95,8 +91,6 @@ namespace siege::platform
     {
       executable_is_supported_proc = GetProcAddress<decltype(executable_is_supported_proc)>("executable_is_supported");
       change_working_directory_proc = GetProcAddress<decltype(executable_is_supported_proc)>("change_working_directory");
-      get_function_name_ranges_proc = GetProcAddress<decltype(get_function_name_ranges_proc)>("get_function_name_ranges");
-      get_variable_name_ranges_proc = GetProcAddress<decltype(get_variable_name_ranges_proc)>("get_variable_name_ranges");
       get_predefined_string_command_line_settings_proc = GetProcAddress<decltype(get_predefined_string_command_line_settings_proc)>("get_predefined_string_command_line_settings");
       get_predefined_int_command_line_settings_proc = GetProcAddress<decltype(get_predefined_int_command_line_settings_proc)>("get_predefined_int_command_line_settings");
       init_keyboard_inputs_proc = GetProcAddress<decltype(init_keyboard_inputs_proc)>("init_keyboard_inputs");
@@ -370,8 +364,6 @@ namespace siege::platform
 
       std::array<void*, 15> ptrs = { { executable_is_supported_proc,
         change_working_directory_proc,
-        get_function_name_ranges_proc,
-        get_variable_name_ranges_proc,
         init_keyboard_inputs_proc,
         init_mouse_inputs_proc,
         get_predefined_string_command_line_settings_proc,
@@ -386,64 +378,6 @@ namespace siege::platform
 
       return std::any_of(ptrs.begin(), ptrs.end(), [=](auto* ptr) { return ptr == export_ptr; });
     }
-
-    inline std::vector<std::pair<std::string, std::string>> get_function_name_ranges() const
-    {
-      std::vector<std::pair<std::string, std::string>> results;
-
-      if (get_function_name_ranges_proc)
-      {
-        std::size_t count;
-
-        if (auto hresult = get_function_name_ranges_proc(0, nullptr, &count); hresult == std::errc{})
-        {
-          std::vector<std::array<const char*, 2>> raw;
-          raw.resize(count);
-
-          if (hresult = get_function_name_ranges_proc(raw.size(), raw.data(), &count); hresult == std::errc{})
-          {
-            results.reserve(raw.size());
-
-            std::transform(raw.begin(), raw.end(), std::back_inserter(results), [](auto& item) {
-              return std::make_pair<std::string, std::string>(item[0] ? item[0] : "", item[1] ? item[1] : "");
-            });
-          }
-        }
-      }
-      return results;
-    }
-
-    inline std::vector<std::pair<std::string, std::string>> get_variable_name_ranges() const
-    {
-      std::vector<std::pair<std::string, std::string>> results;
-
-      if (get_variable_name_ranges_proc)
-      {
-        std::size_t count;
-
-        if (auto hresult = get_variable_name_ranges_proc(0, nullptr, &count); hresult == std::errc{})
-        {
-          std::vector<std::array<const char*, 2>> raw;
-          raw.resize(count);
-
-          if (hresult = get_variable_name_ranges_proc(raw.size(), raw.data(), &count); hresult == std::errc{})
-          {
-            results.reserve(raw.size());
-
-            for (auto& item : raw)
-            {
-              if (!(item[0] || item[1]))
-              {
-                break;
-              }
-              results.emplace_back(std::make_pair<std::string, std::string>(item[0], item[1]));
-            }
-          }
-        }
-      }
-      return results;
-    }
-
   private:
     inline std::span<const wchar_t*> create_span(const char* key) const
     {

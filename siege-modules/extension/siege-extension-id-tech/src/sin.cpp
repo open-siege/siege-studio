@@ -98,16 +98,6 @@ constexpr static auto game_export = siege::game_export<>{
   .console_eval = 0x4774b0
 };
 
-std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
-{
-  return siege::get_name_ranges(game_export.function_name_ranges, length, data, saved);
-}
-
-std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
-{
-  return siege::get_name_ranges(game_export.variable_name_ranges, length, data, saved);
-}
-
 std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, game_export.verification_strings, game_export.function_name_ranges, game_export.variable_name_ranges);

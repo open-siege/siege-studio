@@ -4,6 +4,9 @@
 * In the controllers dialog, keyboards and mice are named by number instead of "X".
 * The controllers dialog is rendered with the correct theme now.
 * Renamed "Zero Tier Last Network IP Address" to "Zero Tier Node IP Address" for clarity. 
+* Removed "scripting" tab from exe view and all function/variable name exports from each extension.
+   * The idea was to have a reference for game scripts, but it's too basic for practical use.
+   * The long term goal is to curate the various game commands and build around that instead.
 
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.

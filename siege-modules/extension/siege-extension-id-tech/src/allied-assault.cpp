@@ -99,16 +99,6 @@ constexpr static auto moh_aliases = std::array<std::array<std::string_view, 2>, 
   { "+throw-grenade", "useweaponclass grenade;wait 50;+attackprimary;" },
   { "-throw-grenade", "-attackprimary;wait;uselast;" } } };
 
-std::errc get_function_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
-{
-  return siege::get_name_ranges(function_name_ranges, length, data, saved);
-}
-
-std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2>* data, std::size_t* saved) noexcept
-{
-  return siege::get_name_ranges(variable_name_ranges, length, data, saved);
-}
-
 std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);

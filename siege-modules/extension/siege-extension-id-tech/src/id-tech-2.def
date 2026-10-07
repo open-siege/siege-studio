@@ -4,8 +4,6 @@ EXPORTS
 	network_backends DATA PRIVATE
 	command_line_caps DATA PRIVATE
 	executable_is_supported
-	get_function_name_ranges PRIVATE
-	get_variable_name_ranges PRIVATE
 	get_predefined_string_command_line_settings PRIVATE
 	get_predefined_int_command_line_settings PRIVATE
 	init_keyboard_inputs PRIVATE

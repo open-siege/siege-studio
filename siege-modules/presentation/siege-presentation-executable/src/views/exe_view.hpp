@@ -29,7 +29,6 @@ namespace siege::views
       win32::list_view resource_table;
       win32::popup_menu extract_menu;
       std::set<std::pair<std::wstring, std::wstring>> selected_resource_items;
-      win32::list_view string_table;
       std::optional<bool> has_saved = std::nullopt;
     } resource;
 

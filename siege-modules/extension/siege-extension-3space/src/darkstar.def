@@ -1,5 +1,3 @@
 EXPORTS
 	DetourFinishHelperProcess @1
 	executable_is_supported
-	get_function_name_ranges
-	get_variable_name_ranges

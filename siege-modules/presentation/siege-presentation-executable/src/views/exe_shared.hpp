@@ -212,10 +212,6 @@ namespace siege::views
 
   std::vector<std::wstring> get_resource_strings(const std::any& state, std::wstring type, std::wstring name);
 
-  std::set<std::string_view> get_function_names(const std::any& state);
-
-  std::set<std::string_view> get_variable_names(const std::any& state);
-
   std::filesystem::path get_exe_path(const std::any& state);
 
   std::span<const siege::fs_string_view> get_executable_formats() noexcept;

@@ -100,20 +100,6 @@ namespace siege::views
 
     resource.resource_table.SetExtendedListViewStyle(LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT, LVS_EX_HEADERINALLVIEWS | LVS_EX_FULLROWSELECT);
 
-    resource.string_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
-      .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
-    resource.string_table.InsertColumn(-1, LVCOLUMNW{
-                                             .pszText = const_cast<wchar_t*>(L"Text"),
-                                           });
-
-    resource.string_table.EnableGroupView(true);
-
-    resource.string_table.bind_notification<win32::list_view, NMLVEMPTYMARKUP, bool>(LVN_GETEMPTYMARKUP, [](auto, const NMLVEMPTYMARKUP& markup) {
-      auto& non_const = const_cast<NMLVEMPTYMARKUP&>(markup);
-      std::memcpy(non_const.szMarkup, L"No strings found", 16);
-      return true;
-    });
-
     launch = create_launch_controls();
     input = create_input_controls();
 
@@ -219,9 +205,6 @@ namespace siege::views
     resource.resource_table.SetWindowPos(three_quarters);
     resource.resource_table.SetWindowPos(POINT{ .y = top_size.cy });
 
-    resource.string_table.SetWindowPos(three_quarters);
-    resource.string_table.SetWindowPos(POINT{ .y = top_size.cy });
-
     launch.launch_table.SetWindowPos(three_quarters);
     launch.launch_table.SetWindowPos(POINT{ .y = top_size.cy });
 
@@ -235,8 +218,7 @@ namespace siege::views
     options.SetWindowPos(one_quarter);
     options.SetWindowPos(POINT{ .x = three_quarters.cx, .y = top_size.cy });
 
-    std::array<std::reference_wrapper<win32::list_view>, 5> tables = { { std::ref(resource.resource_table),
-      std::ref(resource.string_table),
+    std::array<std::reference_wrapper<win32::list_view>, 4> tables = { { std::ref(resource.resource_table),
       std::ref(input.keyboard_table),
       std::ref(launch.launch_table),
       std::ref(input.controller_table) } };
@@ -403,12 +385,11 @@ namespace siege::views
       options.InsertString(0, L"Launch Options");
       options.InsertString(1, L"Keyboard/Mouse Settings");
       options.InsertString(2, L"Controller");
-      options.InsertString(3, L"Scripting");
       options.SetCurrentSelection(0);
       options.bind_lbn_sel_change([this](win32::list_box options, const NMHDR&) {
         auto selected = options.GetCurrentSelection();
 
-        std::array tables{ launch.launch_table.ref(), input.keyboard_table.ref(), input.controller_table.ref(), resource.string_table.ref(), resource.resource_table.ref() };
+        std::array tables{ launch.launch_table.ref(), input.keyboard_table.ref(), input.controller_table.ref(), resource.resource_table.ref() };
 
         for (auto i = 0; i < tables.size(); ++i)
         {
@@ -638,32 +619,6 @@ namespace siege::views
 
       groups.clear();
       groups.reserve(2);
-
-      auto functions = get_function_names(state);
-      std::vector<win32::list_view_item> items;
-      items.reserve(functions.size());
-
-      for (auto& child : functions)
-      {
-        items.emplace_back(win32::list_view_item(win32::widen(child)));
-      }
-
-      auto& group1 = groups.emplace_back(L"Script/Console Functions", std::move(items));
-      group1.state = LVGS_COLLAPSIBLE;
-
-      auto variables = get_variable_names(state);
-      items.clear();
-      items.reserve(variables.size());
-
-      for (auto& child : variables)
-      {
-        items.emplace_back(win32::list_view_item(win32::widen(child)));
-      }
-
-      auto& group2 = groups.emplace_back(L"Script/Console Variables", std::move(items));
-      group2.state = LVGS_COLLAPSIBLE;
-
-      resource.string_table.InsertGroups(groups);
 
       return TRUE;
     }
