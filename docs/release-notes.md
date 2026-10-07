@@ -1,3 +1,6 @@
+# Siege Studio + Siege Launcher 26.41 Development Release
+* Fixed crash in several games, like Unreal Tournament 2004, when using the Zero Tier wrapper.
+
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.
 * Fixed SiN launching with Zero Tier enabled on AMD GPUs.

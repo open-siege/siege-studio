@@ -58,7 +58,7 @@ std::shared_ptr<std::pair<const ATOM, std::span<char>>> get_global_memory(std::s
   if (iter == cache.end())
   {
     iter = std::find_if(cache.begin(), cache.end(), [&](auto& item) {
-      return item.second.size() > size;
+      return item.second.size() >= size;
     });
   }
 
