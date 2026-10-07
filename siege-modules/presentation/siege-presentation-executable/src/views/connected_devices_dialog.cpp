@@ -954,7 +954,7 @@ namespace siege::views
 
       if (device_info.dwType == RIM_TYPEKEYBOARD)
       {
-        win32::list_view_item item(L"Keyboard X");
+        win32::list_view_item item(L"Keyboard " + std::to_wstring(registered_keyboards.size() + 1));
         item.iGroupId = 1;
         item.mask = item.mask | LVIF_GROUPID;
         item.sub_items.emplace_back(L"Keyboard");
@@ -962,7 +962,7 @@ namespace siege::views
       }
       else if (device_info.dwType == RIM_TYPEMOUSE)
       {
-        win32::list_view_item item(L"Mouse X");
+        win32::list_view_item item(L"Mouse " + std::to_wstring(registered_mice.size() + 1));
         item.iGroupId = 2;
         item.mask = item.mask | LVIF_GROUPID;
         item.sub_items.emplace_back(L"Mouse");

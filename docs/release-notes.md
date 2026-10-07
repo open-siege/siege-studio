@@ -1,6 +1,7 @@
 # Siege Studio + Siege Launcher 26.41 Development Release
 * Fixed crash in several games, like Unreal Tournament 2004, when using the Zero Tier wrapper.
 * Renamed "Darkstar" to 3Space 3.5 to be more consistent and accurate.
+* In the controllers dialog, keyboards and mice are named by number instead of "X".
 
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.
