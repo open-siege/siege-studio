@@ -423,6 +423,7 @@ namespace win32
 
         if (message == WM_DESTROY)
         {
+          ::RemovePropW(hWnd, L"SiegeForceThemed");
           remove_window_subclass(hWnd, sub_class::HandleMessage, uIdSubclass);
         }
 
@@ -443,6 +444,7 @@ namespace win32
     if (!get_window_subclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, &existing_object) && existing_object == 0)
     {
       set_window_subclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, (DWORD_PTR) new sub_class());
+      ::SetPropW(control, L"SiegeForceThemed", reinterpret_cast<HANDLE>(1));
     }
 
     if (control.GetWindowStyle() & ~WS_CHILD)

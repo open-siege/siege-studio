@@ -21,13 +21,14 @@ namespace win32
       return false;
     }
 
-    if (module == ::GetModuleHandleW(L"comdlg32") ||
-        module == ::GetModuleHandleW(L"shell32") ||
-        module == ::GetModuleHandleW(L"user32") ||
-        module == ::GetModuleHandleW(L"ExplorerFrame") ||
-        module == ::GetModuleHandleW(L"shlwapi"))
+    if (::GetPropW(window, L"SiegeForceThemed") == reinterpret_cast<HANDLE>(1))
     {
-        return true;
+      return false;
+    }
+
+    if (module == ::GetModuleHandleW(L"comdlg32") || module == ::GetModuleHandleW(L"shell32") || module == ::GetModuleHandleW(L"user32") || module == ::GetModuleHandleW(L"ExplorerFrame") || module == ::GetModuleHandleW(L"shlwapi"))
+    {
+      return true;
     }
 
     return false;
