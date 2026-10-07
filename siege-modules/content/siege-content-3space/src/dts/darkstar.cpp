@@ -1,4 +1,4 @@
-// DTS - Dynamix ThreeSpace Shape v3 for 3Space v3/Darkstar (Starsiege, Tribes, Trophy Bass 3D, Driver's Education)
+// DTS - Dynamix ThreeSpace Shape v3 for 3Space v3 (Starsiege, Tribes, Trophy Bass 3D, Driver's Education)
 
 #include <siege/content/dts/darkstar.hpp>
 

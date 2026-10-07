@@ -46,8 +46,8 @@ namespace siege::views
   };
 
   constexpr static auto engines = std::array<engine_info, 20>{ {
-    { L"Torque"sv, L"torque"sv, L"darkstar"sv },
-    { L"Darkstar"sv, L"darkstar"sv, L"3space-3.0"sv },
+    { L"Torque"sv, L"torque"sv, L"3space-3.5"sv },
+    { L"3Space 3.5"sv, L"3space-3.5"sv, L"3space-3.0"sv },
     { L"3Space 3.0"sv, L"3space-3.0"sv, L"3space-2.5"sv },
     { L"3Space 2.5"sv, L"3space-2.5"sv, L"3space-2.0"sv },
     { L"3Space 2.0"sv, L"3space-2.0"sv, L"3space-1.5"sv },
@@ -95,11 +95,11 @@ namespace siege::views
     { L"Pro Pilot '99"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
     { L"Kid Pilot"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
     { L"Curse You! Red Baron"sv, L"3space-2.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv } } },
-    { L"Front Page Sports: Ski Racing"sv, L"darkstar"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".tbv"sv, L".dts"sv, L".pal"sv, L".ppl"sv, L".bmp"sv, L".pba"sv } } },
-    { L"King's Quest: Mask of Eternity"sv, L"darkstar"sv, L"siege-extension-mask-of-eternity"sv, std::array<std::wstring_view, 8>{ { L".pal"sv, L".ppl", L".bmp", L".pba" } } },
+    { L"Front Page Sports: Ski Racing"sv, L"3space-3.5"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".tbv"sv, L".dts"sv, L".pal"sv, L".ppl"sv, L".bmp"sv, L".pba"sv } } },
+    { L"King's Quest: Mask of Eternity"sv, L"3space-3.5"sv, L"siege-extension-mask-of-eternity"sv, std::array<std::wstring_view, 8>{ { L".pal"sv, L".ppl", L".bmp", L".pba" } } },
     { L"Driver's Education '98"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba" } } },
-    { L"Starsiege"sv, L"darkstar"sv, L"siege-extension-starsiege"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
-    { L"Starsiege: Tribes"sv, L"darkstar"sv, L"siege-extension-tribes"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
+    { L"Starsiege"sv, L"3space-3.5"sv, L"siege-extension-starsiege"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
+    { L"Starsiege: Tribes"sv, L"3space-3.5"sv, L"siege-extension-tribes"sv, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".pal"sv, L".ppl", L".bmp", L".pba", L".cs" } } },
     { L"Field & Stream: Trophy Bass 3D"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },
     { L"Field & Stream: Trophy Bass 4"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },
     { L"Driver's Education '99"sv, L"3space-3.0"sv, std::nullopt, std::array<std::wstring_view, 8>{ { L".vol"sv, L".dts"sv, L".cs"sv } } },

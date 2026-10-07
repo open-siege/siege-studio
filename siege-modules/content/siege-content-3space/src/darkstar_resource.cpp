@@ -252,7 +252,7 @@ namespace siege::resource::vol::darkstar
 
       if (footer.string_header_tag != vol_string_tag)
       {
-        throw std::invalid_argument("Volume file is not a Darkstar/Phoenix VOL file.");
+        throw std::invalid_argument("Volume file is not a Phoenix VOL file.");
       }
 
       auto amount_to_skip = footer.buffer_size - sizeof(int32_t) - footer.file_list_size;
@@ -261,7 +261,7 @@ namespace siege::resource::vol::darkstar
     }
     else
     {
-      throw std::invalid_argument("The file provided is not a valid Darkstar VOL file.");
+      throw std::invalid_argument("The file provided is not a valid Phoenix VOL file.");
     }
   }
 

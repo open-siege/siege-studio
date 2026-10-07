@@ -82,7 +82,6 @@ std::errc get_variable_name_ranges(std::size_t length, std::array<const char*, 2
   return siege::get_name_ranges(variable_name_ranges, length, data, saved);
 }
 
-
 std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
@@ -194,21 +193,6 @@ BOOL WINAPI DllMain(
         std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
 
         DetourTransactionCommit();
-        //auto host = std::make_unique<siege::extension::DarkstarScriptDispatch>(std::move(functions), std::move(variables), [](std::string_view eval_string) -> std::string_view {
-        //  std::array<const char*, 2> args{ "eval", eval_string.data() };
-
-        //  // Luckily this function is static and doesn't need the console instance object nor
-        //  // an ID to identify the callback. It doesn't even check for "eval" and skips straight to the second argument.
-        //  auto result = ConsoleEval(nullptr, 0, 2, args.data());
-
-        //  if (result == nullptr)
-        //  {
-        //    return "";
-        //  }
-
-
-        //  return result;
-        //});
       }
       catch (...)
       {
