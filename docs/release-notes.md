@@ -3,6 +3,7 @@
 * Renamed "Darkstar" to 3Space 3.5 to be more consistent and accurate.
 * In the controllers dialog, keyboards and mice are named by number instead of "X".
 * The controllers dialog is rendered with the correct theme now.
+* Renamed "Zero Tier Last Network IP Address" to "Zero Tier Node IP Address" for clarity. 
 
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.

@@ -730,7 +730,7 @@ namespace siege::views
           .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
           .type = extension_setting_type::computed_setting,
           .value = get_preferred_last_ip(state, std::move(zt_node_id)),
-          .display_name = L"Zero Tier Last Network IP Address",
+          .display_name = L"Zero Tier Node IP Address",
           .group_id = 1,
         });
       }
