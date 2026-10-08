@@ -7,6 +7,7 @@
 * Removed "scripting" tab from exe view and all function/variable name exports from each extension.
    * The idea was to have a reference for game scripts, but it's too basic for practical use.
    * The long term goal is to curate the various game commands and build around that instead.
+* Fixed incorrect ÜberTools label in default view.
 
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.

@@ -18,6 +18,7 @@ if (WIN32)
 					 src/views/siege_main_window.cpp 
 					 src/views/stack_layout.cpp
 					 src/views/sqlite_test.cpp)
+	set_source_files_properties(src/views/default_view.cpp PROPERTIES COMPILE_OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 	add_library(siege-studio-core SHARED ${STUDIO_FILES} src/siege-studio-core.def)
 	target_compile_definitions(siege-studio-core PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
 	target_link_libraries(siege-studio-core PUBLIC siege-win-desktop Imagehlp)
