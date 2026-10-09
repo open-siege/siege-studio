@@ -101,10 +101,6 @@ static void open_command_line_files(HWND window);
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 {
-  std::array<char, 256> data{};
-
-  GetLogicalDriveStringsA(data.size(), data.data());
-
   win32::com::init_com();
 
   win32::init_common_controls_ex({ .dwSize{ sizeof(INITCOMMONCONTROLSEX) },

@@ -98,6 +98,7 @@ namespace siege::views
 
       resize_cursor.reset((HCURSOR)LoadImageW(nullptr, IDC_SIZEWE, IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_SHARED));
 
+      win32::apply_window_theme(*this);
       win32::apply_list_view_theme();
       win32::apply_header_theme();
       win32::apply_tree_view_theme();
@@ -521,7 +522,7 @@ namespace siege::views
         });
       }
 
-      SetMenu(*this, main_menu.get());
+      ::SetMenu(*this, main_menu.get());
 
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[0].get(), L"File");
       main_menu.AppendMenuW(MF_POPUP | MF_OWNERDRAW, (UINT_PTR)popup_menus[1].get(), L"Edit");
@@ -960,8 +961,6 @@ namespace siege::views
             pixel.rgbGreen = GetGValue(bk_color);
           }
 
-          win32::apply_window_theme(*this);
-
           for (auto i = 0; i < tab_control.GetItemCount(); ++i)
           {
             auto tab_item = tab_control.GetItem(i);
@@ -1208,7 +1207,7 @@ namespace siege::views
           .type = siege::platform::storage_info::file
         };
         storage.info.path = file_path.c_str();
-        
+
         auto plugin = std::find_if(loaded_modules.begin(), loaded_modules.end(), [&](auto& module) {
           return module.is_stream_supported(storage);
         });
@@ -1363,7 +1362,8 @@ namespace siege::views
           result = fs::path(text.data()) / result;
         }
 
-        do {
+        do
+        {
           auto parent = sender.GetParent(item);
 
           if (parent == nullptr)
