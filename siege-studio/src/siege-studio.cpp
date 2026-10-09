@@ -394,79 +394,87 @@ discovery_info discover_installation_info(int major_version, int minor_version, 
 
   win32::com::com_string known_folder;
   std::error_code last_error;
+  std::set<fs::path, std::greater<fs::path>> other_paths;
 
+  fs::path known_folder_final;
+
+  // May not work in WINE, so use temp dir instead
   if (auto hresult = ::SHGetKnownFolderPath(FOLDERID_UserProgramFiles, 0, nullptr, known_folder.put()); hresult == S_OK)
   {
-    auto root = fs::path(known_folder) / "The Siege Hub" / "Siege Studio";
+    known_folder_final = fs::path(known_folder);
+  }
+  else
+  {
+    known_folder_final = fs::temp_directory_path(last_error);
+  }
 
-    fs::create_directories(root, last_error);
+  auto root = known_folder_final / "The Siege Hub" / "Siege Studio";
 
-    if (last_error)
+  fs::create_directories(root, last_error);
+
+  if (last_error)
+  {
+    goto discover_temp;
+  }
+
+  for (auto& channel : channels)
+  {
+    auto temp = root / channel / current_version;
+
+    if (!fs::is_directory(temp, last_error))
     {
-      goto discover_temp;
+      continue;
     }
 
-    for (auto& channel : channels)
+    std::optional<fs::path> app_path;
+    int dll_count = 0;
+    for (auto const& dir_entry : fs::directory_iterator{ temp })
     {
-      auto temp = root / channel / current_version;
-
-      if (!fs::is_directory(temp, last_error))
+      if (dir_entry.path().filename() == info.current_app_exe_path.filename())
       {
-        continue;
+        app_path = dir_entry.path();
       }
 
-      std::optional<fs::path> app_path;
-      int dll_count = 0;
-      for (auto const& dir_entry : fs::directory_iterator{ temp })
+      if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
       {
-        if (dir_entry.path().filename() == info.current_app_exe_path.filename())
-        {
-          app_path = dir_entry.path();
-        }
-
-        if (dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
-        {
-          dll_count++;
-        }
-
-        if (app_path && dll_count >= 2)
-        {
-          info.matching_installed_exe_path = *app_path;
-          break;
-        }
+        dll_count++;
       }
 
-      if (info.matching_installed_exe_path)
+      if (app_path && dll_count >= 2)
       {
+        info.matching_installed_exe_path = *app_path;
         break;
       }
     }
 
-
-    std::set<fs::path, std::greater<fs::path>> other_paths;
-
-    for (auto const& dir_entry : fs::recursive_directory_iterator{ root })
+    if (info.matching_installed_exe_path)
     {
-      if (dir_entry.is_directory() && dir_entry.path().filename() != current_version && fs::exists(dir_entry.path() / info.current_app_exe_path.filename()) && dir_entry.path().filename().wstring().contains(L".") && dir_entry.path().filename().string() > current_version)
-      {
-        other_paths.emplace(dir_entry.path() / info.current_app_exe_path.filename());
-      }
+      break;
     }
+  }
 
-    if (!other_paths.empty())
+
+  for (auto const& dir_entry : fs::recursive_directory_iterator{ root })
+  {
+    if (dir_entry.is_directory() && dir_entry.path().filename() != current_version && fs::exists(dir_entry.path() / info.current_app_exe_path.filename()) && dir_entry.path().filename().wstring().contains(L".") && dir_entry.path().filename().string() > current_version)
     {
-      info.latest_installed_exe_path = *other_paths.begin();
+      other_paths.emplace(dir_entry.path() / info.current_app_exe_path.filename());
     }
+  }
 
-    if (!info.matching_installed_exe_path && !info.latest_installed_exe_path)
+  if (!other_paths.empty())
+  {
+    info.latest_installed_exe_path = *other_paths.begin();
+  }
+
+  if (!info.matching_installed_exe_path && !info.latest_installed_exe_path)
+  {
+    auto temp = root / SIEGE_CHANNEL_TYPE / current_version;
+    fs::create_directories(temp, last_error);
+
+    if (!last_error)
     {
-      auto temp = root / SIEGE_CHANNEL_TYPE / current_version;
-      fs::create_directories(temp, last_error);
-
-      if (!last_error)
-      {
-        info.extraction_target_path = temp;
-      }
+      info.extraction_target_path = temp;
     }
   }
 discover_temp:
