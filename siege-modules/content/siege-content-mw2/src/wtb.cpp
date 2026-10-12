@@ -1,15 +1,74 @@
 // WTB - MechWarrior 2 - individual mesh shape
-
-#include <array>
+module;
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/content/wtb.hpp>
+
+import std;
+
+export module siege.content.wtb;
 
 namespace siege::content::wtb
 {
   namespace endian = siege::platform;
 
+  // each tag must represent a type of shading or texturing
+  export enum polygon_type : std::uint8_t {
+    tag1 = 0x10,
+    tag2 = 0x14,
+    tag3 = 0x18,
+    tag4 = 0x19,
+    tag5 = 0x1c,
+    tag6 = 0x47,
+    tag7 = 0x44,
+    tag8 = 0x49,
+    tag9 = 0x4c,
+    tag10 = 0x4d,
+    tag11 = 0x4e,
+    tag12 = 0x54,
+    tag13 = 0x58,
+    tag14 = 0x64,
+    tag15 = 0x68,
+    tag16 = 0x70,
+    tag17 = 0x74,
+    tag18 = 0x78,
+    tag19 = 0x7d,
+    tag20 = 0x7f,
+  };
+
+  export struct packed_vertex
+  {
+    endian::little_int32_t x;
+    endian::little_int32_t y;
+    endian::little_int32_t z;
+    endian::little_uint16_t normal_index;
+    endian::little_uint16_t unknown;
+  };
+
+  export struct surface_header
+  {
+    std::byte unknown;
+    polygon_type type;
+    endian::little_uint16_t number_of_points;
+  };
+
+  export using face_4v = std::array<endian::little_uint16_t, 4>;
+  export using face_7v = std::array<endian::little_uint16_t, 7>;
+
+  export struct surface
+  {
+    surface_header header;
+    std::vector<endian::little_uint16_t> values;
+  };
+
+  export struct wtb_shape
+  {
+    float scale;
+    float translation;
+
+    std::vector<packed_vertex> vertices;
+    std::vector<surface> faces;
+  };
   constexpr auto header_tag = platform::to_tag<4>({ 'W', 'T', 'B', 'O' });
 
   struct wtb_header
@@ -26,7 +85,7 @@ namespace siege::content::wtb
     endian::little_uint32_t unknown3;
   };
 
-  bool is_wtb(std::istream& stream)
+  export bool is_wtb(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 4> tag;
@@ -34,7 +93,7 @@ namespace siege::content::wtb
     return tag == header_tag;
   }
 
-  wtb_shape load_wtb(std::istream& stream)
+  export wtb_shape load_wtb(std::istream& stream)
   {
     wtb_shape result;
 

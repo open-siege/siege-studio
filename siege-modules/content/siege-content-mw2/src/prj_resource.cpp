@@ -1,12 +1,11 @@
-#include <array>
-#include <vector>
-#include <sstream>
-#include <spanstream>
-#include <map>
+module;
 #include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/resource/prj_resource.hpp>
+
+export module siege.resource.prj;
+
+import std;
 
 namespace siege::resource::prj
 {
@@ -78,7 +77,7 @@ namespace siege::resource::prj
     std::array<char, 16> filename;
   };
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -595,7 +594,7 @@ namespace siege::resource::prj
     }
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported, get_content_listing, set_stream_position, extract_file_contents

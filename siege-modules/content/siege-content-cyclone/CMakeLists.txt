@@ -7,7 +7,10 @@ add_library(${PROJECT_NAME}-scripting STATIC src/uprising.cpp)
 set(PROJECT_TARGETS ${PROJECT_NAME}-scripting ${PROJECT_NAME}-resource)
 
 foreach(TARGET IN ITEMS ${PROJECT_TARGETS})
-    set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+    set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 23 
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON
+        POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(${TARGET} PUBLIC siege-content-common)
     target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 endforeach()

@@ -1,10 +1,13 @@
-#include <array>
-#include <map>
+module;
+
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/resource.hpp>
-#include <siege/resource/rsc_resource.hpp>
+
+export module siege.resource.rsc;
+
+import std;
 
 namespace siege::resource::rsc
 {
@@ -51,7 +54,7 @@ namespace siege::resource::rsc
     endian::little_uint32_t group_entry_index;
   };
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -273,7 +276,7 @@ namespace siege::resource::rsc
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported, get_content_listing, set_stream_position, extract_file_contents

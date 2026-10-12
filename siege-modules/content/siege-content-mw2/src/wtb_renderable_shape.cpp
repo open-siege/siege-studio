@@ -1,18 +1,12 @@
-#include <unordered_map>
-#include <set>
-#include <variant>
-#include <optional>
-#include <memory>
-#include <functional>
-#include <list>
-#include <iterator>
-#include <algorithm>
-#include <utility>
-#include <map>
+module;
 #include <glm/gtx/quaternion.hpp>
+#include <siege/content/renderable_shape.hpp>
 
-#include <siege/content/wtb_renderable_shape.hpp>
+export module siege.content.wtb.renderable;
 
+import std;
+import siege.content.wtb;
+import siege.content.bwd;
 
 namespace siege::content::wtb
 {
@@ -104,12 +98,12 @@ namespace siege::content::wtb
     std::variant<wtb_shape, bwd::bwd_model> shape;
   };
 
-  renderable_shape_value make_renderable_shape(wtb_shape shape)
+  export renderable_shape_value make_renderable_shape(wtb_shape shape)
   {
     return renderable_shape_value(wtb_renderable_shape(std::move(shape)));
   }
 
-  renderable_shape_value make_renderable_shape(bwd::bwd_model shape)
+  export renderable_shape_value make_renderable_shape(bwd::bwd_model shape)
   {
     return renderable_shape_value(wtb_renderable_shape(std::move(shape)));
   }

@@ -1,11 +1,12 @@
-#include <array>
-#include <vector>
-#include <fstream>
-#include <utility>
-#include <string>
+module;
 
-#include <siege/resource/sword_resource.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.resource.atd;
+
+import std;
 
 namespace siege::resource::atd
 {
@@ -14,7 +15,7 @@ namespace siege::resource::atd
   using folder_info = platform::resource_reader::folder_info;
   using file_info = platform::resource_reader::file_info;
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -94,7 +95,7 @@ namespace siege::resource::atd
     stream.seekg(2, std::ios::cur);
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

@@ -1,21 +1,64 @@
 // BWD - MechWarrior 2 complete 3D model data (referencing individual WTB meshes)
 // Uses file IDs from the PRJ file instead of file names.
+module;
 
-#include <array>
-#include <any>
-#include <map>
-#include <vector>
-#include <string>
-#include <spanstream>
-#include <optional>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/content/bwd.hpp>
+
+export module siege.content.bwd;
+
+import std;
+import siege.content.wtb;
 
 namespace siege::content::bwd
 {
   namespace endian = siege::platform;
+
+  export struct vec_3s
+  {
+    endian::little_int16_t x;
+    endian::little_int16_t y;
+    endian::little_int16_t z;
+  };
+
+  export struct dtb_object
+  {
+    endian::little_int16_t id;
+    vec_3s origin;
+    std::array<endian::little_uint16_t, 11> unknown;
+    vec_3s translation;
+    vec_3s scale;
+    std::array<endian::little_uint16_t, 3> unknown2;
+    endian::little_int16_t prf_file_index;
+    endian::little_int16_t padding;
+  };
+
+  export struct dtb_object_with_shape : dtb_object
+  {
+    std::optional<wtb::wtb_shape> shape;
+  };
+
+
+  export struct file_info
+  {
+    endian::little_int16_t prj_file_index;
+    std::array<char, 10> string_tag;
+  };
+
+  export struct bwd_model
+  {
+    std::array<char, 4> version;
+    std::vector<dtb_object_with_shape> objects;
+    std::map<int, std::vector<dtb_object_with_shape>> lod_objects;
+    file_info animation_file;
+    file_info vpt_file;
+    file_info cockpit_file;
+    file_info hud_file;
+    file_info mgd_file;
+    file_info pit_file;
+    file_info sound_file;
+  };
 
   constexpr auto header_tag = platform::to_tag<4>({ 'B', 'W', 'D', '\0' });
   constexpr auto rev_tag = platform::to_tag<4>({ 'R', 'E', 'V', '\0' });
@@ -55,7 +98,7 @@ namespace siege::content::bwd
   };
 
 
-  bool is_bwd(std::istream& stream)
+  export bool is_bwd(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -66,7 +109,7 @@ namespace siege::content::bwd
     return tag.tag == header_tag;
   }
 
-  bwd_model load_bwd(std::istream& stream)
+  export bwd_model load_bwd(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     bwd_model result;

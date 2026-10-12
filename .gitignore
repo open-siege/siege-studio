@@ -55,3 +55,4 @@ libzt
 /release/7z.dll
 /release/butler.exe
 /release/c7zip.dll
+out/

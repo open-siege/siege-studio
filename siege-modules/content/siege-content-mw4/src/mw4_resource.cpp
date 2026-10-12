@@ -1,3 +1,4 @@
+module;
 // constexpr auto header_tag = platform::to_tag<4>({ '#', 'V', 'B', 'D' });
 // constexpr auto item_tag = platform::to_tag<4>({ 0x80, 0x10, 0x54, 0xc0 });
 
@@ -7,7 +8,8 @@
 #include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/resource/mw4_resource.hpp>
+
+export module siege.resource.mw4;
 
 namespace siege::resource::mw4
 {
@@ -43,7 +45,7 @@ namespace siege::resource::mw4
     char string_size;
   };
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     mw4_header header{};
@@ -52,7 +54,7 @@ namespace siege::resource::mw4
     return header.tag == file_tag && header.version == 4;
   }
 
-  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  export std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -123,7 +125,7 @@ namespace siege::resource::mw4
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

@@ -1,15 +1,18 @@
 // ERF - MechWarrior 4 mesh data
-
-#include <array>
+module;
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.content.erf;
+
+import std;
 
 namespace siege::content::erf
 {
   namespace endian = siege::platform;
 
-  bool is_erf(std::istream& stream)
+  export bool is_erf(std::istream& stream)
   {
     return false;
   }

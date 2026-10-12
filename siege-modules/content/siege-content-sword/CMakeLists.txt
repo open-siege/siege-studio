@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.30)
 project(siege-content-sword)
 
 add_library(${PROJECT_NAME}-resource STATIC src/sword_resource.cpp)
-set_target_properties(${PROJECT_NAME}-resource PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+set_target_properties(${PROJECT_NAME}-resource PROPERTIES CXX_STANDARD 23 
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON
+        POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME}-resource PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}-resource PUBLIC siege-content-common)
 

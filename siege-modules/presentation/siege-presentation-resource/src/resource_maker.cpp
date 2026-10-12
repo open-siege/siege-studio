@@ -4,17 +4,17 @@ module;
 #include <siege/resource/three_space_resource.hpp>
 #include <siege/resource/common_resources.hpp>
 #include <siege/resource/trophy_bass_resource.hpp>
-#include <siege/resource/sword_resource.hpp>
 #include <siege/resource/cyclone_resource.hpp>
 #include <siege/resource/pak_resource.hpp>
 #include <siege/resource/clm_resource.hpp>
 #include <siege/resource/wad_resource.hpp>
-#include <siege/resource/rsc_resource.hpp>
-#include <siege/resource/res_resource.hpp>
-#include <siege/resource/mw4_resource.hpp>
-#include <siege/resource/prj_resource.hpp>
 
 export module vol.maker;
+import siege.resource.rsc;
+import siege.resource.res;
+import siege.resource.mw4;
+import siege.resource.prj;
+import siege.resource.atd;
 
 namespace siege::resource
 {

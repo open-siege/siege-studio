@@ -21,7 +21,10 @@ if (WIN32)
     target_sources(${PROJECT_NAME} PRIVATE ${WIN32_SRC_FILES})
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON
+        POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME} siege-platform libzip::zip ZLIB::ZLIB nlohmann_json::nlohmann_json glm::glm libzip::zip ZLIB::ZLIB)
 install(DIRECTORY include

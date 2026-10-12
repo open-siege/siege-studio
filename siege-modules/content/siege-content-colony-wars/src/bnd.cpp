@@ -1,14 +1,17 @@
 // BND - Colony Wars 3D shape data from Colony Wars and Colony Wars Vengeance
 // Contains embedded TMD shape data and TIM texture data.
 
-#include <array>
-#include <any>
-#include <spanstream>
+module;
+
 #include <siege/content/tmd.hpp>
 #include <siege/content/tim.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.content.bnd;
+
+import std;
 
 namespace siege::content::bnd
 {
@@ -82,7 +85,7 @@ namespace siege::content::bnd
     std::vector<platform::bitmap::windows_bmp_data> textures;
   };
 
-  bool is_bnd(std::istream& stream)
+  export bool is_bnd(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -95,7 +98,7 @@ namespace siege::content::bnd
     return body.tag == body_tag && data.tag == data_tag;
   }
 
-  std::vector<std::any> load_bnd(std::istream& stream)
+  export std::vector<std::any> load_bnd(std::istream& stream)
   {
     std::vector<std::any> results;
     platform::istream_pos_resetter resetter(stream);
