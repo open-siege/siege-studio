@@ -1,9 +1,11 @@
-#include <filesystem>
-#include <optional>
-#include <fstream>
+module;
+
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/stream.hpp>
-#include "vol_shared.hpp"
+
+module vol.shared;
+
+import std;
 
 namespace fs = std::filesystem;
 

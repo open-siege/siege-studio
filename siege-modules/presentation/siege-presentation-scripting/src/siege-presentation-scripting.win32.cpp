@@ -2,16 +2,14 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
-#include "views/cfg_shared.hpp"
+#include <siege/platform/shared.hpp>
 
-static ATOM cfg_view_atom;
-
-namespace siege::views
-{
-  ATOM register_cfg_view(win32::window_module_ref module);
-}
+import cfg.shared;
+import cfg.views;
 
 using namespace siege::views;
+
+static ATOM cfg_view_atom;
 using storage_info = siege::platform::storage_info;
 
 extern "C" {

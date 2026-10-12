@@ -1,5 +1,4 @@
-#ifndef BITMAPWINDOW_HPP
-#define BITMAPWINDOW_HPP
+module;
 
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/basic_window.hpp>
@@ -10,15 +9,11 @@
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/storage_module.hpp>
-#undef NDEBUG
-#include <cassert>
-#include <sstream>
-#include <vector>
-#include <memory>
-#include <istream>
-#include <spanstream>
-#include <future>
-#include "2d_shared.hpp"
+
+export module bmp.views;
+
+import std;
+import bmp.shared;
 
 namespace siege::views
 {
@@ -905,7 +900,7 @@ namespace siege::views
         std::wstring temp;
         temp.reserve(10);
 
-        std::vector<siege::platform::bitmap::size> frame_sizes;
+        std::vector<size> frame_sizes;
 
         if (count > 1)
         {
@@ -1029,7 +1024,7 @@ namespace siege::views
     }
   };
 
-  ATOM register_bmp_view(win32::window_module_ref module)
+  export ATOM register_bmp_view(win32::window_module_ref module)
   {
     WNDCLASSEXW info{
       .cbSize = sizeof(info),
@@ -1042,5 +1037,3 @@ namespace siege::views
     return ::RegisterClassExW(&info);
   }
 }// namespace siege::views
-
-#endif

@@ -1,35 +1,26 @@
+module;
+
+#include <siege/platform/shared.hpp>
+#include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
-#include <fstream>
-#include <spanstream>
-#include <shared_mutex>
 #include <siege/platform/wave.hpp>
 #include <siege/platform/bitmap.hpp>
-#include <istream>
-#include <vector>
-#include <variant>
-#include <filesystem>
-#include <sstream>
-#include <future>
-#include "vol_shared.hpp"
 
 #if WIN32
 #include <siege/platform/win/file.hpp>
 #endif
 
-#include <siege/platform/resource.hpp>
+export module vol.shared;
 
-namespace siege::resource
-{
-  bool is_resource_readable(std::istream&);
-  siege::platform::resource_reader make_resource_reader(std::istream&);
-}// namespace siege::resource
+import std;
+import vol.maker;
 
 namespace siege::views
 {
   using namespace siege::resource;
   using namespace siege::platform;
 
-  std::span<const siege::fs_string_view> get_volume_formats() noexcept
+  export std::span<const siege::fs_string_view> get_volume_formats() noexcept
   {
     constexpr static auto formats = std::array<siege::fs_string_view, 32>{ {
       FSL ".vol",
@@ -69,7 +60,7 @@ namespace siege::views
     return formats;
   }
 
-  bool is_vol(std::istream& vol_stream) noexcept
+  export bool is_vol(std::istream& vol_stream) noexcept
   {
     return is_resource_readable(vol_stream);
   }
@@ -95,7 +86,7 @@ namespace siege::views
     return *std::any_cast<std::shared_ptr<controller_state>>(self).get();
   }
 
-  std::unique_ptr<std::istream> get_raw_resource_data_stream(std::any& self)
+  export std::unique_ptr<std::istream> get_raw_resource_data_stream(std::any& self)
   {
     if (auto* path = std::get_if<fs::path>(&ref(self).storage); path)
     {
@@ -105,9 +96,9 @@ namespace siege::views
     // For now, not supporting in memory files
     return {};
   }
-  void stop_loading(std::any& self) { ref(self).should_continue = false; }
+  export void stop_loading(std::any& self) { ref(self).should_continue = false; }
 
-  std::optional<std::filesystem::path> get_original_path(std::any& self)
+  export std::optional<std::filesystem::path> get_original_path(std::any& self)
   {
     if (auto* path = std::get_if<std::filesystem::path>(&ref(self).storage); path)
     {
@@ -118,7 +109,7 @@ namespace siege::views
   };
 
 
-  std::size_t load_volume(std::any& self, std::istream& vol_stream, std::optional<std::filesystem::path> path, std::function<void(resource_reader::content_info&)> on_new_item)
+  export std::size_t load_volume(std::any& self, std::istream& vol_stream, std::optional<std::filesystem::path> path, std::function<void(resource_reader::content_info&)> on_new_item)
   {
     auto& state = ref(self);
     state.resource.emplace(make_resource_reader(vol_stream));
@@ -183,7 +174,7 @@ namespace siege::views
 
   static std::mutex stream_mutex;
 
-  std::vector<char> load_content_data(std::any& self, const siege::platform::resource_reader::content_info& content)
+  export std::vector<char> load_content_data(std::any& self, const siege::platform::resource_reader::content_info& content)
   {
     std::vector<char> results;
 
@@ -265,7 +256,7 @@ namespace siege::views
     return results;
   }
 
-  std::vector<std::reference_wrapper<siege::platform::resource_reader::content_info>> get_contents(std::any& self)
+  export std::vector<std::reference_wrapper<siege::platform::resource_reader::content_info>> get_contents(std::any& self)
   {
     auto& state = ref(self);
     std::shared_lock guard(state.lock);
@@ -281,4 +272,11 @@ namespace siege::views
 
     return results;
   }
+
+#if WIN32
+  export std::optional<std::filesystem::path> create_self_extracting_resource(std::any& self,
+    std::filesystem::path unvol_exe_path,
+    std::optional<std::filesystem::path> output_path,
+    std::optional<std::vector<std::string>> post_extract_commands);
+#endif
 }// namespace siege::views

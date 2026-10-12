@@ -1,3 +1,5 @@
+module;
+
 #include <string_view>
 #include <istream>
 #include <spanstream>
@@ -5,7 +7,11 @@
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
-#include "2d_shared.hpp"
+
+export module pal.views;
+
+import std;
+import pal.shared;
 
 namespace siege::views
 {
@@ -158,7 +164,7 @@ namespace siege::views
     }
   };
 
-  ATOM register_pal_view(win32::window_module_ref module)
+  export ATOM register_pal_view(win32::window_module_ref module)
   {
     WNDCLASSEXW info{
       .cbSize = sizeof(info),

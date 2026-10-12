@@ -1,22 +1,34 @@
-#include "3d_shared.hpp"
+module;
+
+#include <siege/platform/shared.hpp>
 #include <siege/content/dts/darkstar.hpp>
+
+export module dml.shared;
+
+import std;
 
 namespace siege::views
 {
-  using namespace siege::content;
-
-  bool is_material(std::istream& image_stream)
+  export struct material_context : std::any
   {
+    using std::any::any;
+  };
+
+  export bool is_material(std::istream& image_stream)
+  {
+    using namespace siege::content;
     return dts::darkstar::is_darkstar_dml(image_stream);
   }
-  std::span<const siege::fs_string_view> get_material_formats() noexcept
+
+  export std::span<const siege::fs_string_view> get_material_formats() noexcept
   {
     constexpr static auto formats = std::array<siege::fs_string_view, 1>{ { FSL ".dml" } };
     return formats;
   }
 
-  std::size_t load_material(material_context& state, std::istream& image_stream)
+  export std::size_t load_material(material_context& state, std::istream& image_stream)
   {
+    using namespace siege::content;
     auto dml = dts::darkstar::read_shape(image_stream);
 
     if (auto* real_dml = std::get_if<dts::darkstar::material_list_variant>(&dml); real_dml)
@@ -33,7 +45,7 @@ namespace siege::views
     return 0;
   }
 
-  std::optional<std::filesystem::path> get_filename(const material_context& state, std::size_t index)
+  export std::optional<std::filesystem::path> get_filename(const material_context& state, std::size_t index)
   {
     auto real_material = std::any_cast<siege::content::dts::darkstar::material_list_variant>(&state);
 
@@ -56,4 +68,3 @@ namespace siege::views
   }
 
 }// namespace siege::views
-// namespace siege::views

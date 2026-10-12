@@ -1,20 +1,47 @@
-#include "2d_shared.hpp"
-#include <siege/content/bmp/bitmap.hpp>
+module;
+
+#include <siege/platform/shared.hpp>
+#include <siege/platform/palette.hpp>
+#include <siege/content/pal/palette.hpp>
+
+export module pal.shared;
+
+import std;
 
 namespace siege::views
 {
-  bool is_pal(std::istream& image_stream) noexcept
+  export struct pal_context : std::any
+  {
+    using std::any::any;
+  };
+
+  export struct rect
+  {
+    int x;
+    int y;
+    int width;
+    int height;
+  };
+
+  export struct colour_entry
+  {
+    rect position;
+    siege::content::pal::colour colour;
+    std::u8string name;
+  };
+
+  export bool is_pal(std::istream& image_stream) noexcept
   {
     return siege::platform::palette::is_microsoft_pal(image_stream) || siege::content::pal::is_earthsiege_pal(image_stream) || siege::content::pal::is_old_pal(image_stream) || siege::content::pal::is_phoenix_pal(image_stream);
   }
 
-  std::span<const siege::fs_string_view> get_pal_formats() noexcept
+  export std::span<const siege::fs_string_view> get_pal_formats() noexcept
   {
     constexpr static auto formats = std::array<siege::fs_string_view, 4>{ { FSL ".pal", FSL ".ipl", FSL ".ppl", FSL ".dpl" } };
     return formats;
   }
 
-  std::size_t load_palettes(pal_context& state, std::istream& image_stream)
+  export std::size_t load_palettes(pal_context& state, std::istream& image_stream)
   {
     std::vector<std::vector<colour_entry>> all_rectangles;
 
@@ -87,7 +114,7 @@ namespace siege::views
     return size;
   }
 
-  std::span<const colour_entry> get_palette(const pal_context& state, std::size_t index)
+  export std::span<const colour_entry> get_palette(const pal_context& state, std::size_t index)
   {
     auto* palettes = std::any_cast<std::vector<std::vector<colour_entry>>>(&state);
     if (!palettes)
@@ -97,6 +124,4 @@ namespace siege::views
 
     return palettes->operator[](index);
   }
-
-
 }// namespace siege::views

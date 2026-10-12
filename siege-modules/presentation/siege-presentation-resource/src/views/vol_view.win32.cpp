@@ -1,3 +1,5 @@
+module;
+
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/menu.hpp>
@@ -8,22 +10,17 @@
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/stream.hpp>
-#include <spanstream>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <algorithm>
 #include <versionhelpers.h>
 #include <siege/platform/win/theming.hpp>
-#include "vol_shared.hpp"
+
+export module vol.views;
+
+import std;
+import vol.shared;
 
 namespace siege::views
 {
   namespace fs = std::filesystem;
-  std::optional<fs::path> create_self_extracting_resource(std::any& self,
-    fs::path unvol_exe_path,
-    std::optional<fs::path> output_path,
-    std::optional<std::vector<std::string>> post_extract_commands);
 
   struct vol_view final : win32::basic_window<vol_view>
   {
@@ -620,7 +617,7 @@ namespace siege::views
       }
 
       // TODO fix crash when extracting lots of files with our internal zip code
-      if (auto archive_path = get_original_path(shared_state); IsWindows10OrGreater() && archive_path && (archive_path->extension().string() == ".pk3" || archive_path->extension().string() == ".PK3" || archive_path->extension().string() == ".zip" || archive_path->extension().string() == ".ZIP"))
+      if (auto archive_path = get_original_path(shared_state); ::IsWindows10OrGreater() && archive_path && (archive_path->extension().string() == ".pk3" || archive_path->extension().string() == ".PK3" || archive_path->extension().string() == ".zip" || archive_path->extension().string() == ".ZIP"))
       {
         std::stringstream command;
         command << "cd " << *path << " && tar -xf " << *archive_path << " && explorer .";
@@ -976,7 +973,7 @@ namespace siege::views
     }
   };
 
-  ATOM register_vol_view(win32::window_module_ref module)
+  export ATOM register_vol_view(win32::window_module_ref module)
   {
     WNDCLASSEXW info{
       .cbSize = sizeof(info),

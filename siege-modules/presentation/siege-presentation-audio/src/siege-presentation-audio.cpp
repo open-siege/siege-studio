@@ -4,7 +4,10 @@
 #include <system_error>
 #include <algorithm>
 #include <siege/platform/stream.hpp>
-#include "views/sfx_shared.hpp"
+#include <siege/platform/shared.hpp>
+
+import std;
+import sfx.shared;
 
 using namespace std::literals;
 using namespace siege::views;

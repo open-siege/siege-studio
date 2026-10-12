@@ -1,14 +1,22 @@
+module;
+
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/registry.hpp>
 #include <siege/platform/shared.hpp>
-#include <locale>
-#include <codecvt>
+#include <siege/platform/extension_module.hpp>
+#include <siege/platform/extension_module_client.hpp>
+#include <xinput.h>
+#define DIRECTINPUT_VERSION 0x800
+#include <dinput.h>// DIJOYSTATE only
 #include <winreg.h>
 #include <detours.h>
 #include <imagehlp.h>
 #include <nlohmann/json.hpp>
-#include "exe_shared.hpp"
+
+export module exe.shared;
+
+import std;
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -18,6 +26,149 @@ using siege::platform::predefined_string;
 
 namespace siege::views
 {
+  export constexpr auto zt_fallback_ip = L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4";
+
+  export struct input_action_binding
+  {
+    std::uint16_t vkey;
+    // The context starts off vague and becomes more
+    // defined as more hardware information is detected.
+    // For controller input especially, we eventually
+    // care about the type of context to use for generating configurations.
+    // This is because older games rely on the hardware index
+    // of buttons/axises but we care about the conceptual button/axies when binding
+    // (ie we want the A button to jump).
+    // The reason why each input gets a context
+    // is because in more complex configurations,
+    // you may have two separate input devices to control a game (think of HOTAS configurations).
+    // But, most old games are programmed to only handle one input at a time.
+    // The logic to handle separate contextes doesn't strictly exist yet,
+    // but it would fall on the extension to do something reasonable
+    // (ie configure a primary device as the joystick and then the secondary device to simulate keyboard/mouse inputs)
+    siege::platform::hardware_context context;
+    std::uint16_t action_index;
+  };
+
+
+  export struct menu_item : ::MENUITEMINFOW
+  {
+    menu_item() : ::MENUITEMINFOW()
+    {
+    }
+
+    menu_item(std::wstring text) : ::MENUITEMINFOW(), text(std::move(text))
+    {
+      this->dwTypeData = text.data();
+    }
+
+    std::wstring text;
+    std::vector<menu_item> sub_items;
+  };
+
+  export struct menu_info : ::MENUINFO
+  {
+    std::vector<menu_item> menu_items;
+  };
+
+  export enum struct extension_setting_type {
+    unknown,
+    string_setting,
+    flag_setting,
+    int_setting,
+    float_setting,
+    env_setting,
+    computed_setting,
+  };
+
+  export struct game_setting
+  {
+    using game_command_line_caps = siege::platform::game_command_line_caps;
+    std::wstring setting_name;
+    extension_setting_type type;
+    std::variant<std::wstring, int, float, bool> value;
+    std::wstring display_name;
+    std::wstring display_value;
+    bool visible = true;
+    bool enabled = true;
+    int group_id = 0;
+    std::function<std::span<const siege::platform::predefined_string>(std::wstring_view name)> get_predefined_string;
+    std::function<std::span<const siege::platform::predefined_int>(std::wstring_view name)> get_predefined_int;
+    std::function<void()> persist = []() {};
+
+    void update_value(int new_value, std::wstring_view new_display_value = L"");
+    void update_value(std::wstring_view new_value, std::wstring_view new_display_value = L"");
+
+    std::wstring get_computed_display_value();
+  };
+
+  // TODO games which use winmm (and possibly also dinput)
+  // rely on the first controller being used.
+  // This is governed by the primary controller setting in Windows.
+  // We should add which controller is considered to be the primary here.
+  // Then, if the user's preferred context is not the primary, we can warn them and
+  // ask if they want to change it via the system dialog
+  export struct hardware_index
+  {
+    siege::platform::controller_input_type type;
+
+    std::uint16_t index;
+
+    auto operator<=> (const hardware_index&) const = default;
+  };
+
+  export using input_type = decltype(hardware_index::type);
+
+  export struct winmm_hardware_index : hardware_index
+  {
+  };
+
+  export struct controller_info
+  {
+    siege::platform::hardware_context detected_context;
+    std::string_view backend;
+    std::wstring_view device_path;
+    std::wstring_view device_name;
+    enum button_preference : bool
+    {
+      prefer_axis,
+      prefer_button
+    };
+
+    enum index_preference : bool
+    {
+      prefer_hid,
+      prefer_winmm
+    };
+    std::function<std::optional<hardware_index>(SHORT, button_preference)> get_hardware_index;
+    std::pair<std::uint32_t, std::uint32_t> vendor_product_id;
+    bool is_system_preferred = false;
+  };
+
+  export winmm_hardware_index map_hid_to_winmm(hardware_index, const std::set<std::uint32_t>& axis_indexes);
+
+  export struct input_state_change
+  {
+    WORD vkey;
+    std::uint16_t new_value;
+    std::uint16_t old_value;
+  };
+
+  export struct controller_state
+  {
+    controller_info info;
+    std::any caps;
+    XINPUT_STATE last_state;
+    std::array<input_state_change, 64> buffer;
+  };
+
+  export struct ui_action_context
+  {
+    WORD vkey;
+    siege::platform::hardware_context context;
+    siege::platform::game_action action;
+    WORD action_index;
+  };
+
   struct registry_settings
   {
     std::array<fs_char, 64> last_player_name;
@@ -96,7 +247,7 @@ namespace siege::views
     }
   }
 
-  std::span<input_action_binding> get_action_bindings(std::any& state)
+  export std::span<input_action_binding> get_action_bindings(std::any& state)
   {
     auto& self = get(state);
 
@@ -105,7 +256,7 @@ namespace siege::views
     return self.bound_actions;
   }
 
-  std::size_t add_action_binding(std::any& state, input_action_binding binding)
+  export std::size_t add_action_binding(std::any& state, input_action_binding binding)
   {
     auto& self = get(state);
     init_capacity(self);
@@ -326,13 +477,13 @@ namespace siege::views
     return std::visit(convert_to_string, value);
   }
 
-  std::span<const siege::fs_string_view> get_executable_formats() noexcept
+  export std::span<const siege::fs_string_view> get_executable_formats() noexcept
   {
     constexpr static auto exe_formats = std::array<siege::fs_string_view, 2>{ { FSL ".exe", FSL ".com" } };
     return exe_formats;
   }
 
-  std::span<const siege::fs_string_view> get_library_formats() noexcept
+  export std::span<const siege::fs_string_view> get_library_formats() noexcept
   {
     constexpr static auto lib_formats = std::array<siege::fs_string_view, 6>{ {
       FSL ".dll",
@@ -353,16 +504,38 @@ namespace siege::views
   std::wstring get_preferred_last_ip(const std::any& state, std::wstring zt_node_id);
 
   bool links_to_networking_libraries(exe_state& self);
-  bool has_extension_module(const std::any& state) { return get(state).matching_extension.has_value(); }
-  siege::platform::game_extension_module& get_extension(std::any& state) { return *get(state).matching_extension; }
-  const siege::platform::game_extension_module& get_extension(const std::any& state) { return *get(state).matching_extension; }
-  std::optional<fs::path> get_zero_tier_extension_folder_path(const std::any& state);
+  export bool has_extension_module(const std::any& state) { return get(state).matching_extension.has_value(); }
+  export siege::platform::game_extension_module& get_extension(std::any& state) { return *get(state).matching_extension; }
+  export const siege::platform::game_extension_module& get_extension(const std::any& state) { return *get(state).matching_extension; }
+  export std::optional<fs::path> get_zero_tier_extension_folder_path(const std::any& state);
 
-  fs::path get_exe_path(const std::any& state) { return get(state).loaded_path; }
+  export fs::path get_exe_path(const std::any& state) { return get(state).loaded_path; }
 
   const registry_settings& load_game_settings(std::any& state);
 
-  std::span<game_setting> init_launch_settings(std::any& state)
+  export bool can_support_zero_tier(std::any& state);
+
+  // Defined in input.cpp (impl unit)
+  export std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDLE handle);
+  export std::vector<controller_info> get_connected_controllers();
+  export std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT handle);
+  export std::set<std::uint32_t> hardware_buttons(const controller_state& state);
+  export std::set<std::uint32_t> hardware_axes(const controller_state& state);
+  export std::uint32_t hardware_hat_count(const controller_state& state);
+  export DIJOYSTATE get_raw_state_for_handle(controller_state& state, HRAWINPUT handle);
+  export XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle);
+  export controller_info store_controller_context(const controller_info& info, siege::platform::hardware_context context);
+  export controller_info detect_and_store_controller_context_from_hint(const controller_info& info, siege::platform::hardware_context hint);
+  export std::set<std::uint32_t> mapped_buttons(const controller_info& info);
+  export std::set<std::uint32_t> mapped_axes(const controller_info& info);
+  export std::uint32_t mapped_hat_count(const controller_info& info);
+  export std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer);
+  export bool is_vkey_for_controller(WORD vkey);
+  export std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+  export std::wstring label_for_vkey(SHORT vkey, siege::platform::controller_context context);
+  export std::wstring label_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+
+  export std::span<game_setting> init_launch_settings(std::any& state)
   {
     constexpr auto hosting_pref_name = L"MULTIPLAYER_HOSTING_PREFERENCE";
     constexpr static auto pref_options = std::array<std::wstring_view, 4>{ { L"Use Game UI", L"Client/Connect to Server", L"Listen/Host & Connect", L"Dedicated Server" } };
@@ -1180,7 +1353,7 @@ namespace siege::views
     return self.launch_settings;
   }
 
-  siege::platform::owning_packaged_args get_packaged_args(std::any& state)
+  export siege::platform::owning_packaged_args get_packaged_args(std::any& state)
   {
     auto& self = get(state);
 
@@ -1201,7 +1374,7 @@ namespace siege::views
   }
 
 
-  std::optional<std::reference_wrapper<game_setting>> get_game_setting(std::any& state, std::size_t index)
+  export std::optional<std::reference_wrapper<game_setting>> get_game_setting(std::any& state, std::size_t index)
   {
     try
     {
@@ -1215,7 +1388,7 @@ namespace siege::views
 
   networking_support get_supported_networking_libraries(std::span<char> data);
 
-  bool is_exe_or_lib(std::istream& stream) noexcept
+  export bool is_exe_or_lib(std::istream& stream) noexcept
   {
     platform::istream_pos_resetter resetter(stream);
     thread_local std::string data(128, '\0');
@@ -1287,7 +1460,7 @@ namespace siege::views
     return false;
   }
 
-  std::size_t load_executable(std::any& state, std::istream& image_stream, std::optional<fs::path> path) noexcept
+  export std::size_t load_executable(std::any& state, std::istream& image_stream, std::optional<fs::path> path) noexcept
   {
     auto& self = get(state);
     if (!path)
@@ -1453,7 +1626,7 @@ namespace siege::views
     return cache;
   }
 
-  std::map<std::wstring, std::set<std::wstring>> get_resource_names(const std::any& state)
+  export std::map<std::wstring, std::set<std::wstring>> get_resource_names(const std::any& state)
   {
     auto& self = get(state);
     std::map<std::wstring, std::set<std::wstring>> results;
@@ -1504,7 +1677,7 @@ namespace siege::views
     return results;
   }
 
-  std::optional<menu_info> get_resource_menu_items(const std::any& state, std::wstring type, std::wstring name)
+  export std::optional<menu_info> get_resource_menu_items(const std::any& state, std::wstring type, std::wstring name)
   {
     auto& self = get(state);
     auto resource = ::FindResourceW(self.loaded_module, name.c_str(), type.c_str());
@@ -1588,7 +1761,7 @@ namespace siege::views
     return result;
   }
 
-  std::vector<std::wstring> get_resource_strings(const std::any& state, std::wstring type, std::wstring name)
+  export std::vector<std::wstring> get_resource_strings(const std::any& state, std::wstring type, std::wstring name)
   {
     auto& self = get(state);
     auto resource = ::FindResourceW(self.loaded_module, name.c_str(), type.c_str());
@@ -1673,7 +1846,7 @@ namespace siege::views
     WORD IconCursorId;
   };
 
-  std::vector<std::byte> get_resource_data(const std::any& state, std::wstring type, std::wstring name, bool raw)
+  export std::vector<std::byte> get_resource_data(const std::any& state, std::wstring type, std::wstring name, bool raw = false)
   {
     auto& self = get(state);
     std::optional<NEWHEADER> main_header;
@@ -1818,7 +1991,7 @@ namespace siege::views
     return raw_result;
   }
 
-  std::optional<std::wstring> get_extension_for_name(const std::any& state, std::wstring type, std::wstring name)
+  export std::optional<std::wstring> get_extension_for_name(const std::any& state, std::wstring type, std::wstring name)
   {
     using namespace std::literals;
 
@@ -1848,7 +2021,7 @@ namespace siege::views
   using siege::platform::hardware_context_caps;
   using siege::platform::input_mapping_ex;
 
-  std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context context, WORD virtual_key, std::uint16_t action_index)
+  export std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context context, WORD virtual_key, std::uint16_t action_index)
   {
     assert(has_extension_module(state));
 
@@ -1908,7 +2081,7 @@ namespace siege::views
   }
 
 
-  std::optional<WORD> get_expected_vkey_for_keyboard_mouse(const std::any& state, hardware_context context, WORD vkey, std::uint16_t action_index)
+  export std::optional<WORD> get_expected_vkey_for_keyboard_mouse(const std::any& state, hardware_context context, WORD vkey, std::uint16_t action_index)
   {
     assert(has_extension_module(state));
 
@@ -1946,7 +2119,9 @@ namespace siege::views
     return std::nullopt;
   }
 
-  std::vector<ui_action_context> load_keyboard_mouse_configs(std::any& state)
+  using input_type = decltype(siege::views::hardware_index::type);
+
+  export std::vector<ui_action_context> load_keyboard_mouse_configs(std::any& state)
   {
     if (!has_extension_module(state))
     {
@@ -2142,7 +2317,7 @@ namespace siege::views
     return false;
   }
 
-  bool controller_can_be_toggled(std::any& state)
+  export bool controller_can_be_toggled(std::any& state)
   {
     if (!has_extension_module(state))
     {
@@ -2158,7 +2333,7 @@ namespace siege::views
     return extension.caps->controller_enabled_setting && extension.caps->controller_enabled_setting[0] != '\0';
   }
 
-  void enable_controller_for_extension(std::any& state)
+  export void enable_controller_for_extension(std::any& state)
   {
     if (!controller_can_be_toggled(state))
     {
@@ -2184,7 +2359,7 @@ namespace siege::views
     }
   }
 
-  void disable_controller_for_extension(std::any& state)
+  export void disable_controller_for_extension(std::any& state)
   {
     if (!controller_can_be_toggled(state))
     {
@@ -2320,7 +2495,7 @@ namespace siege::views
     return self.registry_data;
   }
 
-  void set_ip_for_current_network(std::any& state, std::string ip_address, bool for_client)
+  export void set_ip_for_current_network(std::any& state, std::string ip_address, bool for_client)
   {
     auto& self = get(state);
     std::wstring_view network_id =
@@ -2552,7 +2727,7 @@ namespace siege::views
     return !self.detected_networking_support.empty();
   }
 
-  bool can_support_zero_tier(std::any& state)
+  export bool can_support_zero_tier(std::any& state)
   {
     auto& self = get(state);
     if (self.matching_extension)
@@ -2619,7 +2794,7 @@ namespace siege::views
     return false;
   }
 
-  bool uses_ws2_32(const std::any& state)
+  export bool uses_ws2_32(const std::any& state)
   {
     auto& exe_state = get(state);
     for (auto& info : exe_state.detected_networking_support)
@@ -2764,13 +2939,13 @@ namespace siege::views
     return is_console;
   }
 
-  bool zero_tier_enabled(const std::any& state)
+  export bool zero_tier_enabled(const std::any& state)
   {
     const auto& self = get(state);
     return self.registry_data.zero_tier_enabled;
   }
 
-  HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept
+  export HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept
   {
     auto& self = get(state);
 
@@ -3136,7 +3311,7 @@ namespace siege::views
     }
   }
 
-  bool has_client_preference(const std::any& state)
+  export bool has_client_preference(const std::any& state)
   {
     auto& self = get(state);
 
@@ -3147,7 +3322,7 @@ namespace siege::views
     return hosting_pref != pref_options_keys[2] && hosting_pref != pref_options_keys[3];
   }
 
-  bool can_launch_additional_instance(const std::any& state)
+  export bool can_launch_additional_instance(const std::any& state)
   {
     auto& self = get(state);
 
@@ -3161,14 +3336,14 @@ namespace siege::views
     return hosting_pref == pref_options_keys[2];
   }
 
-  bool is_launch_enabled(const std::any& state)
+  export bool is_launch_enabled(const std::any& state)
   {
     auto& self = get(state);
 
     return can_launch_additional_instance(state) ? self.launch_enabled_for_server_process : self.launch_enabled_for_client_process;
   }
 
-  void disable_launch(std::any& state)
+  export void disable_launch(std::any& state)
   {
     auto& self = get(state);
 
@@ -3182,7 +3357,7 @@ namespace siege::views
     }
   }
 
-  void reset_launch_state(std::any& state)
+  export void reset_launch_state(std::any& state)
   {
     auto& self = get(state);
 

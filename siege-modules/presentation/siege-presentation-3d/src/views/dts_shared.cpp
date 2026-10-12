@@ -1,9 +1,12 @@
-#include <any>
+module;
+
+#include <siege/platform/shared.hpp>
 #include <siege/content/dts/renderable_shapes.hpp>
 #include <siege/content/wtb_renderable_shape.hpp>
 #include <siege/content/dts/darkstar.hpp>
-#include "3d_shared.hpp"
+#include <siege/content/renderable_shape.hpp>
 
+// Content-lib imports are internal for now.
 namespace siege::content::tmd
 {
   bool is_tmd(std::istream& stream);
@@ -28,9 +31,20 @@ namespace siege::content::mdl
   std::any load_mdx(std::istream& stream);
 }// namespace siege::content::mdl
 
+export module dts.shared;
+
+import std;
+export import dml.shared;
+
 namespace siege::views
 {
+  export struct shape_context : public std::any
+  {
+    using std::any::any;
+  };
+
   std::optional<content::renderable_shape_value> make_shape(std::istream& shape_stream);
+
   struct shape_data
   {
     content::renderable_shape_value shape;
@@ -40,13 +54,13 @@ namespace siege::views
     std::vector<content::sequence_info> sequences;
   };
 
-  std::span<const siege::fs_string_view> get_shape_formats() noexcept
+  export std::span<const siege::fs_string_view> get_shape_formats() noexcept
   {
     constexpr static auto formats = std::array<siege::fs_string_view, 12>{ { FSL ".dts", FSL ".tmd", FSL ".bnd", FSL ".cwg", FSL ".trk", FSL ".bwd", FSL ".wtb", FSL ".erf", FSL ".mdl", FSL ".md2", FSL ".mdx", FSL ".dkm" } };
     return formats;
   }
 
-  bool is_shape(std::istream& stream) noexcept
+  export bool is_shape(std::istream& stream) noexcept
   {
     return siege::content::dts::darkstar::is_darkstar_dts(stream)
            || siege::content::dts::three_space::v1::is_3space_dts(stream)
@@ -59,7 +73,7 @@ namespace siege::views
            || siege::content::wtb::is_wtb(stream);
   }
 
-  std::size_t load_shape(shape_context& state, std::istream& stream)
+  export std::size_t load_shape(shape_context& state, std::istream& stream)
   {
     if (siege::content::tmd::is_tmd(stream))
     {
@@ -128,7 +142,7 @@ namespace siege::views
     return std::any_cast<std::vector<shape_data>>(&state);
   }
 
-  std::vector<std::string> get_detail_levels_for_shape(const shape_context& state, std::size_t index)
+  export std::vector<std::string> get_detail_levels_for_shape(const shape_context& state, std::size_t index)
   {
     auto* shapes = self(state);
     auto detail_levels = shapes->at(index).detail_levels;
@@ -141,13 +155,13 @@ namespace siege::views
     return detail_levels;
   }
 
-  std::vector<content::sequence_info> get_sequence_info_for_shape(const shape_context& state, std::size_t index)
+  export std::vector<content::sequence_info> get_sequence_info_for_shape(const shape_context& state, std::size_t index)
   {
     auto* shapes = self(state);
     return shapes->at(index).sequences;
   }
 
-  std::vector<std::int32_t> get_sequence_ids_for_shape(const shape_context& state, std::size_t index)
+  export std::vector<std::int32_t> get_sequence_ids_for_shape(const shape_context& state, std::size_t index)
   {
     auto* shapes = self(state);
     auto& shape = shapes->at(index);
@@ -161,13 +175,13 @@ namespace siege::views
     return results;
   }
 
-  std::vector<std::size_t> get_selected_detail_levels(const shape_context& state, std::size_t index)
+  export std::vector<std::size_t> get_selected_detail_levels(const shape_context& state, std::size_t index)
   {
     auto* shapes = self(state);
     return shapes->at(index).selected_detail_levels;
   }
 
-  void set_selected_detail_levels(shape_context& state, std::size_t index, std::span<std::size_t> span)
+  export void set_selected_detail_levels(shape_context& state, std::size_t index, std::span<std::size_t> span)
   {
     auto* shapes = self(state);
     auto& shape = shapes->at(index);
@@ -175,7 +189,7 @@ namespace siege::views
     std::copy(span.begin(), span.end(), shape.selected_detail_levels.begin());
   }
 
-  bool is_sequence_enabled(const shape_context& state, std::size_t shape_index, std::int32_t index)
+  export bool is_sequence_enabled(const shape_context& state, std::size_t shape_index, std::int32_t index)
   {
     auto* shapes = self(state);
 
@@ -191,7 +205,7 @@ namespace siege::views
     return false;
   }
 
-  void enable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
+  export void enable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
     auto* shapes = self(state);
 
@@ -208,7 +222,7 @@ namespace siege::views
     }
   }
 
-  void disable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
+  export void disable_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
     auto* shapes = self(state);
 
@@ -229,7 +243,7 @@ namespace siege::views
     }
   }
 
-  void advance_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
+  export void advance_sequence(shape_context& state, std::size_t shape_index, std::int32_t index)
   {
     auto* shapes = self(state);
     auto& shape = shapes->at(shape_index);
@@ -246,7 +260,7 @@ namespace siege::views
     }
   }
 
-  void render_shape(const shape_context& state, std::size_t index, content::shape_renderer& renderer)
+  export void render_shape(const shape_context& state, std::size_t index, content::shape_renderer& renderer)
   {
     auto* shapes = self(state);
     auto& context = shapes->operator[](index);

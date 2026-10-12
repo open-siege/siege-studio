@@ -1,12 +1,15 @@
-﻿#include <string_view>
-#include <istream>
-#include <spanstream>
+﻿module;
+
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
-#include "cfg_shared.hpp"
+
+export module cfg.views;
+
+import std;
+import cfg.shared;
 
 namespace siege::views
 {
@@ -106,7 +109,7 @@ namespace siege::views
     }
   };
 
-  ATOM register_cfg_view(win32::window_module_ref module)
+  export ATOM register_cfg_view(win32::window_module_ref module)
   {
     WNDCLASSEXW info{
       .cbSize = sizeof(info),

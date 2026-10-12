@@ -1,9 +1,8 @@
-#include <bit>
-#include <filesystem>
-#include <memory>
-#include <system_error>
 #include <siege/platform/stream.hpp>
-#include "views/cfg_shared.hpp"
+#include <siege/platform/shared.hpp>
+
+import std;
+import cfg.shared;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;

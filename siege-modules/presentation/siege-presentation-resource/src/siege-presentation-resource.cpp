@@ -1,24 +1,13 @@
-
-#include <bit>
-#include <filesystem>
-#undef NDEBUG
-#include <cassert>
-#include <atomic>
-#include <unordered_set>
-#include <unordered_map>
-#include <system_error>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
-#include "views/vol_shared.hpp"
+#include <siege/platform/resource.hpp>
+
+import std;
+import vol.shared;
+import vol.maker;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
-
-namespace siege::resource
-{
-  bool is_resource_readable(std::istream&);
-  siege::platform::resource_reader make_resource_reader(std::istream&);
-}// namespace siege::resource
 
 extern "C" {
 

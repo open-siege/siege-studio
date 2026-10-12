@@ -1,17 +1,14 @@
 
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/presentation_module.hpp>
-#include "views/vol_shared.hpp"
+
+import vol.shared;
+import vol.views;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
 
 static ATOM vol_view_atom;
-
-namespace siege::views
-{
-  ATOM register_vol_view(win32::window_module_ref module);
-}
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_ZIPFILE;
@@ -38,7 +35,7 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
   }
 
   static std::wstring storage;
-  
+
   if (!storage.empty())
   {
     *class_name = storage.data();

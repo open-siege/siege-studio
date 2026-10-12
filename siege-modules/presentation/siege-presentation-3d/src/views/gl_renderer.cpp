@@ -1,14 +1,20 @@
-#ifndef GL_RENDERER_HPP
-#define GL_RENDERER_HPP
+module;
 
-#include <map>
+#if WIN32
+#include <siege/platform/win/file.hpp>
+#endif
+
+// TODO is this actually cros-platform?
 #include <GL/GL.h>
 #include <siege/content/renderable_shape.hpp>
 
+export module gl.renderer;
+
+import std;
+
 namespace siege::views
 {
-
-  struct gl_renderer final : content::shape_renderer
+  export struct gl_renderer final : content::shape_renderer
   {
     const std::array<std::uint8_t, 3> max_colour = { 255, 255, 0 };
     std::string_view current_object_name;
@@ -27,7 +33,6 @@ namespace siege::views
 
       return std::nullopt;
     }
-
 
     gl_renderer(std::map<std::optional<std::string>, std::map<std::string, bool>>& visible_nodes,
       std::map<std::string, std::map<std::string, bool>>& visible_objects) : visible_nodes(visible_nodes), visible_objects(visible_objects)
@@ -95,17 +100,14 @@ namespace siege::views
     }
   };
 
-  inline void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar)
+  export void perspectiveGL(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar)
   {
     constexpr GLdouble pi = 3.1415926535897932384626433832795;
     GLdouble fW, fH;
 
-    // fH = tan( (fovY / 2) / 180 * pi ) * zNear;
-    fH = tan(fovY / 360 * pi) * zNear;
+    fH = tan(fovY / 360 * pi) * zNear;// equiv: tan((fovY/2)/180*pi)*zNear
     fW = fH * aspect;
 
     ::glFrustum(-fW, fW, -fH, fH, zNear, zFar);
   }
 }// namespace siege::views
-
-#endif// DARKSTARDTSCONVERTER_GL_RENDERER_HPP

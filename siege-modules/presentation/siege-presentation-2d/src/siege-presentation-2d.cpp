@@ -2,9 +2,12 @@
 #include <filesystem>
 #include <memory>
 #include <system_error>
+#include <algorithm>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/shared.hpp>
 
-#include "views/2d_shared.hpp"
+import std;
+import bmp.shared;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;

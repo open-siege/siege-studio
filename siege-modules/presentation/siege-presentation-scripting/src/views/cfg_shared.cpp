@@ -1,28 +1,27 @@
-#include <map>
-#include <string>
-#include <algorithm>
-#include <istream>
-#include <memory>
+module;
+
 #include <siege/configuration/shared.hpp>
 #include <siege/configuration/id_tech.hpp>
 #include <siege/platform/stream.hpp>
-#include "cfg_shared.hpp"
+
+export module cfg.shared;
+import std;
 
 namespace siege::views
 {
-  std::span<const siege::fs_string_view> get_cfg_formats() noexcept
+  export std::span<const siege::fs_string_view> get_cfg_formats() noexcept
   {
     constexpr static auto formats = std::array<siege::fs_string_view, 5>{ { FSL ".cfg", FSL ".ini", FSL ".inf", FSL "txt", FSL ".cs" } };
 
     return formats;
   }
 
-  bool is_cfg(std::istream& stream) noexcept
+  export bool is_cfg(std::istream& stream) noexcept
   {
     return siege::configuration::is_ascii_text_config(stream);
   }
 
-  std::size_t load_config(std::any& state, std::istream& stream) noexcept
+  export std::size_t load_config(std::any& state, std::istream& stream) noexcept
   {
     using namespace siege::configuration::id_tech;
 
@@ -45,7 +44,7 @@ namespace siege::views
     return std::any_cast<std::shared_ptr<siege::configuration::text_game_config>>(&state)->get();
   }
 
-  std::map<std::wstring, std::wstring> get_key_values(std::any& state)
+  export std::map<std::wstring, std::wstring> get_key_values(std::any& state)
   {
     std::map<std::wstring, std::wstring> result;
 

@@ -5,7 +5,10 @@
 #include <algorithm>
 #include <array>
 #include <siege/platform/stream.hpp>
-#include "views/3d_shared.hpp"
+#include <siege/platform/shared.hpp>
+
+import std;
+import dts.shared;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;

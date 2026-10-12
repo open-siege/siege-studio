@@ -1,12 +1,18 @@
 // WIP - this file is still work in progress and messy
+module;
 
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/dialog.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/extension_module.hpp>
 #include <hidusage.h>
-#include "exe_shared.hpp"
+#include <xinput.h>
+
+module exe.views;
+
+import exe.shared;
 
 namespace siege::views
 {

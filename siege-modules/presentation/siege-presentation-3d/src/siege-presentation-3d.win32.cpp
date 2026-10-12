@@ -1,20 +1,16 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
-#include "views/3d_shared.hpp"
 
-static ATOM dts_view_atom;
-static ATOM dml_view_atom;
-
-namespace siege::views
-{
-  ATOM register_dts_view(win32::window_module_ref module);
-  ATOM register_dml_view(win32::window_module_ref module);
-}// namespace siege::views
-
+import dts.shared;
+import dts.views;
+import dml.views;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
+
+static ATOM dts_view_atom;
+static ATOM dml_view_atom;
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_IMAGEFILES;

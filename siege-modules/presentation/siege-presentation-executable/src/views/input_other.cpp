@@ -1,4 +1,5 @@
-#include <vector>
+module;
+
 #include <siege/platform/win/dialog.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <siege/platform/win/window_module.hpp>
@@ -7,7 +8,8 @@
 #include <xinput.h>
 #include <joystickapi.h>
 #include <hidsdi.h>
-#include "exe_shared.hpp"
+
+module exe.shared;
 
 namespace siege::views
 {

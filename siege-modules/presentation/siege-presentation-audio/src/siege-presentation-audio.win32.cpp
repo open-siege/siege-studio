@@ -2,18 +2,15 @@
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
-#include "views/sfx_shared.hpp"
+
+import sfx.shared;
+import sfx.views;
 
 using namespace siege::views;
 
 using storage_info = siege::platform::storage_info;
 
 static ATOM sfx_view_atom;
-
-namespace siege::views
-{
-  ATOM register_sfx_view(win32::window_module_ref module);
-}
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_AUDIOFILES;

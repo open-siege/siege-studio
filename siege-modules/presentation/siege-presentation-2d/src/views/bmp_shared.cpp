@@ -1,17 +1,41 @@
+module;
+
 #include <siege/content/bmp/bitmap.hpp>
 #include <siege/content/tim.hpp>
+#include <siege/content/pal/palette.hpp>
 #include <siege/platform/image.hpp>
 #include <siege/platform/stream.hpp>
-#include <deque>
-#include <fstream>
-#include <spanstream>
-#include <filesystem>
-#include <future>
-#include <execution>
-#include "2d_shared.hpp"
+#include <siege/platform/palette.hpp>
+
+export module bmp.shared;
+
+import std;
+export import pal.shared;
 
 namespace siege::views
 {
+  export struct bmp_context : std::any
+  {
+    using std::any::any;
+  };
+
+  export struct palette_info
+  {
+    std::filesystem::path path;
+    std::vector<content::pal::palette> children;
+  };
+
+  export using size = siege::platform::bitmap::size;
+  export using get_embedded_pal_filenames = std::set<std::filesystem::path>(std::filesystem::path);
+  export using resolve_embedded_pal = std::vector<char>(std::filesystem::path);
+
+  export enum class colour_strategy : int
+  {
+    do_nothing,
+    remap,
+    remap_unique
+  };
+
   struct bitmap_data
   {
     std::optional<platform::bitmap::platform_image> original_image;
@@ -34,7 +58,7 @@ namespace siege::views
     return std::any_cast<bitmap_data>(&state);
   }
 
-  std::span<const siege::fs_string_view> get_bmp_formats() noexcept
+  export std::span<const siege::fs_string_view> get_bmp_formats() noexcept
   {
     constexpr static auto formats = std::array<siege::fs_string_view, 22>{ { FSL ".jpg",
       FSL ".jpeg",
@@ -62,7 +86,7 @@ namespace siege::views
     return formats;
   }
 
-  bool is_bmp(std::istream& image_stream) noexcept
+  export bool is_bmp(std::istream& image_stream) noexcept
   {
     auto path = siege::platform::get_stream_path(image_stream);
 
@@ -137,7 +161,7 @@ namespace siege::views
     return temp;
   }
 
-  std::shared_future<const std::deque<palette_info>&> load_palettes_async(bmp_context& state, std::optional<std::filesystem::path> folder_hint, std::move_only_function<get_embedded_pal_filenames> get_palettes, std::move_only_function<resolve_embedded_pal> resolve_data)
+  export std::shared_future<const std::deque<palette_info>&> load_palettes_async(bmp_context& state, std::optional<std::filesystem::path> folder_hint, std::move_only_function<get_embedded_pal_filenames> get_palettes, std::move_only_function<resolve_embedded_pal> resolve_data)
   {
     namespace fs = std::filesystem;
 
@@ -224,7 +248,7 @@ namespace siege::views
       .share();
   }
 
-  std::size_t load_bitmap(bmp_context& state, std::istream& image_stream, std::shared_future<const std::deque<palette_info>&> pending_load) noexcept
+  export std::size_t load_bitmap(bmp_context& state, std::istream& image_stream, std::shared_future<const std::deque<palette_info>&> pending_load) noexcept
   {
     using namespace siege::content;
 
@@ -343,9 +367,7 @@ namespace siege::views
     return 0;
   }
 
-  using size = siege::platform::bitmap::size;
-
-  size get_size(const bmp_context& state, std::size_t frame) noexcept
+  export size get_size(const bmp_context& state, std::size_t frame) noexcept
   {
     auto* self = get(state);
     if (self && self->original_image)
@@ -356,7 +378,7 @@ namespace siege::views
     return {};
   }
 
-  std::size_t get_frame_count(const bmp_context& state) noexcept
+  export std::size_t get_frame_count(const bmp_context& state) noexcept
   {
     auto* self = get(state);
     if (self && self->original_image)
@@ -367,7 +389,7 @@ namespace siege::views
     return {};
   }
 
-  std::pair<const palette_info&, std::size_t> get_selected_palette(const bmp_context& state)
+  export std::pair<const palette_info&, std::size_t> get_selected_palette(const bmp_context& state)
   {
     auto* self = get(state);
     if (!self)
@@ -379,7 +401,7 @@ namespace siege::views
   }
 
 #if WIN32
-  win32::wic::bitmap_source& get_frame(bmp_context& state, std::size_t frame)
+  export win32::wic::bitmap_source& get_frame(bmp_context& state, std::size_t frame)
   {
     auto* self = get(state);
     return self->original_image->at(frame);

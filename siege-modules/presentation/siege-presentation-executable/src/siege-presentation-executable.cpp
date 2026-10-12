@@ -8,17 +8,14 @@
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
-#include "views/exe_view.hpp"
+
+import exe.shared;
+import exe.views;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
 
 static ATOM exe_view_atom;
-
-namespace siege::views
-{
-  ATOM register_exe_view(win32::window_module_ref module);
-}
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_APPLICATION;

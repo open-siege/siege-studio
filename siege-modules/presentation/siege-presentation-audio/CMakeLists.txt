@@ -13,7 +13,10 @@ else()
     target_link_libraries(${PROJECT_NAME} PRIVATE siege-content-common)
 endif()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED ON
+    CXX_SCAN_FOR_MODULES ON
+    POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/include)
 
 

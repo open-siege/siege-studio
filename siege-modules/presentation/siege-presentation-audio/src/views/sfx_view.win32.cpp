@@ -1,4 +1,6 @@
-﻿#include <string_view>
+﻿module;
+
+#include <string_view>
 #include <istream>
 #include <spanstream>
 #include <siege/platform/win/basic_window.hpp>
@@ -6,8 +8,14 @@
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
-#include "sfx_shared.hpp"
-#include "media_module.hpp"
+
+export module sfx.views;
+
+import std;
+import sfx.shared;
+import win32.winmm;
+
+#undef PlaySound
 
 namespace siege::views
 {
@@ -282,7 +290,7 @@ namespace siege::views
     }
   };
 
-  ATOM register_sfx_view(win32::window_module_ref module)
+  export ATOM register_sfx_view(win32::window_module_ref module)
   {
     WNDCLASSEXW info{
       .cbSize = sizeof(info),

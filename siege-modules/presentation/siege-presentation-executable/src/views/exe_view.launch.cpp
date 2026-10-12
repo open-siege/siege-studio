@@ -1,15 +1,20 @@
-﻿
+﻿module;
+
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
+#include <siege/platform/extension_module.hpp>
 #include <siege/extension/input_filter.hpp>
-#include "exe_view.hpp"
 #include <detours.h>
 #include <imagehlp.h>
 #include <xinput.h>
-#include "input_injector.hpp"
+
+module exe.views;
+
+import exe.shared;
+import exe.input_injector;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 namespace stl = std::ranges;

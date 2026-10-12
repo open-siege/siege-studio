@@ -1,21 +1,17 @@
 #include <siege/platform/win/common_controls.hpp>
-
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/hresult.hpp>
 #include <siege/platform/stream.hpp>
-#include "views/2d_shared.hpp"
+
+import bmp.shared;
+import bmp.views;
+import pal.views;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;
 
 static ATOM bmp_view_atom;
 static ATOM pal_view_atom;
-
-namespace siege::views
-{
-  ATOM register_bmp_view(win32::window_module_ref module);
-  ATOM register_pal_view(win32::window_module_ref module);
-}
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_IMAGEFILES;
@@ -67,7 +63,7 @@ HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) no
     *class_name = storage.data();
     return S_OK;
   }
-  
+
   if (is_bmp(*stream))
   {
     static std::wstring storage;

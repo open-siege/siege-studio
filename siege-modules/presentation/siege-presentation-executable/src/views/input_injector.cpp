@@ -1,3 +1,4 @@
+module;
 #include <siege/platform/win/window.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <siege/platform/win/capabilities.hpp>
@@ -11,13 +12,33 @@
 #include <mmsystem.h>
 #include <siege/extension/input_filter.hpp>
 #include <siege/platform/win/common_controls.hpp>
-#include "input_injector.hpp"
-#include "exe_shared.hpp"
+
+export module exe.input_injector;
+import std;
+import exe.shared;
 
 namespace siege::views
 {
   using siege::views::controller_state;
   using siege::platform::hardware_context;
+
+  export struct input_injector_args
+  {
+    enum mode
+    {
+      none,
+      bind_input,
+      bind_action
+    };
+
+    siege::platform::owning_packaged_args args;
+    std::wstring script_host;
+    mode input_mode = bind_input;
+    std::function<HRESULT(siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info)> launch_game_with_extension;
+    std::function<void()> on_process_closed;
+  };
+
+  export std::any bind_to_window(win32::window_ref, input_injector_args);
 
   enum class input_state
   {

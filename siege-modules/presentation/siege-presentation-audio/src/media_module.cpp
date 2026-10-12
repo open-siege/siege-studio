@@ -1,16 +1,17 @@
-#ifndef OPEN_SIEGE_MEDIA_MODULE_HPP
-#define OPEN_SIEGE_MEDIA_MODULE_HPP
+module;
 
 #include <siege/platform/win/module.hpp>
 #include <filesystem>
 #include <span>
 #include <mmsystem.h>
 
+export module win32.winmm;
+
 #undef PlaySound
 
 namespace siege
 {
-  struct media_module : private win32::module
+  export struct media_module : private win32::module
   {
     media_module() : win32::module("winmm.dll", true)
     {
@@ -67,5 +68,3 @@ namespace siege
     std::add_pointer_t<decltype(::PlaySoundW)> play_sound_utf;
   };
 }// namespace siege
-
-#endif

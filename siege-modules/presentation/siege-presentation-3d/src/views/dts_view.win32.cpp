@@ -1,3 +1,5 @@
+module;
+
 #include <string_view>
 #include <istream>
 #include <set>
@@ -9,10 +11,15 @@
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/theming.hpp>
-#include "gl_renderer.hpp"
 #include <siege/content/obj_renderer.hpp>
 #include <glm/ext/vector_float3.hpp>
-#include "3d_shared.hpp"
+#include <GL/GL.h>
+
+export module dts.views;
+
+import std;
+import dts.shared;
+import gl.renderer;
 
 namespace siege::views
 {
@@ -707,7 +714,7 @@ namespace siege::views
     }
   };
 
-  ATOM register_dts_view(win32::window_module_ref module)
+  export ATOM register_dts_view(win32::window_module_ref module)
   {
     WNDCLASSEXW info{
       .cbSize = sizeof(info),
