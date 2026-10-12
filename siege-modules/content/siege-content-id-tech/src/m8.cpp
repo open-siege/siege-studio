@@ -1,7 +1,12 @@
-#include <istream>
+module;
+
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/tagged_data.hpp>
+
+export module siege.content.m8;
+
+import std;
 
 namespace siege::content::m8
 {
@@ -9,7 +14,7 @@ namespace siege::content::m8
 
   constexpr file_tag header = platform::to_tag<4>({ 0x02, 0x00, 0x00, 0x00 });
 
-  bool is_m8(std::istream& stream)
+  export bool is_m8(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 

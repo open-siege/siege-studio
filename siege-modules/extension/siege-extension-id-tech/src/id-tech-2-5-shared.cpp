@@ -10,12 +10,14 @@
 #include <cassert>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/resource/pak_resource.hpp>
 #include <siege/resource/common_resources.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
 #include "id-tech-shared.hpp"
+
+import siege.resource.pak;
+import siege.configuration.id_tech;
 
 
 extern "C" {

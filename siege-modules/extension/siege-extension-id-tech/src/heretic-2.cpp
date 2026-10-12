@@ -15,6 +15,8 @@
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
 
+import siege.configuration.id_tech;
+
 namespace fs = std::filesystem;
 extern "C" {
 using hardware_context = siege::platform::hardware_context;

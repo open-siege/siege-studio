@@ -12,12 +12,14 @@
 #include <mutex>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/resource/pak_resource.hpp>
 #include <siege/resource/common_resources.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
 #include "id-tech-shared.hpp"
+
+import siege.resource.pak;
+import siege.configuration.id_tech;
 
 namespace fs = std::filesystem;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;

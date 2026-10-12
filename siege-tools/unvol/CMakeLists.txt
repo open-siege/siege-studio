@@ -11,7 +11,7 @@ else()
 endif()
 
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 23)
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
 target_link_libraries(${PROJECT_NAME} PRIVATE 
                                     siege-content-3space-resource
                                     siege-content-id-tech-resource

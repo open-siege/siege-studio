@@ -104,7 +104,7 @@ if (WIN32)
     endforeach()
 
     foreach(EXT_TARGET IN ITEMS ${ID_TECH_TARGETS})
-        set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23)
+        set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
 	    target_link_libraries(${EXT_TARGET} PRIVATE siege-extension siege-content-id-tech-resource siege-content-id-tech-scripting)
     endforeach()
 endif()

@@ -18,24 +18,13 @@ namespace siege::content::bnd
   std::vector<std::any> load_bnd(std::istream& stream);
 }// namespace siege::content::bnd
 
-namespace siege::content::mdl
-{
-  bool is_mdl(std::istream& stream);
-  std::any load_mdl(std::istream& stream);
-
-  bool is_md2(std::istream& stream);
-  std::any load_md2(std::istream& stream);
-
-  bool is_mdx(std::istream& stream);
-  std::any load_mdx(std::istream& stream);
-}// namespace siege::content::mdl
-
 export module dts.shared;
 
 import std;
 import siege.content.wtb;
 import siege.content.bwd;
 import siege.content.wtb.renderable;
+import siege.content.mdl;
 export import dml.shared;
 
 namespace siege::views

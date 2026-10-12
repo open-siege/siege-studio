@@ -13,6 +13,8 @@
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
 
+import siege.configuration.id_tech;
+
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;

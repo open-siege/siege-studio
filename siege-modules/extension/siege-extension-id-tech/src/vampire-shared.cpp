@@ -4,6 +4,8 @@
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
 
+import siege.configuration.id_tech;
+
 using siege::platform::input_mapping_ex;
 using siege::platform::controller_input_type;
 namespace stl = std::ranges;

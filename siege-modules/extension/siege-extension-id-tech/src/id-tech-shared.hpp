@@ -2,7 +2,7 @@
 #define ID_TECH_SHARED_HPP
 
 #include <siege/platform/win/window_module.hpp>
-#include <siege/configuration/id_tech.hpp>
+#include <siege/configuration/shared.hpp>
 #include <siege/platform/extension_module.hpp>
 #include <filesystem>
 #include <optional>

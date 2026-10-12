@@ -1,20 +1,13 @@
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <list>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <cstdlib>
-#include <sstream>
-#include <algorithm>
-#include <iostream>
-#include <unordered_map>
-#include <zlib.h>
+module;
 
-#include <siege/resource/pak_resource.hpp>
+#include <zlib.h>
+#include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.resource.pak;
+
+import std;
 
 namespace fs = std::filesystem;
 
@@ -62,7 +55,7 @@ namespace siege::resource::pak
 
   using file_entry = std::variant<pak_file_entry, daikatana_pak_file_entry, dat_file_entry, sin_file_entry>;
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -399,7 +392,7 @@ namespace siege::resource::pak
     }
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

@@ -10,11 +10,12 @@
 #include <sstream>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/configuration/id_tech.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
 #include "id-tech-shared.hpp"
+
+import siege.configuration.id_tech;
 
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;

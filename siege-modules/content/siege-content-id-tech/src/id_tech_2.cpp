@@ -1,14 +1,22 @@
-#include <limits>
-#include <memory>
-#include <siege/configuration/id_tech.hpp>
-#include <any>
+module;
+
+#include <siege/configuration/shared.hpp>
+
+export module siege.configuration.id_tech;
+
+import std;
 
 namespace siege::configuration::id_tech
 {
   namespace id_tech_2
   {
+    export struct id_tech_context
+    {
+      std::string default_end_line = "\r\n";
+    };
+
     using config_line = text_game_config::config_line;
-    
+
     constexpr static auto average_line_size = 20;
 
     std::vector<std::string_view> split_into_lines(std::string_view line, std::string_view separator, std::size_t size_hint = 4)
@@ -89,7 +97,9 @@ namespace siege::configuration::id_tech
       return segments;
     }
 
-    std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
+    export void save_config(const std::any&, const std::vector<config_line>&, std::ostream&);
+
+    export std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
     {
       if (stream_size == 0)
       {
@@ -208,7 +218,7 @@ namespace siege::configuration::id_tech
       return result;
     }
 
-    void save_config(const std::any& context, const std::vector<config_line>& entries, std::ostream& raw_data)
+    export void save_config(const std::any& context, const std::vector<config_line>& entries, std::ostream& raw_data)
     {
       id_tech_context real_context{};
 

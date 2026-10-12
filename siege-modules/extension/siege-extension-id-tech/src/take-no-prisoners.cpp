@@ -14,6 +14,8 @@
 #include <siege/extension/shared.hpp>
 #include "id-tech-shared.hpp"
 
+import siege.configuration.id_tech;
+
 using siege::platform::hardware_context;
 using siege::platform::game_action;
 using siege::platform::keyboard_binding;

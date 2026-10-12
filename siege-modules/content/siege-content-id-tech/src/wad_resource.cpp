@@ -1,25 +1,15 @@
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <list>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <cstdlib>
-#include <optional>
-#include <sstream>
-#include <algorithm>
-#include <iostream>
-#include <map>
+module;
 
-#include <siege/resource/wad_resource.hpp>
+#include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/wave.hpp>
 #include <siege/platform/palette.hpp>
 #include <siege/platform/bitmap.hpp>
 
-namespace fs = std::filesystem;
+export module siege.resource.wad;
+
+import std;
 
 namespace siege::resource::wad
 {
@@ -57,7 +47,7 @@ namespace siege::resource::wad
     endian::little_uint32_t string_offset;
   };
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 8> tag{};
@@ -404,7 +394,7 @@ namespace siege::resource::wad
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

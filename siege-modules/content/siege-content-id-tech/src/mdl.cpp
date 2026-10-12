@@ -4,11 +4,15 @@
 // MDX - Kingpin model data
 // DKM - Daikatana model data
 
-#include <array>
-#include <any>
+module;
+
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.content.mdl;
+
+import std;
 
 namespace siege::content::mdl
 {
@@ -86,7 +90,7 @@ namespace siege::content::mdl
   };
 
 
-  bool is_mdl(std::istream& stream)
+  export bool is_mdl(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 4> tag;
@@ -94,7 +98,7 @@ namespace siege::content::mdl
     return tag == mdl_tag;
   }
 
-  std::any load_mdl(std::istream& stream)
+  export std::any load_mdl(std::istream& stream)
   {
     mdl_shape shape;
     platform::istream_pos_resetter resetter(stream);
@@ -222,7 +226,7 @@ namespace siege::content::mdl
   };
 
 
-  bool is_md2(std::istream& stream)
+  export bool is_md2(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 4> tag;
@@ -230,7 +234,7 @@ namespace siege::content::mdl
     return tag == md2_tag;
   }
 
-  std::any load_md2(std::istream& stream)
+  export std::any load_md2(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
 
@@ -340,7 +344,7 @@ namespace siege::content::mdl
     std::vector<mdx_sub_object_grouping> sub_object_groupings;
   };
 
-  bool is_mdx(std::istream& stream)
+  export bool is_mdx(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     std::array<std::byte, 4> tag;
@@ -348,7 +352,7 @@ namespace siege::content::mdl
     return tag == mdx_tag;
   }
 
-  std::any load_mdx(std::istream& stream)
+  export std::any load_mdx(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
 
