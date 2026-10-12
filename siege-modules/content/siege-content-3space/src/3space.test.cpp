@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
-#include <siege/configuration/3space.hpp>
+import siege.configuration.three_space;
 
 namespace three_space = siege::configuration::three_space;
 

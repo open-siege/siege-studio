@@ -1,8 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
-#include <siege/resource/darkstar_resource.hpp>
+#include <any>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
+#include <siege/platform/resource.hpp>
+
+import siege.resource.vol;
 
 namespace darkstar = siege::resource::vol::darkstar;
 
@@ -16,7 +19,7 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
     auto memory_file_info = new std::stringstream();
 
     (*memory_file_info) << "Hello Darkness, my old friend...";
-    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32 , std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::istream>(memory_file_info) });
+    files.emplace_back(darkstar::volume_file_info{ "hello.txt", 32, std::nullopt, darkstar::compression_type::none, std::unique_ptr<std::istream>(memory_file_info) });
 
     darkstar::create_vol_file(mem_buffer, files);
 

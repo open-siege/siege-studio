@@ -1,9 +1,9 @@
 module;
 
 #include <siege/platform/shared.hpp>
-#include <siege/content/dts/renderable_shapes.hpp>
-#include <siege/content/dts/darkstar.hpp>
 #include <siege/content/renderable_shape.hpp>
+#include <siege/content/dts/renderable_shapes.hpp>
+#include <siege/content/dts/3space.hpp>
 
 // Content-lib imports are internal for now.
 namespace siege::content::tmd
@@ -25,6 +25,8 @@ import siege.content.wtb;
 import siege.content.bwd;
 import siege.content.wtb.renderable;
 import siege.content.mdl;
+import siege.content.dts;
+import siege.content.dts.renderable;
 export import dml.shared;
 
 namespace siege::views

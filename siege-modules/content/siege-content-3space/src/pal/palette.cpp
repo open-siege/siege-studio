@@ -1,9 +1,50 @@
-#include <optional>
-#include <siege/content/pal/palette.hpp>
+module;
+
+#include <siege/platform/shared.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/palette.hpp>
 #include <siege/platform/stream.hpp>
+
+export module siege.content.pal;
+
+import std;
 
 namespace siege::content::pal
 {
+
+  export using colour = siege::platform::palette::colour;
+  namespace endian = siege::platform;
+  using file_tag = std::array<std::byte, 4>;
+
+  export enum class palette_type {
+    unknown,
+    cga,
+    ega,
+    vga
+  };
+
+  export struct old_palette
+  {
+    palette_type type;
+    std::vector<colour> colours;
+  };
+
+  export inline double colour_distance(const colour& e1, const colour& e2)
+  {
+    long rmean = ((long)e1.red + (long)e2.red) / 2;
+    long r = (long)e1.red - (long)e2.red;
+    long g = (long)e1.green - (long)e2.green;
+    long b = (long)e1.blue - (long)e2.blue;
+    return std::sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
+  }
+
+  export struct palette
+  {
+    std::vector<colour> colours;
+    endian::little_uint32_t index;
+    endian::little_uint32_t type;
+  };
+
   constexpr file_tag ppl_tag = platform::to_tag<4>({ 'P', 'L', '9', '8' });
 
   constexpr file_tag dpl_tag = platform::to_tag<4>({ 0x0f, 0x00, 0x28, 0x00 });
@@ -49,7 +90,7 @@ namespace siege::content::pal
     return temp > 255 ? std::byte(255) : std::byte(temp);
   }
 
-  bool is_old_pal(std::istream& raw_data)
+  export bool is_old_pal(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
 
@@ -59,7 +100,7 @@ namespace siege::content::pal
     return header == old_pal_tag;
   }
 
-  void get_old_pal_data(std::istream& raw_data,
+  export void get_old_pal_data(std::istream& raw_data,
     std::vector<old_palette>& results,
     std::optional<std::array<std::byte, 4>> header = std::nullopt)
   {
@@ -134,7 +175,7 @@ namespace siege::content::pal
     }
   }
 
-  std::vector<old_palette> get_old_pal_data(std::istream& raw_data)
+  export std::vector<old_palette> get_old_pal_data(std::istream& raw_data)
   {
     std::vector<old_palette> results;
     get_old_pal_data(raw_data, results);
@@ -154,7 +195,7 @@ namespace siege::content::pal
     return results;
   }
 
-  bool is_phoenix_pal(std::istream& raw_data)
+  export bool is_phoenix_pal(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
 
@@ -164,7 +205,7 @@ namespace siege::content::pal
     return header == ppl_tag;
   }
 
-  std::vector<palette> get_ppl_data(std::istream& raw_data)
+  export std::vector<palette> get_ppl_data(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
     palette_info info{};
@@ -197,7 +238,7 @@ namespace siege::content::pal
     return results;
   }
 
-  bool is_earthsiege_pal(std::istream& raw_data)
+  export bool is_earthsiege_pal(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
 
@@ -207,7 +248,7 @@ namespace siege::content::pal
     return header == dpl_tag || header == dpl_tag2;
   }
 
-  std::vector<colour> get_earthsiege_pal(std::istream& raw_data)
+  export std::vector<colour> get_earthsiege_pal(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
     platform::read(raw_data, header.data(), sizeof(header));

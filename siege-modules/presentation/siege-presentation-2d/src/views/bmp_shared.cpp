@@ -1,8 +1,6 @@
 module;
 
-#include <siege/content/bmp/bitmap.hpp>
 #include <siege/content/tim.hpp>
-#include <siege/content/pal/palette.hpp>
 #include <siege/platform/image.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/palette.hpp>
@@ -10,6 +8,8 @@ module;
 export module bmp.shared;
 
 import std;
+import siege.content.bmp;
+import siege.content.pal;
 export import pal.shared;
 
 namespace siege::views
@@ -29,8 +29,7 @@ namespace siege::views
   export using get_embedded_pal_filenames = std::set<std::filesystem::path>(std::filesystem::path);
   export using resolve_embedded_pal = std::vector<char>(std::filesystem::path);
 
-  export enum class colour_strategy : int
-  {
+  export enum class colour_strategy : int {
     do_nothing,
     remap,
     remap_unique

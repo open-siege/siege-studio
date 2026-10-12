@@ -1,12 +1,63 @@
-#include <set>
-#include <map>
-#include <cmath>
-#include <siege/content/bmp/bitmap.hpp>
+module;
+
+#include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/tagged_data.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/palette.hpp>
+
+export module siege.content.bmp;
+
+import std;
+import siege.content.pal;
 
 namespace siege::content::bmp
 {
+
+  namespace endian = siege::platform;
+
+  export struct pbmp_header
+  {
+    endian::little_uint32_t version;
+    endian::little_int32_t width;
+    endian::little_int32_t height;
+    endian::little_uint32_t bit_depth;
+    endian::little_uint32_t flags;
+  };
+
+  export struct pbmp_data
+  {
+    pbmp_header bmp_header;
+    endian::little_uint32_t detail_levels;
+    endian::little_uint32_t palette_index;
+    std::vector<std::byte> pixels;
+  };
+
+  export struct dba_header
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint32_t file_size;
+    endian::little_uint32_t count;
+  };
+
+  export struct dbm_header
+  {
+    std::array<std::byte, 4> tag;
+    endian::little_uint32_t file_size;
+    endian::little_uint16_t height;
+    endian::little_uint16_t width;
+    std::byte bit_depth;
+    std::byte unknown0;
+    std::byte unknown1;
+    endian::little_uint32_t image_size;
+    endian::little_uint16_t extra_data_size;
+  };
+
+  export struct dbm_data
+  {
+    dbm_header header;
+    std::vector<std::byte> pixels;
+  };
+
   using file_tag = std::array<std::byte, 4>;
 
   constexpr file_tag bmp_alt1_tag = platform::to_tag<4>({ 'B', 'M', 'P', ' ' });
@@ -33,7 +84,7 @@ namespace siege::content::bmp
 
   constexpr std::array<std::byte, 2> special_reserved_tag = { std::byte{ 0xF7 }, std::byte{ 0xF5 } };// for palettes
 
-  bool is_earthsiege_bmp(std::istream& raw_data)
+  export bool is_earthsiege_bmp(std::istream& raw_data)
   {
     platform::istream_pos_resetter resetter(raw_data);
     std::array<std::byte, 4> header{};
@@ -52,7 +103,7 @@ namespace siege::content::bmp
     return header == dci_tag;
   }
 
-  bool is_earthsiege_bmp_array(std::istream& raw_data)
+  export bool is_earthsiege_bmp_array(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
     platform::read(raw_data, header.data(), sizeof(header));
@@ -62,7 +113,7 @@ namespace siege::content::bmp
     return header == dba_tag;
   }
 
-  dbm_data read_earthsiege_bmp(std::istream& raw_data)
+  export dbm_data read_earthsiege_bmp(std::istream& raw_data)
   {
     dbm_data data{};
     platform::read(raw_data, reinterpret_cast<char*>(&data.header), sizeof(data.header));
@@ -72,7 +123,7 @@ namespace siege::content::bmp
       throw std::invalid_argument("File data is not DBM based at offset " + std::to_string(int(raw_data.tellg()) - sizeof(data.header)));
     }
 
-    auto total_size = int(data.header.width) * int(data.header.height) * (int(data.header.bit_depth)/ 8);
+    auto total_size = int(data.header.width) * int(data.header.height) * (int(data.header.bit_depth) / 8);
 
     if (total_size == data.header.image_size)
     {
@@ -83,7 +134,7 @@ namespace siege::content::bmp
     return data;
   }
 
-  dbm_data read_earthsiege_cursor(std::istream& raw_data)
+  export dbm_data read_earthsiege_cursor(std::istream& raw_data)
   {
     std::array<std::byte, 4> file_header{};
 
@@ -102,7 +153,7 @@ namespace siege::content::bmp
     return read_earthsiege_bmp(raw_data);
   }
 
-  std::vector<dbm_data> read_earthsiege_bmp_array(std::istream& raw_data)
+  export std::vector<dbm_data> read_earthsiege_bmp_array(std::istream& raw_data)
   {
     std::vector<dbm_data> results;
     dba_header header;
@@ -153,7 +204,7 @@ namespace siege::content::bmp
     }
   }
 
-  bool is_phoenix_bmp(std::istream& raw_data)
+  export bool is_phoenix_bmp(std::istream& raw_data)
   {
     platform::istream_pos_resetter resetter(raw_data);
     std::array<std::byte, 4> header{};
@@ -162,7 +213,7 @@ namespace siege::content::bmp
     return header == pbmp_tag;
   }
 
-  pbmp_data get_pbmp_data(std::istream& raw_data)
+  export pbmp_data get_pbmp_data(std::istream& raw_data)
   {
     const auto start = std::size_t(raw_data.tellg());
     std::array<std::byte, 4> header{};
@@ -237,7 +288,7 @@ namespace siege::content::bmp
     };
   }
 
-  void write_pbmp_data(std::ofstream& raw_data,
+  export void write_pbmp_data(std::ofstream& raw_data,
     std::int32_t width,
     std::int32_t height,
     const std::vector<pal::colour>& colours,
@@ -292,7 +343,7 @@ namespace siege::content::bmp
     platform::write(raw_data, reinterpret_cast<const char*>(&file_size), sizeof(file_size));
   }
 
-  bool is_phoenix_bmp_array(std::istream& raw_data)
+  export bool is_phoenix_bmp_array(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
     platform::read(raw_data, header.data(), sizeof(header));
@@ -302,7 +353,7 @@ namespace siege::content::bmp
     return header == pba_tag;
   }
 
-  std::vector<pbmp_data> get_pba_data(std::istream& raw_data)
+  export std::vector<pbmp_data> get_pba_data(std::istream& raw_data)
   {
     std::vector<pbmp_data> results;
 
@@ -335,11 +386,11 @@ namespace siege::content::bmp
     return results;
   }
 
-  template<typename IndexType>
+  export template<typename IndexType>
   std::vector<IndexType> remap_bitmap(const std::vector<IndexType>& pixels,
-                                         const std::vector<pal::colour>& original_colours,
-                                         const std::vector<pal::colour>& other_colours,
-                                         bool only_unique)
+    const std::vector<pal::colour>& original_colours,
+    const std::vector<pal::colour>& other_colours,
+    bool only_unique)
   {
     if (pixels.empty())
     {
@@ -359,7 +410,7 @@ namespace siege::content::bmp
     {
       auto& colour = original_colours[x];
       auto result = std::find_if(other_colours.begin(), other_colours.end(), [&](auto& other) {
-             return other.red == colour.red && other.green == colour.green && other.blue == colour.blue;
+        return other.red == colour.red && other.green == colour.green && other.blue == colour.blue;
       });
 
       if (result != other_colours.end())
@@ -382,7 +433,7 @@ namespace siege::content::bmp
           for (auto distance : distances)
           {
             auto already_exists = std::find_if(palette_map.begin(), palette_map.end(), [&](auto& elem) {
-                   return elem.second == distance.second;
+              return elem.second == distance.second;
             });
 
             if (already_exists == palette_map.end())
@@ -413,16 +464,16 @@ namespace siege::content::bmp
     return results;
   }
 
-  std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
-                                         const std::vector<pal::colour>& original_colours,
-                                         const std::vector<pal::colour>& other_colours,
-                                         bool only_unique)
+  export std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
+    const std::vector<pal::colour>& original_colours,
+    const std::vector<pal::colour>& other_colours,
+    bool only_unique)
   {
     return remap_bitmap<std::byte>(pixels, original_colours, other_colours, only_unique);
   }
 
 
-  std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
+  export std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
     const std::vector<pal::colour>& original_colours,
     const std::vector<pal::colour>& other_colours,
     bool only_unique)

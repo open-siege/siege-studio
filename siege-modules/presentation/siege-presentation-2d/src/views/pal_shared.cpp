@@ -2,11 +2,11 @@ module;
 
 #include <siege/platform/shared.hpp>
 #include <siege/platform/palette.hpp>
-#include <siege/content/pal/palette.hpp>
 
 export module pal.shared;
 
 import std;
+import siege.content.pal;
 
 namespace siege::views
 {

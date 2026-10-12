@@ -1,13 +1,13 @@
-#include <array>
-#include <vector>
-#include <fstream>
-#include <utility>
-#include <string>
-#include <cstring>
+module;
 
-#include <siege/resource/three_space_resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/wave.hpp>
+
+export module siege.resource.three_space;
+
+import std;
 
 namespace siege::resource::vol::three_space
 {
@@ -326,7 +326,7 @@ namespace siege::resource::vol::three_space
     return files;
   }
 
-  bool is_stream_rmf(std::istream& stream)
+  export bool is_stream_rmf(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -407,14 +407,14 @@ namespace siege::resource::vol::three_space
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_rmf_resource_reader()
+  export siege::platform::resource_reader make_rmf_resource_reader()
   {
     return {
       is_stream_rmf, get_rmf_content_listing, set_rmf_stream_position, extract_rmf_file_contents
     };
   }
 
-  bool is_stream_dyn(std::istream& stream)
+  export bool is_stream_dyn(std::istream& stream)
   {
     std::array<std::byte, 20> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -465,14 +465,14 @@ namespace siege::resource::vol::three_space
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_dyn_resource_reader()
+  export siege::platform::resource_reader make_dyn_resource_reader()
   {
     return {
       is_stream_dyn, get_dyn_content_listing, set_dyn_stream_position, extract_dyn_file_contents
     };
   }
 
-  bool is_stream_vol(std::istream& stream)
+  export bool is_stream_vol(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -552,7 +552,7 @@ namespace siege::resource::vol::three_space
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_vol_resource_reader()
+  export siege::platform::resource_reader make_vol_resource_reader()
   {
     return {
       is_stream_vol,

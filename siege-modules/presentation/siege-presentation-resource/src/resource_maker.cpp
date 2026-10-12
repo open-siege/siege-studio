@@ -1,10 +1,6 @@
 module;
 
-#include <siege/resource/darkstar_resource.hpp>
-#include <siege/resource/three_space_resource.hpp>
 #include <siege/resource/common_resources.hpp>
-#include <siege/resource/trophy_bass_resource.hpp>
-#include <siege/resource/clm_resource.hpp>
 
 export module vol.maker;
 import siege.resource.rsc;
@@ -15,6 +11,10 @@ import siege.resource.atd;
 import siege.resource.cln;
 import siege.resource.pak;
 import siege.resource.wad;
+import siege.resource.vol;
+import siege.resource.three_space;
+import siege.resource.trophy_bass;
+import siege.resource.clm;
 
 namespace siege::resource
 {

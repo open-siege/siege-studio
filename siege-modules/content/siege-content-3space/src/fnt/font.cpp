@@ -1,4 +1,12 @@
-#include <siege/content/fnt/font.hpp>
+module;
+
+#include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/shared.hpp>
+
+export module siege.content.fnt;
+
+import std;
+import siege.content.bmp;
 
 namespace siege::content::fnt
 {
@@ -29,7 +37,7 @@ namespace siege::content::fnt
     std::array<endian::little_uint8_t, 3> unknown;
   };
 
-  bool is_phoenix_font(std::istream& raw_data)
+  export bool is_phoenix_font(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
     raw_data.read(reinterpret_cast<char*>(header.data()), sizeof(header));
@@ -39,7 +47,7 @@ namespace siege::content::fnt
     return header == pft_tag;
   }
 
-  bmp::pbmp_data read_phoenix_font(std::istream& raw_data)
+  export bmp::pbmp_data read_phoenix_font(std::istream& raw_data)
   {
     std::array<std::byte, 4> file_header{};
     endian::little_uint32_t file_size{};
@@ -76,4 +84,4 @@ namespace siege::content::fnt
 
     return bmp::get_pbmp_data(raw_data);
   }
-}
+}// namespace siege::content::fnt

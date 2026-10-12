@@ -1,11 +1,11 @@
 module;
 
 #include <siege/platform/shared.hpp>
-#include <siege/content/dts/darkstar.hpp>
 
 export module dml.shared;
 
 import std;
+import siege.content.dts;
 
 namespace siege::views
 {

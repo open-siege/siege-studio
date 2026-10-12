@@ -1,9 +1,11 @@
-#include <array>
-#include <vector>
-#include <fstream>
-#include <utility>
-#include <string>
-#include <siege/resource/trophy_bass_resource.hpp>
+module;
+
+#include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/resource.hpp>
+
+export module siege.resource.trophy_bass;
+
+import std;
 
 namespace siege::resource::vol::trophy_bass
 {
@@ -53,7 +55,7 @@ namespace siege::resource::vol::trophy_bass
 
   using folder_info = siege::platform::folder_info;
 
-  bool is_stream_rbx(std::istream& stream)
+  export bool is_stream_rbx(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -159,7 +161,7 @@ namespace siege::resource::vol::trophy_bass
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_rbx_resource_reader()
+  export siege::platform::resource_reader make_rbx_resource_reader()
   {
     return {
       is_stream_rbx,
@@ -169,7 +171,7 @@ namespace siege::resource::vol::trophy_bass
     };
   }
 
-  bool is_stream_tbv(std::istream& stream)
+  export bool is_stream_tbv(std::istream& stream)
   {
     std::array<std::byte, 9> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -271,7 +273,7 @@ namespace siege::resource::vol::trophy_bass
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_tbv_resource_reader()
+  export siege::platform::resource_reader make_tbv_resource_reader()
   {
     return {
       is_stream_tbv,

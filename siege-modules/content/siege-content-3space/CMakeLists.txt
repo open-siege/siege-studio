@@ -11,12 +11,13 @@ add_library(${PROJECT_NAME}-2d STATIC src/bmp/bitmap.cpp src/pal/palette.cpp src
 
 add_library(${PROJECT_NAME}-3d STATIC src/dts/dts_renderable_shape.cpp 
                                       src/dts/3space.cpp 
+                                      src/dts/3space_v2.cpp
                                       src/dts/3space_renderable_shape.cpp 
-                                      src/dts/3space_v2.cpp src/dts/darkstar.cpp)
+                                      src/dts/darkstar.cpp)
 
 target_link_libraries(${PROJECT_NAME}-3d PRIVATE ${PROJECT_NAME}-2d)
 
-add_library(${PROJECT_NAME}-scripting STATIC src/mis/mission.cpp src/gui/interface.cpp)
+add_library(${PROJECT_NAME}-scripting STATIC src/mis/mission.cpp src/gui/interface.cpp src/3space.cpp)
 
 add_library(${PROJECT_NAME}-resource STATIC src/clm_resource.cpp 
                                             src/darkstar_resource.cpp 
@@ -29,7 +30,10 @@ target_link_libraries(${PROJECT_NAME}-resource PRIVATE ${PROJECT_NAME}-2d ${PROJ
 set(PROJECT_TARGETS ${PROJECT_NAME}-2d ${PROJECT_NAME}-3d ${PROJECT_NAME}-scripting ${PROJECT_NAME}-resource)
 
 foreach(TARGET IN ITEMS ${PROJECT_TARGETS})
-    set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 23 POSITION_INDEPENDENT_CODE ON)
+    set_target_properties(${TARGET} PROPERTIES CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON
+        POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(${TARGET} PUBLIC siege-content-common)
     target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 endforeach()
@@ -43,15 +47,11 @@ install(TARGETS ${PROJECT_TARGETS}
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION lib)
 
-# test code
-file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
-if (NOT WIN32)
-        list(REMOVE_ITEM TESTABLE_SRC_FILES ${TEST_SRC_FILES} ${WIN32_SRC_FILES})
-endif()
-add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
-set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
+# test code — link content libs (modules) instead of recompiling all sources
+add_executable(${PROJECT_NAME}-tests ${TEST_SRC_FILES})
+set_target_properties(${PROJECT_NAME}-tests PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain siege-content-common)
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain ${PROJECT_TARGETS})
 
 if (MSVC)
         target_compile_options(${PROJECT_NAME}-tests PRIVATE /bigobj)

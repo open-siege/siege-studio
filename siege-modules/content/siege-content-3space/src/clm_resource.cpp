@@ -1,20 +1,13 @@
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <list>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <cstdlib>
-#include <sstream>
-#include <algorithm>
-#include <iostream>
-#include <map>
+module;
 
-#include <siege/resource/clm_resource.hpp>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/wave.hpp>
+
+export module siege.resource.clm;
+
+import std;
 
 namespace fs = std::filesystem;
 
@@ -35,7 +28,7 @@ namespace siege::resource::clm
   };
 
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     std::array<std::byte, 26> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -110,7 +103,7 @@ namespace siege::resource::clm
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

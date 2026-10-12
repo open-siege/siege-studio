@@ -6,9 +6,10 @@
 #include <utility>
 #include <unordered_map>
 #include <siege/platform/shared.hpp>
-#include <siege/content/dts/darkstar.hpp>
-#include <siege/content/dts/renderable_shapes.hpp>
 #include <siege/content/obj_renderer.hpp>
+
+import siege.content.dts;
+import siege.content.dts.renderable;
 
 namespace fs = std::filesystem;
 namespace dts = siege::content::dts::darkstar;
@@ -46,8 +47,7 @@ int main(int argc, const char** argv)
       auto shape = dts::read_shape(input);
 
       std::visit(overloaded{
-                   [&](const dts::shape_variant& core_shape)
-                   {
+                   [&](const dts::shape_variant& core_shape) {
                      std::visit([&](const auto& main_shape) {
                        for (auto i = 0u; i < main_shape.details.size(); ++i)
                        {
@@ -55,10 +55,10 @@ int main(int argc, const char** argv)
                          const auto root_node = main_shape.nodes[detail_level.root_node_index];
                          const std::string root_node_name = main_shape.names[root_node.name_index].data();
                          std::ofstream output(file_name.string() + "." + root_node_name + ".obj", std::ios::trunc);
-                         auto renderer = siege::content::obj_renderer{output};
+                         auto renderer = siege::content::obj_renderer{ output };
 
                          auto instance = siege::content::dts::darkstar::make_renderable_shape(core_shape);
-                         std::vector<std::size_t> details{i};
+                         std::vector<std::size_t> details{ i };
                          auto sequences = instance.get_sequences(details);
                          instance.render_shape(renderer, details, sequences);
                        }
@@ -66,7 +66,7 @@ int main(int argc, const char** argv)
                        core_shape);
                    },
                    [&](const dts::material_list_variant&) {
-                     //TODO generate a MTL file
+                     // TODO generate a MTL file
                    } },
         shape);
     }

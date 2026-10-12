@@ -1,9 +1,159 @@
+#include <vector>
+#include <map>
+#include <optional>
+#include <istream>
+#include <variant>
+#include <filesystem>
 #include <fstream>
-#include <sstream>
 #include <functional>
-// #include <siege/resource/darkstar_volume.hpp>
-#include <siege/configuration/mis/mission.hpp>
+#include <string>
+#include <siege/platform/tagged_data.hpp>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/shared.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/stream.hpp>
+
+namespace siege::mis::darkstar
+{
+  namespace endian = siege::platform;
+  struct sim_set;
+  struct sim_group;
+  struct sim_volume;
+  struct sim_terrain;
+  struct sim_palette;
+  struct interior_shape;
+  struct sim_structure;
+  struct sim_marker;
+  struct nav_marker;
+  struct vehicle;
+
+  using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
+
+  using sim_items = std::vector<sim_item>;
+
+
+  struct sim_set
+  {
+    object_header header;
+    endian::little_uint32_t item_id;
+    endian::little_uint32_t children_count;
+    sim_items children;
+  };
+
+  struct sim_group
+  {
+    object_header header;
+    endian::little_uint32_t version;
+    endian::little_uint32_t children_count;
+    sim_items children;
+    std::vector<std::string> names;
+  };
+
+  struct address
+  {
+    endian::little_uint32_t reserved;
+    endian::little_uint32_t object_id;
+    endian::little_uint32_t manager_id;
+  };
+
+  struct sim_network_object
+  {
+    endian::little_uint32_t version;
+    endian::little_uint32_t id;
+    endian::little_uint32_t flags;
+    address object_address;
+  };
+
+  struct sim_volume
+  {
+    object_header header;
+    sim_network_object base;
+    std::string filename;
+  };
+
+  struct sim_terrain
+  {
+    object_header header;
+    sim_network_object base;
+    std::array<std::byte, 48> data;
+    std::string dtf_file;
+    std::array<std::byte, 20> footer;
+  };
+
+  struct sim_palette
+  {
+    object_header header;
+    sim_network_object base;
+    std::string palette_file;
+  };
+
+
+  struct interior_shape
+  {
+    object_header header;
+    endian::little_uint32_t version;
+    std::array<std::byte, 124> data;
+    endian::little_uint32_t string_length;
+    std::string filename;
+    std::array<std::byte, 22> footer;
+  };
+
+  struct sim_structure
+  {
+    object_header header;
+    endian::little_uint32_t version;
+    std::array<std::byte, 117> data;
+    endian::little_uint32_t string_length;
+    std::string filename;
+  };
+
+  struct transform_matrix
+  {
+    endian::little_int32_t flags;
+    std::array<std::array<float, 3>, 3> rotation;
+    std::array<float, 3> position;
+  };
+
+  struct sim_marker
+  {
+    object_header header;
+    sim_network_object base;
+    transform_matrix transformation;
+  };
+
+  struct nav_marker
+  {
+    object_header header;
+    sim_network_object base;
+    transform_matrix transformation;
+    std::array<std::byte, 12> footer;
+  };
+
+  struct vehicle
+  {
+    constexpr static auto type_fields_size = sizeof(std::array<endian::little_uint16_t, 9>);
+
+    object_header header;
+    endian::little_uint32_t version;
+    std::array<std::byte, 14> data;
+
+    endian::little_uint16_t vehicle_type;
+    endian::little_uint16_t engine_type;
+    endian::little_uint16_t reactor_type;
+    endian::little_uint16_t computer_type;
+    endian::little_uint16_t shield_type;
+    endian::little_uint16_t armor_type;
+    endian::little_uint16_t sensor_type;
+    endian::little_uint16_t special_1_type;
+    endian::little_uint16_t special_2_type;
+
+    std::vector<std::byte> footer;
+  };
+}// namespace siege::mis::darkstar
+
+namespace siege::resource::mis::darkstar
+{
+}// namespace siege::resource::mis::darkstar
 
 namespace siege::mis::darkstar
 {

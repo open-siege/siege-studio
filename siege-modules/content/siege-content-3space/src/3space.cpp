@@ -1,7 +1,10 @@
-#include <limits>
-#include <memory>
-#include <ranges>
-#include <siege/configuration/3space.hpp>
+module;
+
+#include <siege/configuration/shared.hpp>
+
+export module siege.configuration.three_space;
+
+import std;
 
 namespace siege::configuration::three_space
 {
@@ -12,10 +15,10 @@ namespace siege::configuration::three_space
 
     constexpr static auto average_line_size = 20;
 
-
     std::vector<std::string_view> split_into_lines(std::string_view line, std::string_view separator, std::size_t size_hint = 4);
+    export void save_config(const std::any& context, const std::vector<config_line>& entries, std::ostream& raw_data);
 
-    std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
+    export std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
     {
       if (stream_size == 0)
       {

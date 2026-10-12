@@ -1,8 +1,4 @@
-#include <siege/resource/darkstar_resource.hpp>
-#include <siege/resource/three_space_resource.hpp>
 #include <siege/resource/common_resources.hpp>
-#include <siege/resource/trophy_bass_resource.hpp>
-#include <siege/resource/clm_resource.hpp>
 
 import std;
 import siege.resource.prj;
@@ -13,27 +9,16 @@ import siege.resource.rsc;
 import siege.resource.cln;
 import siege.resource.pak;
 import siege.resource.wad;
+import siege.resource.vol;
+import siege.resource.three_space;
+import siege.resource.trophy_bass;
+import siege.resource.clm;
 
 namespace siege::resource
 {
   bool is_resource_readable(std::istream& stream)
   {
-    return vol::darkstar::is_stream_supported(stream) || 
-        vol::three_space::is_stream_vol(stream) ||
-        vol::three_space::is_stream_dyn(stream) || 
-        vol::three_space::is_stream_rmf(stream) || 
-        vol::trophy_bass::is_stream_rbx(stream) || 
-        vol::trophy_bass::is_stream_tbv(stream) || 
-        pak::is_stream_supported(stream) || 
-        clm::is_stream_supported(stream) || 
-        cln::is_stream_supported(stream) || 
-        atd::is_stream_supported(stream) || 
-        wad::is_stream_supported(stream) || 
-        rsc::is_stream_supported(stream) || 
-        res::is_stream_supported(stream) || 
-        mw4::is_stream_supported(stream) || 
-        prj::is_stream_supported(stream) || 
-        zip::is_stream_zip(stream);
+    return vol::darkstar::is_stream_supported(stream) || vol::three_space::is_stream_vol(stream) || vol::three_space::is_stream_dyn(stream) || vol::three_space::is_stream_rmf(stream) || vol::trophy_bass::is_stream_rbx(stream) || vol::trophy_bass::is_stream_tbv(stream) || pak::is_stream_supported(stream) || clm::is_stream_supported(stream) || cln::is_stream_supported(stream) || atd::is_stream_supported(stream) || wad::is_stream_supported(stream) || rsc::is_stream_supported(stream) || res::is_stream_supported(stream) || mw4::is_stream_supported(stream) || prj::is_stream_supported(stream) || zip::is_stream_zip(stream);
   }
 
   siege::platform::resource_reader make_resource_reader(std::istream& stream)

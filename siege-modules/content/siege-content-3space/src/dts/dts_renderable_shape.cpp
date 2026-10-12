@@ -1,13 +1,12 @@
-#include <unordered_map>
-#include <set>
-#include <variant>
-#include <optional>
-#include <memory>
-#include <functional>
-#include <list>
-#include <glm/gtx/quaternion.hpp>
+module;
+
 #include <siege/content/renderable_shape.hpp>
-#include <siege/content/dts/darkstar_structures.hpp>
+#include <glm/gtx/quaternion.hpp>
+
+export module siege.content.dts.renderable;
+
+import std;
+import siege.content.dts;
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -433,7 +432,7 @@ namespace siege::content::dts::darkstar
     shape_variant shape;
   };
 
-  renderable_shape_value make_renderable_shape(shape_variant data)
+  export renderable_shape_value make_renderable_shape(shape_variant data)
   {
     return renderable_shape_value{ dts_renderable_shape{ std::move(data) } };
   }
