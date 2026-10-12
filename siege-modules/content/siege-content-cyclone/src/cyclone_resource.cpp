@@ -1,12 +1,12 @@
-#include <array>
-#include <vector>
-#include <fstream>
-#include <utility>
-#include <string>
-#include <unordered_map>
+module;
 
-#include <siege/resource/cyclone_resource.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.resource.cln;
+
+import std;
 
 namespace siege::resource::cln
 {
@@ -15,7 +15,7 @@ namespace siege::resource::cln
   using folder_info = platform::resource_reader::folder_info;
   using file_info = platform::resource_reader::file_info;
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     auto path = siege::platform::get_stream_path(stream);
 
@@ -109,7 +109,7 @@ namespace siege::resource::cln
     return input.rfind(value_to_find, 0) == 0;
   }
 
-  std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
+  export std::vector<content_info> get_content_listing(std::any&, std::istream& stream, const platform::listing_query& query)
   {
     platform::istream_pos_resetter resetter(stream);
     thread_local std::unordered_map<std::string, std::vector<file_entry>> cache;
@@ -218,7 +218,7 @@ namespace siege::resource::cln
 
   constexpr auto file_data_header = std::string_view("MAGIC_NUMBER");
 
-  void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
+  export void set_stream_position(std::istream& stream, const siege::platform::file_info& info)
   {
     if (std::size_t(stream.tellg()) == info.offset)
     {
@@ -230,7 +230,7 @@ namespace siege::resource::cln
     }
   }
 
-  void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
+  export void extract_file_contents(std::any&, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     if (info.compression_type == platform::compression_type::none)
     {
@@ -271,7 +271,7 @@ namespace siege::resource::cln
     }
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

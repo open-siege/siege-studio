@@ -4,7 +4,6 @@ module;
 #include <siege/resource/three_space_resource.hpp>
 #include <siege/resource/common_resources.hpp>
 #include <siege/resource/trophy_bass_resource.hpp>
-#include <siege/resource/cyclone_resource.hpp>
 #include <siege/resource/pak_resource.hpp>
 #include <siege/resource/clm_resource.hpp>
 #include <siege/resource/wad_resource.hpp>
@@ -15,6 +14,7 @@ import siege.resource.res;
 import siege.resource.mw4;
 import siege.resource.prj;
 import siege.resource.atd;
+import siege.resource.cln;
 
 namespace siege::resource
 {

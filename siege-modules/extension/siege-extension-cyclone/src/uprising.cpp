@@ -1,7 +1,8 @@
 #include <siege/extension/shared.hpp>
-#include <siege/configuration/uprising.hpp>
 #include <cassert>
 #include <utility>
+
+import siege.configuration.uprising;
 
 namespace fs = std::filesystem;
 
