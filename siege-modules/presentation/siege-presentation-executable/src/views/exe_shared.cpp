@@ -76,6 +76,7 @@ namespace siege::views
     if (cache.type() != typeid(std::shared_ptr<exe_state>))
     {
       auto temp = std::make_shared<exe_state>();
+      temp->launch_settings.reserve(64);
       cache = temp;
     }
 
@@ -268,10 +269,7 @@ namespace siege::views
     }
     }
 
-    if (persist)
-    {
-      persist();
-    }
+    persist();
   }
 
   void game_setting::update_value(std::wstring_view new_value, std::wstring_view new_display_value)
@@ -315,10 +313,7 @@ namespace siege::views
     {
     }
 
-    if (persist)
-    {
-      persist();
-    }
+    persist();
   }
 
   std::wstring game_setting::get_computed_display_value()
@@ -578,21 +573,15 @@ namespace siege::views
               {
                 connect_setting->value = self.registry_data.last_ip_address.data();
               }
-
-              if (connect_setting->persist)
-              {
-                connect_setting->persist();
-              }
+                
+              connect_setting->persist();
             }
             else if (connect_flag != self.launch_settings.end())
             {
               connect_flag->enabled = should_connect;
               connect_flag->value = should_connect;
 
-              if (connect_flag->persist)
-              {
-                connect_flag->persist();
-              }
+              connect_flag->persist();
             }
           }
 
@@ -949,18 +938,86 @@ namespace siege::views
         .group_id = 2 });
     }
 
+    if (can_support_zero_tier(state) && get_zero_tier_extension_folder_path(state))
+    {
+      self.launch_settings.emplace_back(game_setting{
+        .setting_name = L"ZERO_TIER_ENABLED",
+        .type = extension_setting_type::env_setting,
+        .value = (int)settings.zero_tier_enabled,
+        .display_name = L"Enable Zero Tier",
+        .group_id = 1,
+        .get_predefined_int = [results = std::vector<predefined_int>{
+                                 predefined_int{
+                                   .label = L"Yes",
+                                   .value = 1 },
+                                 predefined_int{
+                                   .label = L"No",
+                                   .value = 0 } }](auto name) -> std::span<const predefined_int> {
+          if (name != L"ZERO_TIER_ENABLED")
+          {
+            return std::span<const predefined_int>{};
+          }
+          return results;
+        },
+        .persist = [&self]() {
+          if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+                return setting.setting_name == L"ZERO_TIER_ENABLED";
+              });
+            setting_iter != self.launch_settings.end())
+          {
+             
+            self.registry_data.zero_tier_enabled = std::visit(convert_to_bool, setting_iter->value);
+          } } });
+
+      auto network_id = settings.last_zero_tier_network_id.back() == L'\0' ? std::wstring{ settings.last_zero_tier_network_id.data() }
+                                                                           : std::wstring{ settings.last_zero_tier_network_id.data(), settings.last_zero_tier_network_id.size() };
+
+      constexpr static std::wstring_view zt_network_id = L"SIEGE_WSOCK_NETWORK_ID";
+
+      self.launch_settings.emplace_back(game_setting{
+        .setting_name = L"SIEGE_WSOCK_NETWORK_ID",
+        .type = extension_setting_type::env_setting,
+        .value = network_id,
+        .display_name = L"Zero Tier Network ID",
+        .group_id = 1,
+        .persist = [&self]() {
+          if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
+                return setting.setting_name == zt_network_id;
+              });
+            setting_iter != self.launch_settings.end())
+          {
+            copy_to_array(setting_iter->value, self.registry_data.last_zero_tier_network_id);
+          }
+        } });
+
+      auto zt_node_id = get_preferred_zt_node_id(state);
+
+      if (!zt_node_id.empty())
+      {
+        self.launch_settings.emplace_back(game_setting{
+          .setting_name = L"ZERO_TIER_PEER_ID",
+          .type = extension_setting_type::computed_setting,
+          .value = zt_node_id,
+          .display_name = L"Zero Tier Node ID",
+          .group_id = 1 });
+
+
+        self.launch_settings.emplace_back(game_setting{
+          .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
+          .type = extension_setting_type::computed_setting,
+          .value = get_preferred_last_ip(state, std::move(zt_node_id)),
+          .display_name = L"Zero Tier Node IP Address",
+          .group_id = 1,
+        });
+      }
+    }
 
     static std::set<std::wstring> converted_strings;
-
 
     for (auto& setting : self.launch_settings)
     {
       setting.persist = [persist = std::move(setting.persist), &setting, &self]() {
-        if (persist)
-        {
-          persist();
-        }
-
+        persist();
         try
         {
           switch (setting.type)
@@ -1114,86 +1171,10 @@ namespace siege::views
       };
     }
 
-    if (can_support_zero_tier(state) && get_zero_tier_extension_folder_path(state))
-    {
-      self.launch_settings.emplace_back(game_setting{
-        .setting_name = L"ZERO_TIER_ENABLED",
-        .type = extension_setting_type::env_setting,
-        .value = (int)settings.zero_tier_enabled,
-        .display_name = L"Enable Zero Tier",
-        .group_id = 1,
-        .get_predefined_int = [results = std::vector<predefined_int>{
-                                 predefined_int{
-                                   .label = L"Yes",
-                                   .value = 1 },
-                                 predefined_int{
-                                   .label = L"No",
-                                   .value = 0 } }](auto name) -> std::span<const predefined_int> {
-          if (name != L"ZERO_TIER_ENABLED")
-          {
-            return std::span<const predefined_int>{};
-          }
-          return results;
-        },
-        .persist = [&self]() {
-          if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                return setting.setting_name == L"ZERO_TIER_ENABLED";
-              });
-            setting_iter != self.launch_settings.end())
-          {
-             
-            self.registry_data.zero_tier_enabled = std::visit(convert_to_bool, setting_iter->value);
-          } } });
-
-      auto network_id = settings.last_zero_tier_network_id.back() == L'\0' ? std::wstring{ settings.last_zero_tier_network_id.data() }
-                                                                           : std::wstring{ settings.last_zero_tier_network_id.data(), settings.last_zero_tier_network_id.size() };
-
-      constexpr static std::wstring_view zt_network_id = L"SIEGE_WSOCK_NETWORK_ID";
-
-      self.launch_settings.emplace_back(game_setting{
-        .setting_name = L"SIEGE_WSOCK_NETWORK_ID",
-        .type = extension_setting_type::env_setting,
-        .value = network_id,
-        .display_name = L"Zero Tier Network ID",
-        .group_id = 1,
-        .persist = [&self]() {
-          if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
-                return setting.setting_name == zt_network_id;
-              });
-            setting_iter != self.launch_settings.end())
-          {
-            copy_to_array(setting_iter->value, self.registry_data.last_zero_tier_network_id);
-          }
-        } });
-
-      auto zt_node_id = get_preferred_zt_node_id(state);
-
-      if (!zt_node_id.empty())
-      {
-        self.launch_settings.emplace_back(game_setting{
-          .setting_name = L"ZERO_TIER_PEER_ID",
-          .type = extension_setting_type::computed_setting,
-          .value = zt_node_id,
-          .display_name = L"Zero Tier Node ID",
-          .group_id = 1 });
-
-
-        self.launch_settings.emplace_back(game_setting{
-          .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
-          .type = extension_setting_type::computed_setting,
-          .value = get_preferred_last_ip(state, std::move(zt_node_id)),
-          .display_name = L"Zero Tier Node IP Address",
-          .group_id = 1,
-        });
-      }
-    }
-
     for (auto& setting : self.launch_settings)
     {
-      if (setting.persist)
-      {
-        setting.persist();
-      }
+      assert(setting.persist);
+      setting.persist();
     }
 
     return self.launch_settings;
@@ -2781,6 +2762,12 @@ namespace siege::views
     const bool is_console = image.FileHeader->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI;
     ::UnMapAndLoad(&image);
     return is_console;
+  }
+
+  bool zero_tier_enabled(const std::any& state)
+  {
+    const auto& self = get(state);
+    return self.registry_data.zero_tier_enabled;
   }
 
   HRESULT launch_game_with_extension(std::any& state, siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info) noexcept

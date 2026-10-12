@@ -76,7 +76,7 @@ namespace siege::views
       });
       
       std::error_code last_error;
-      if (uses_ws2_32(state) && wsock_rpc_server_path.has_value() && fs::exists(*wsock_rpc_server_path, last_error))
+      if (zero_tier_enabled(state) && uses_ws2_32(state) && wsock_rpc_server_path.has_value() && fs::exists(*wsock_rpc_server_path, last_error))
       {
         args.append(*wsock_rpc_server_path);
       }
@@ -494,11 +494,7 @@ namespace siege::views
           column.iGroupId = setting.group_id;
 
           setting.persist = [setting_index, launch_table_hwnd = launch.launch_table.get(), &setting, persist = std::move(setting.persist)]() {
-            if (persist)
-            {
-              persist();
-            }
-
+            persist();
             auto find_info = LVFINDINFOW{
               .flags = LVFI_PARAM,
               .lParam = (LPARAM)setting_index
