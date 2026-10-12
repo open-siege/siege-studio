@@ -34,9 +34,9 @@ namespace siege::views
       .style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_WRAPABLE | BTNS_CHECKGROUP });
 
     exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = add_to_firewall_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Add to Firewall" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 0, .idCommand = input.controllers_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Input Devices" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = launch.launch_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Launch" }, false);
-    exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = extract_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 1, .idCommand = input.controllers_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Input Devices" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 2, .idCommand = launch.launch_selected_id, .fsStyle = BTNS_BUTTON, .iString = (INT_PTR)L"Launch" }, false);
+    exe_actions.InsertButton(-1, { .iBitmap = 3, .idCommand = extract_selected_id, .fsStyle = BTNS_DROPDOWN, .iString = (INT_PTR)L"Extract" }, false);
     exe_actions.SetExtendedStyle(TBSTYLE_EX_MIXEDBUTTONS | TBSTYLE_EX_DRAWDDARROWS);
     exe_actions.bind_nm_click([this](win32::tool_bar exe_actions, const NMMOUSE& message) {
       if (message.dwItemSpec != extract_selected_id)
@@ -150,7 +150,7 @@ namespace siege::views
     resource.resource_table.bind_nm_rclick([this](win32::list_view resource_table, const NMITEMACTIVATE& message) {
       auto point = message.ptAction;
 
-      if (!ClientToScreen(resource_table, &point))
+      if (!::ClientToScreen(resource_table, &point))
       {
         return;
       }
@@ -341,6 +341,7 @@ namespace siege::views
 
     std::array exe_icons{
       win32::segoe_fluent_icons::shield,
+      win32::segoe_fluent_icons::game,
       win32::segoe_fluent_icons::new_window,
       win32::segoe_fluent_icons::folder_open,
     };
@@ -383,13 +384,14 @@ namespace siege::views
     if (path && options.GetCount() < 3 && (path->extension() == ".exe" || path->extension() == ".EXE"))
     {
       options.InsertString(0, L"Launch Options");
-      options.InsertString(1, L"Keyboard/Mouse Settings");
-      options.InsertString(2, L"Controller");
       options.SetCurrentSelection(0);
       options.bind_lbn_sel_change([this](win32::list_box options, const NMHDR&) {
         auto selected = options.GetCurrentSelection();
 
-        std::array tables{ launch.launch_table.ref(), input.keyboard_table.ref(), input.controller_table.ref(), resource.resource_table.ref() };
+        std::array all_tables{ launch.launch_table.ref(), input.keyboard_table.ref(), input.controller_table.ref(), resource.resource_table.ref() };
+        std::array no_ext_tables{ launch.launch_table.ref(), input.controller_table.ref(), resource.resource_table.ref() };
+
+        std::span<win32::window_ref> tables = has_extension_module(this->state) ? std::span<win32::window_ref>{ all_tables } : std::span<win32::window_ref>{ no_ext_tables };
 
         for (auto i = 0; i < tables.size(); ++i)
         {
@@ -409,7 +411,7 @@ namespace siege::views
       options.bind_lbn_sel_change([this](auto options, const auto&) {
         auto selected = options.GetCurrentSelection();
 
-        if (selected != 4)
+        if (selected != 3)
         {
           resource.selected_resource_items.clear();
 
@@ -455,6 +457,11 @@ namespace siege::views
         int setting_index = 1;
 
         auto launch_settings = init_launch_settings(state);
+
+        if (launch_settings.size() == 1)
+        {
+          launch.launch_table.EnableGroupView(false);
+        }
 
         for (auto& setting : launch_settings)
         {
@@ -517,6 +524,8 @@ namespace siege::views
           populate_controller_table(actions, backends);
           populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
         }
+        options.InsertString(1, L"Keyboard/Mouse Settings");
+        options.InsertString(2, L"Controller");
       }
       else// generically support controller to keyboard/mouse mapping and zero tier networking
       {
@@ -525,6 +534,7 @@ namespace siege::views
         std::array<siege::platform::game_action, 0> actions{};
         std::array<const wchar_t*, 0> backends{};
         populate_controller_table(actions, backends);
+        options.InsertString(1, L"Controller");
       }
 
       std::vector<win32::list_view_group> groups;

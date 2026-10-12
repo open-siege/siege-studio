@@ -971,6 +971,7 @@ namespace siege::views
             }
           }
 
+          win32::apply_window_theme(*this);
           RegCloseKey(key);
           return 0;
         }

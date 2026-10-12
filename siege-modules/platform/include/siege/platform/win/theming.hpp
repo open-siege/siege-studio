@@ -60,6 +60,7 @@ namespace win32
     picture = 0xe8b9,
     save = 0xE74E,
     save_as = 0xE792,
+    game = 0xE7FC,
     dpad = 0xF10E,
     caret_solid_left = 0xf08d,
     caret_solid_down = 0xf08e,

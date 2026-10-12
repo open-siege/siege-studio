@@ -10,6 +10,8 @@
 * Fixed incorrect ÜberTools label in default view.
 * Fixed menu bar not appearing in older versions of Windows or WINE. 
 * Fixed file extraction not working on WINE.
+* Added correct icon for controller view in launcher.
+* Keyboard/mouse settings don't show up for games with partial support (since it was always empty).
 
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.
