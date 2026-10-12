@@ -1,14 +1,19 @@
+module;
+
 #include <spanstream>
-#include <siege/content/sfx/sound.hpp>
 #include <siege/platform/win/com.hpp>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/wave.hpp>
+
+module siege.content.sfx;
+
+import std;
 
 namespace siege::content::sfx
 {
   platform_sound::platform_sound(std::filesystem::path filename)
   {
-
   }
 
   platform_sound::platform_sound(std::istream& sound_stream)

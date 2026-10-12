@@ -1,3 +1,5 @@
+module;
+
 #include <fstream>
 #include <filesystem>
 #include <vector>
@@ -12,9 +14,13 @@
 #include <iostream>
 #include <deque>
 #include <cstring>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 
-#include <siege/resource/common_resources.hpp>
-#include <siege/resource/external_utils.hpp>
+export module siege.resource.iso;
+
+import std;
+import siege.resource.ext;
 
 namespace fs = std::filesystem;
 
@@ -505,7 +511,7 @@ namespace siege::resource::iso
     return results;
   }
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     std::vector<std::byte> tag(16);
     stream.read(reinterpret_cast<char*>(tag.data()), std::streamsize(tag.size()));
@@ -536,7 +542,7 @@ namespace siege::resource::iso
     iso_extract_file_contents(cache, info, output);
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

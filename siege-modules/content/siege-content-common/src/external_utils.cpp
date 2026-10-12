@@ -1,3 +1,5 @@
+module;
+
 #include <array>
 #include <string>
 #include <string_view>
@@ -10,17 +12,43 @@
 #include <list>
 #include <map>
 #include <unordered_set>
-#include <siege/resource/external_utils.hpp>
-
+#include <siege/platform/resource.hpp>
 #ifdef WIN32
 #include <siege/platform/win/module.hpp>
 #endif
+
+export module siege.resource.ext;
+
+import std;
 
 namespace fs = std::filesystem;
 namespace platform = siege::platform;
 
 namespace siege::resource
 {
+
+  export using content_info = std::variant<platform::folder_info, siege::platform::file_info>;
+
+  export [[nodiscard]] std::string rtrim(std::string str)
+  {
+    auto it1 = std::find_if(str.rbegin(), str.rend(), [](char ch) { return !std::isspace<char>(ch, std::locale::classic()); });
+    str.erase(it1.base(), str.end());
+    return str;
+  }
+
+  export [[nodiscard]] std::vector<std::string> read_lines(std::istream& input)
+  {
+    std::vector<std::string> raw_contents;
+    raw_contents.reserve(128);
+
+    for (std::string temp; std::getline(input, temp);)
+    {
+      raw_contents.push_back(rtrim(std::move(temp)));
+    }
+
+    return raw_contents;
+  }
+
   [[nodiscard]] std::string find_cab_executable(std::string_view app_name, std::array<std::string_view, 2> search_names)
   {
 #ifdef WIN32
@@ -462,7 +490,7 @@ namespace siege::resource
     });
   }
 
-  std::vector<content_info> zip_get_content_listing(std::any& cache, const platform::listing_query& query)
+  export std::vector<content_info> zip_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
     return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
       auto raw_contents = execute_command(listing_filename, [&](auto& command) {
@@ -816,7 +844,7 @@ namespace siege::resource
   }
 
 
-  std::vector<content_info> cab_get_content_listing(std::any& cache, const platform::listing_query& query)
+  export std::vector<content_info> cab_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
     content_cache& temp = cache_as_content_cache(cache);
 
@@ -956,7 +984,7 @@ namespace siege::resource
     });
   }
 
-  std::vector<content_info> iso_get_content_listing(std::any& cache, const platform::listing_query& query)
+  export std::vector<content_info> iso_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
     auto listing = power_iso_get_content_listing(cache, query);
 
@@ -1030,7 +1058,7 @@ namespace siege::resource
     return true;
   }
 
-  bool seven_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
+  export bool seven_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
   {
     return extract_file_contents_using_external_app(
       storage,
@@ -1048,7 +1076,7 @@ namespace siege::resource
         return command.str(); });
   }
 
-  void iso_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
+  export void iso_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
   {
     auto extracted = extract_file_contents_using_external_app(
       storage, info, output, [](const auto& info, const auto& temp_path, const auto& internal_file_path) {
@@ -1100,7 +1128,7 @@ namespace siege::resource
     }
   }
 
-  void cab_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
+  export void cab_extract_file_contents(std::any& storage, const siege::platform::file_info& info, std::ostream& output)
   {
     content_cache& temp = cache_as_content_cache(storage);
 

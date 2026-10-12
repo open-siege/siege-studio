@@ -1,3 +1,5 @@
+module;
+
 #include <fstream>
 #include <filesystem>
 #include <vector>
@@ -10,9 +12,13 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 
-#include <siege/resource/common_resources.hpp>
-#include <siege/resource/external_utils.hpp>
+export module siege.resource.cab;
+
+import std;
+import siege.resource.ext;
 
 namespace fs = std::filesystem;
 
@@ -36,7 +42,7 @@ namespace siege::resource::cab
   using folder_info = platform::resource_reader::folder_info;
   using file_info = platform::resource_reader::file_info;
 
-  bool is_stream_supported(std::istream& stream)
+  export bool is_stream_supported(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -56,7 +62,7 @@ namespace siege::resource::cab
     cab_extract_file_contents(cache, info, output);
   }
 
-  siege::platform::resource_reader make_resource_reader()
+  export siege::platform::resource_reader make_resource_reader()
   {
     return {
       is_stream_supported,

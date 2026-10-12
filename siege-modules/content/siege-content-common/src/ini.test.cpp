@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
-#include <siege/configuration/ini.hpp>
+
+import siege.configuration.ini;
 
 namespace ini = siege::configuration::common::ini;
 
@@ -34,10 +35,11 @@ TEST_CASE("With sample ini lines, with trailing end line, values convert correct
 
 TEST_CASE("With sample ini lines, with multiple groups and values, values convert correctly")
 {
-  std::stringstream raw_config("[DefaultPlayer]\nName=Player\nTeam=255\n"
-	  "[Engine.Input]\n"
-	  "Aliases[0]=(Command=\"Button bFire | Fire\",Alias=Fire)\n"
-	  "LeftMouse=Fire\nRightMouse=AltFire\nCtrl=Duck");
+  std::stringstream raw_config(
+    "[DefaultPlayer]\nName=Player\nTeam=255\n"
+    "[Engine.Input]\n"
+    "Aliases[0]=(Command=\"Button bFire | Fire\",Alias=Fire)\n"
+    "LeftMouse=Fire\nRightMouse=AltFire\nCtrl=Duck");
 
   auto value = ini::load_config(raw_config, raw_config.str().size());
 

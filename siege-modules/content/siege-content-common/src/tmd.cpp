@@ -1,16 +1,30 @@
-// TMD - PlayStation standard model format. Embedded inside of BND files from Colony Wars
+module;
 
 #include <array>
 #include <variant>
 #include <any>
-#include <siege/content/tmd.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 
+export module siege.content.tmd;
+
+import std;
+
+// TMD - PlayStation standard model format. Embedded inside of BND files from Colony Wars
+
 namespace siege::content::tmd
 {
   namespace endian = siege::platform;
+
+  export struct tmd_vertex
+  {
+    endian::little_uint16_t x;
+    endian::little_uint16_t y;
+    endian::little_uint16_t z;
+    endian::little_uint16_t padding;
+  };
+
 
   constexpr static std::uint8_t magic_number = 65;
 
@@ -85,7 +99,7 @@ namespace siege::content::tmd
     std::vector<tmd_primitive> primitives;
   };
 
-  bool is_tmd(std::istream& stream)
+  export bool is_tmd(std::istream& stream)
   {
     platform::istream_pos_resetter resetter(stream);
     tmd_header main_header{};
@@ -105,7 +119,7 @@ namespace siege::content::tmd
     return false;
   }
 
-  std::vector<std::any> load_tmd(std::istream& stream)
+  export std::vector<std::any> load_tmd(std::istream& stream)
   {
     std::vector<std::any> results;
     platform::istream_pos_resetter resetter(stream);
@@ -116,7 +130,7 @@ namespace siege::content::tmd
     if (main_header.magic_number == magic_number && main_header.object_count > 0)
     {
       auto start_offset = (std::size_t)stream.tellg();
-      
+
       results.reserve(main_header.object_count);
 
       for (auto i = 0u; i < main_header.object_count; ++i)
@@ -173,4 +187,4 @@ namespace siege::content::tmd
 
     return results;
   }
-}
+}// namespace siege::content::tmd

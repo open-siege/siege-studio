@@ -1,4 +1,6 @@
-#include <siege/configuration/xml.hpp>
+module;
+
+#include <siege/configuration/shared.hpp>
 #include <siege/platform/win/wic.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <xmllite.h>
@@ -8,6 +10,10 @@
 #include <vector>
 #include <stack>
 #include <memory>
+
+export module siege.configuration.xml;
+
+import std;
 
 struct xml_element
 {
@@ -25,7 +31,9 @@ namespace siege::configuration::common::xml
 {
   using config_line = text_game_config::config_line;
 
-  std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
+  export void save_config(const std::any&, const std::vector<config_line>& entries, std::ostream& raw_data);
+
+  export std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
   {
     if (stream_size == 0)
     {
@@ -213,7 +221,7 @@ std::list<xml_element> parse_xml_elements(std::string_view raw_xml)
 
       xml_element current_element;
       current_element.name = { &raw_xml[name_pos], name_size };
-      
+
       for (HRESULT hr = xml_reader->MoveToFirstAttribute(); hr == S_OK; hr = xml_reader->MoveToNextAttribute())
       {
         const WCHAR* attr = nullptr;
@@ -253,7 +261,7 @@ std::list<xml_element> parse_xml_elements(std::string_view raw_xml)
       current_element.parents = parent_stack;
       out_list.push_back(current_element);
 
-      xml_reader->MoveToElement(); 
+      xml_reader->MoveToElement();
       if (xml_reader->IsEmptyElement() == FALSE)
       {
         parent_stack.push(current_element.name);

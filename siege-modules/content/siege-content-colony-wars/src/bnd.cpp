@@ -3,15 +3,16 @@
 
 module;
 
-#include <siege/content/tmd.hpp>
-#include <siege/content/tim.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/bitmap.hpp>
 
 export module siege.content.bnd;
 
 import std;
+import siege.content.tim;
+import siege.content.tmd;
 
 namespace siege::content::bnd
 {
@@ -208,12 +209,12 @@ namespace siege::content::bnd
           {
             iff_tag next_item;
             stream.read((char*)&next_item, sizeof(next_item));
-            
+
             if (next_item.tag != tims_tag)
             {
               break;
             }
-            
+
             buffer.resize(next_item.size);
             stream.read(buffer.data(), buffer.size());
             std::ispanstream tim_stream{ std::span<char>(buffer) };

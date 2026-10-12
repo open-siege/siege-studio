@@ -1,4 +1,9 @@
-#include <siege/resource/common_resources.hpp>
+#include <siege/platform/resource.hpp>
+
+import std;
+import siege.resource.zip;
+import siege.resource.cab;
+import siege.resource.iso;
 
 namespace siege::resource
 {

@@ -1,11 +1,26 @@
+module;
+
 #include <limits>
 #include <memory>
-#include <siege/configuration/ini.hpp>
 #include <any>
+#include <siege/configuration/shared.hpp>
+
+export module siege.configuration.ini;
+
+import std;
+
 
 namespace siege::configuration::common::ini
 {
+
+  export struct ini_context
+  {
+    std::string default_end_line = "\r\n";
+  };
+
   using config_line = text_game_config::config_line;
+
+  export void save_config(const std::any&, const std::vector<config_line>& entries, std::ostream& raw_data);
 
   constexpr static auto average_line_size = 20;
 
@@ -32,7 +47,7 @@ namespace siege::configuration::common::ini
     return segments;
   }
 
-  std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
+  export std::optional<text_game_config> load_config(std::istream& raw_data, std::size_t stream_size)
   {
     if (stream_size == 0)
     {

@@ -1,3 +1,5 @@
+module;
+
 #include <fstream>
 #include <filesystem>
 #include <vector>
@@ -7,14 +9,22 @@
 #include <utility>
 #include <cstring>
 #include <zip.h>
-
-#include <siege/resource/common_resources.hpp>
 #include <siege/platform/stream.hpp>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.resource.zip;
+
+import std;
 
 namespace fs = std::filesystem;
 
 namespace siege::resource::zip
 {
+
+  export bool is_stream_7zip(std::istream& stream);
+  export siege::platform::resource_reader make_7zip_resource_reader();
+
   using content_info = platform::resource_reader::content_info;
   using folder_info = platform::resource_reader::folder_info;
   using file_info = platform::resource_reader::file_info;
@@ -23,7 +33,7 @@ namespace siege::resource::zip
   constexpr auto folder_record_tag = platform::to_tag<4>({ 'P', 'K', 0x01, 0x02 });
   constexpr auto end_record_tag = platform::to_tag<4>({ 'P', 'K', 0x05, 0x06 });
 
-  bool is_stream_zip(std::istream& stream)
+  export bool is_stream_zip(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
     stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
@@ -361,7 +371,7 @@ namespace siege::resource::zip
       std::ostreambuf_iterator(output));
   }
 
-  siege::platform::resource_reader make_zip_resource_reader()
+  export siege::platform::resource_reader make_zip_resource_reader()
   {
     return {
       is_stream_zip,

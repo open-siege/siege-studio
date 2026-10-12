@@ -1,7 +1,14 @@
+module;
+
 #include <siege/platform/tagged_data.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/bitmap.hpp>
 #include <bitset>
+
+export module siege.content.tim;
+
+import std;
+
 
 namespace siege::content::tim
 {
@@ -50,7 +57,7 @@ namespace siege::content::tim
     std::vector<endian::little_uint16_t> pixels;
   };
 
-  bool is_tim(std::istream& raw_data)
+  export bool is_tim(std::istream& raw_data)
   {
     std::array<std::byte, 8> header{};
     platform::istream_pos_resetter resetter(raw_data);
@@ -144,7 +151,7 @@ namespace siege::content::tim
   }
 
 
-  platform::bitmap::windows_bmp_data get_tim_data_as_bitmap(std::istream& raw_data)
+  export platform::bitmap::windows_bmp_data get_tim_data_as_bitmap(std::istream& raw_data)
   {
     tim_data temp = get_tim_data(raw_data);
     platform::bitmap::windows_bmp_data result{};

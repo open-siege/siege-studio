@@ -1,3 +1,5 @@
+module;
+
 #include <fstream>
 #include <filesystem>
 #include <vector>
@@ -10,14 +12,23 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include <siege/platform/resource.hpp>
+#include <siege/platform/endian_arithmetic.hpp>
 
-#include <siege/resource/common_resources.hpp>
-#include <siege/resource/external_utils.hpp>
+module siege.resource.zip;
+
+import std;
+import siege.resource.ext;
 
 namespace fs = std::filesystem;
 
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+template<class... Ts>
+struct overloaded : Ts...
+{
+  using Ts::operator()...;
+};
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace siege::resource::zip
 {
@@ -32,22 +43,19 @@ namespace siege::resource::zip
 
   std::string rtrim(std::string str)
   {
-    auto it1 =  std::find_if( str.rbegin() , str.rend() , [](char ch){ return !std::isspace<char>(ch , std::locale::classic() ) ; } );
-    str.erase( it1.base() , str.end() );
+    auto it1 = std::find_if(str.rbegin(), str.rend(), [](char ch) { return !std::isspace<char>(ch, std::locale::classic()); });
+    str.erase(it1.base(), str.end());
     return str;
   }
 
   bool is_stream_7zip(std::istream& stream)
   {
     std::array<std::byte, 4> tag{};
-    stream.read(reinterpret_cast<char *>(tag.data()), sizeof(tag));
+    stream.read(reinterpret_cast<char*>(tag.data()), sizeof(tag));
 
     stream.seekg(-int(sizeof(tag)), std::ios::cur);
 
-    return tag == seven7_file_record_tag ||
-           tag == gz_deflate_file_record_tag ||
-           tag == rar_file_record_tag ||
-           tag == common_exe_tag;
+    return tag == seven7_file_record_tag || tag == gz_deflate_file_record_tag || tag == rar_file_record_tag || tag == common_exe_tag;
   }
 
   std::vector<content_info> get_zip_content_listing(std::any& cache, std::istream& stream, const platform::listing_query& query)
@@ -56,9 +64,7 @@ namespace siege::resource::zip
     return zip_get_content_listing(cache, query);
   }
 
-  void extract_zip_file_contents(std::any& storage, std::istream& stream,
-    const siege::platform::file_info& info,
-    std::ostream& output)
+  void extract_zip_file_contents(std::any& storage, std::istream& stream, const siege::platform::file_info& info, std::ostream& output)
   {
     seven_extract_file_contents(storage, info, output);
   }
@@ -72,4 +78,4 @@ namespace siege::resource::zip
       extract_zip_file_contents
     };
   }
-}// namespace darkstar::vol
+}// namespace siege::resource::zip

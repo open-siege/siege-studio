@@ -1,6 +1,5 @@
 module;
 
-#include <siege/content/tim.hpp>
 #include <siege/platform/image.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/palette.hpp>
@@ -8,6 +7,7 @@ module;
 export module bmp.shared;
 
 import std;
+import siege.content.tim;
 import siege.content.bmp;
 import siege.content.pal;
 export import pal.shared;

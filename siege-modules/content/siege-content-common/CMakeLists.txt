@@ -36,10 +36,8 @@ install(TARGETS ${PROJECT_NAME}
         CONFIGURATIONS Debug Release
         RUNTIME DESTINATION lib)
 
-file(GLOB TESTABLE_SRC_FILES src/*.cpp src/**/*.cpp)
-
-add_executable(${PROJECT_NAME}-tests ${TESTABLE_SRC_FILES} ${TEST_SRC_FILES})
-set_property(TARGET ${PROJECT_NAME}-tests PROPERTY CXX_STANDARD 23)
+add_executable(${PROJECT_NAME}-tests ${TEST_SRC_FILES})
+set_target_properties(${PROJECT_NAME}-tests PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
 target_include_directories(${PROJECT_NAME}-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}-tests PRIVATE Catch2::Catch2WithMain siege-content-common)
 

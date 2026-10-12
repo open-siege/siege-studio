@@ -10,7 +10,6 @@
 #include <cassert>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/resource/common_resources.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
@@ -18,6 +17,9 @@
 
 import siege.resource.pak;
 import siege.configuration.id_tech;
+import siege.resource.zip;
+import siege.resource.cab;
+import siege.resource.iso;
 
 
 extern "C" {

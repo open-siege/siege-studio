@@ -1,9 +1,11 @@
 module;
 
 #include <siege/platform/wave.hpp>
-#include <siege/content/sfx/sound.hpp>
 
 export module sfx.shared;
+
+import std;
+import siege.content.sfx;
 
 namespace siege::views
 {
