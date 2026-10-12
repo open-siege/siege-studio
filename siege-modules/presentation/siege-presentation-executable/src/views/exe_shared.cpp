@@ -2638,9 +2638,10 @@ namespace siege::views
     return false;
   }
 
-  bool uses_ws2_32(const exe_state& state)
+  bool uses_ws2_32(const std::any& state)
   {
-    for (auto& info : state.detected_networking_support)
+    auto& exe_state = get(state);
+    for (auto& info : exe_state.detected_networking_support)
     {
       if (info.second.ws2_32 || info.second.dplayx)
       {
@@ -2866,7 +2867,7 @@ namespace siege::views
         fs::copy_file(zt_path, ext_path / "wsock-backend-zero-tier.dll", fs::copy_options::overwrite_existing, last_errorc);
 
 
-        if (links_to_networking_libraries(self) && uses_ws2_32(self))
+        if (links_to_networking_libraries(self) && uses_ws2_32(state))
         {
           auto ws2_path = *zt_ext_path / "ws2_32-rpc-client.dll";
           fs::copy_file(ws2_path, ext_path / "ws2_32.dll", fs::copy_options::overwrite_existing, last_errorc);

@@ -12,6 +12,9 @@
 * Fixed file extraction not working on WINE.
 * Added correct icon for controller view in launcher.
 * Keyboard/mouse settings don't show up for games with partial support (since it was always empty).
+* Fixed "Add to Firewall" adding the game to outbound rules instead of inbound. 
+* Rule generation uses the exe name instead of the parent directory (which could sometimes be "System" or "bin" instead of the root game folder).
+* For games which use WinSock 2 or DirectPlay, "Add to Firewall" adds the network helper as its exception.
 
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.

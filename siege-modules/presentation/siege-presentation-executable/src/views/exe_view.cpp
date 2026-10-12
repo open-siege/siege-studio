@@ -60,15 +60,31 @@ namespace siege::views
       std::wstring args;
       args.reserve(256);
 
-      args.append(L"advfirewall firewall add rule dir=out enable=yes name=");
+      args.append(L"advfirewall firewall add rule dir=in enable=yes name=");
 
       args.append(1, L'\"');
-      args.append(path.parent_path().stem());
+      args.append(path.stem());
       args.append(1, L'\"');
       args.append(L" action=allow program=");
 
       args.append(1, L'\"');
-      args.append(path);
+
+      namespace fs = std::filesystem;
+      
+      auto wsock_rpc_server_path = get_zero_tier_extension_folder_path(state).transform([](const auto& zt_ext_path) {
+        return zt_ext_path / "ws2_32-rpc-server.exe";
+      });
+      
+      std::error_code last_error;
+      if (uses_ws2_32(state) && wsock_rpc_server_path.has_value() && fs::exists(*wsock_rpc_server_path, last_error))
+      {
+        args.append(*wsock_rpc_server_path);
+      }
+      else
+      {
+        args.append(path);
+      }
+
       args.append(1, L'\"');
 
       ::ShellExecuteW(nullptr,

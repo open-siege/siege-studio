@@ -221,6 +221,8 @@ namespace siege::views
   bool is_vkey_for_controller(WORD vkey);
   std::optional<std::reference_wrapper<game_setting>> get_game_setting(std::any& state, std::size_t index);
 
+  bool uses_ws2_32(const std::any& state);
+  std::optional<std::filesystem::path> get_zero_tier_extension_folder_path(const std::any& state);
   void set_ip_for_current_network(std::any& state, std::string ip_address, bool for_client);
 
   bool controller_can_be_toggled(std::any& state);
