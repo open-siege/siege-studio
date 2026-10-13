@@ -2,12 +2,13 @@ module;
 
 #include <siege/platform/tagged_data.hpp>
 #include <siege/platform/stream.hpp>
-#include <siege/platform/bitmap.hpp>
 #include <bitset>
 
 export module siege.content.tim;
 
 import std;
+import siege.platform.bitmap;
+import siege.platform.palette;
 
 
 namespace siege::content::tim

@@ -2,12 +2,12 @@ module;
 
 #include <siege/platform/shared.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/palette.hpp>
 #include <siege/platform/stream.hpp>
 
 export module siege.content.pal;
 
 import std;
+import siege.platform.palette;
 
 namespace siege::content::pal
 {

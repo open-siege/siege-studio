@@ -1,12 +1,114 @@
-#include <set>
-#include <map>
-#include <cmath>
-#include <siege/platform/bitmap.hpp>
-#include <siege/platform/tagged_data.hpp>
+module;
+
+#include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
+
+export module siege.platform.bitmap;
+
+import std;
+export import siege.platform.palette;
 
 namespace siege::platform::bitmap
 {
+  namespace endian = siege::platform;
+
+  export struct windows_bmp_header
+  {
+    std::array<std::byte, 2> tag;
+    endian::little_uint32_t file_size;
+    endian::little_uint16_t reserved1;
+    endian::little_uint16_t reserved2;
+    endian::little_uint32_t offset;
+  };
+
+  export struct windows_bmp_info
+  {
+    endian::little_uint32_t info_size;
+    endian::little_int32_t width;
+    endian::little_int32_t height;
+    endian::little_uint16_t planes;
+    endian::little_uint16_t bit_depth;
+    endian::little_uint32_t compression;
+    endian::little_uint32_t image_size;
+    endian::little_int32_t x_pixels_per_metre;
+    endian::little_int32_t y_pixels_per_metre;
+    endian::little_uint32_t num_colours_used;
+    endian::little_uint32_t num_important_colours;
+  };
+
+  export struct windows_bmp_data
+  {
+    windows_bmp_header header;
+    windows_bmp_info info;
+    std::vector<palette::colour> colours;
+    std::vector<std::int32_t> indexes;
+  };
+
+  export template<typename UnitType>
+  inline void invert(std::vector<UnitType>& pixels)
+  {
+    std::reverse(pixels.begin(), pixels.end());
+  }
+
+  export template<typename UnitType>
+  inline void horizontal_flip(std::vector<UnitType>& pixels, int width)
+  {
+    for (auto r = pixels.begin(); r != pixels.end(); r += width)
+    {
+      std::reverse(r, r + width);
+    }
+  }
+
+  export template<typename UnitType>
+  inline void vertical_flip(std::vector<UnitType>& pixels, int width)
+  {
+    invert(pixels);
+    horizontal_flip(pixels, width);
+  }
+
+  export struct bitmap_settings
+  {
+    std::vector<palette::colour> colours;
+    std::int32_t width;
+    std::int32_t height;
+    std::int32_t bit_depth;
+    bool auto_flip = true;
+  };
+
+  export struct bitmap_offset_settings : bitmap_settings
+  {
+    std::size_t offset;
+  };
+
+  export struct size
+  {
+    int width;
+    int height;
+
+    size(const size&) = default;
+    size(size&&) = default;
+    size& operator=(const size&) = default;
+    size& operator=(size&&) = default;
+
+    size() : width(0), height(0)
+    {
+    }
+
+    size(int width, int height) : width(width), height(height)
+    {
+    }
+
+    size(std::pair<int, int> pair) : width(pair.first), height(pair.second)
+    {
+    }
+
+    bool operator==(const size& b) const
+    {
+      return this->width == b.width && this->height == b.height;
+    }
+  };
+
   using file_tag = std::array<std::byte, 4>;
 
   constexpr file_tag bmp_alt1_tag = platform::to_tag<4>({ 'B', 'M', 'P', ' ' });
@@ -15,13 +117,55 @@ namespace siege::platform::bitmap
 
   constexpr std::array<std::byte, 2> windows_bmp_tag = { std::byte{ 66 }, std::byte{ 77 } };// BM
 
-  bool is_microsoft_bmp(std::istream& raw_data)
+  constexpr file_tag png_tag = platform::to_tag<4>({ 0x89, 'P', 'N', 'G' });
+  constexpr std::array<std::byte, 3> gif_tag = platform::to_tag<3>({ 'G', 'I', 'F' });
+  constexpr std::array<std::byte, 2> jpg_tag = platform::to_tag<2>({ 0xff, 0xd8 });
+
+  export bool is_microsoft_bmp(std::istream& raw_data)
   {
     platform::istream_pos_resetter resetter(raw_data);
     file_tag header{};
     platform::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
 
     return header != bmp_alt1_tag && header != bmp_alt2_tag && header[0] == windows_bmp_tag[0] && header[1] == windows_bmp_tag[1];
+  }
+
+  export bool is_jpg(std::istream& raw_data)
+  {
+    platform::istream_pos_resetter resetter(raw_data);
+    std::array<std::byte, 2> header{};
+    raw_data.read(reinterpret_cast<char*>(header.data()), sizeof(header));
+
+    return header == jpg_tag;
+  }
+
+  export bool is_png(std::istream& raw_data)
+  {
+    platform::istream_pos_resetter resetter(raw_data);
+    file_tag header{};
+    raw_data.read(reinterpret_cast<char*>(header.data()), sizeof(header));
+
+    return header == png_tag;
+  }
+
+  export bool is_gif(std::istream& raw_data)
+  {
+    platform::istream_pos_resetter resetter(raw_data);
+    std::array<std::byte, 3> header{};
+    raw_data.read(reinterpret_cast<char*>(header.data()), sizeof(header));
+
+    return header == gif_tag;
+  }
+
+  export bool is_tga(std::istream& raw_data)
+  {
+    std::array<std::byte, 3> header{};
+    raw_data.read(reinterpret_cast<char*>(header.data()), sizeof(header));
+
+    raw_data.seekg(-int(sizeof(header)), std::ios::cur);
+
+    // TODO turn this into an enum
+    return header[2] == std::byte{ 0 } || header[2] == std::byte{ 1 } || header[2] == std::byte{ 2 } || header[2] == std::byte{ 3 } || header[2] == std::byte{ 9 } || header[2] == std::byte{ 10 } || header[2] == std::byte{ 11 };
   }
 
   template<typename AlignmentType, typename PixelType>
@@ -58,7 +202,7 @@ namespace siege::platform::bitmap
     }
   }
 
-  windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip)
+  export windows_bmp_data get_bmp_data(std::istream& raw_data, bool auto_flip = false)
   {
     windows_bmp_header header{};
     platform::read(raw_data, reinterpret_cast<char*>(&header), sizeof(header));
@@ -128,7 +272,7 @@ namespace siege::platform::bitmap
     };
   }
 
-  void write_bmp_data(std::ostream& raw_data, std::vector<palette::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip)
+  export void write_bmp_data(std::ostream& raw_data, std::vector<palette::colour> colours, std::vector<std::byte> pixels, std::int32_t width, std::int32_t height, std::int32_t bit_depth, bool auto_flip = true)
   {
     if (auto_flip)
     {
@@ -299,7 +443,7 @@ namespace siege::platform::bitmap
     return results;
   }
 
-  std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
+  export std::vector<std::byte> remap_bitmap(const std::vector<std::byte>& pixels,
     const std::vector<palette::colour>& original_colours,
     const std::vector<palette::colour>& other_colours,
     bool only_unique)
@@ -307,8 +451,7 @@ namespace siege::platform::bitmap
     return remap_bitmap<std::byte>(pixels, original_colours, other_colours, only_unique);
   }
 
-
-  std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
+  export std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
     const std::vector<palette::colour>& original_colours,
     const std::vector<palette::colour>& other_colours,
     bool only_unique)

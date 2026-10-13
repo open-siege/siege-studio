@@ -3,11 +3,11 @@ module;
 #include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/tagged_data.hpp>
 #include <siege/platform/stream.hpp>
-#include <siege/platform/palette.hpp>
 
 export module siege.content.bmp;
 
 import std;
+import siege.platform.palette;
 import siege.content.pal;
 
 namespace siege::content::bmp

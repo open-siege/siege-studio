@@ -6,11 +6,11 @@ module;
 #include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/bitmap.hpp>
 
 export module siege.content.bnd;
 
 import std;
+import siege.platform.bitmap;
 import siege.content.tim;
 import siege.content.tmd;
 

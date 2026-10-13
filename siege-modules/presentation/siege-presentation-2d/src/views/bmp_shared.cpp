@@ -1,12 +1,13 @@
 module;
 
-#include <siege/platform/image.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
-#include <siege/platform/palette.hpp>
 
 export module bmp.shared;
 
 import std;
+import siege.platform.image;
+import siege.platform.palette;
 import siege.content.tim;
 import siege.content.bmp;
 import siege.content.pal;

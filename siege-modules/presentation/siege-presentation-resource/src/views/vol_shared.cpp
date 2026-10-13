@@ -4,7 +4,6 @@ module;
 #include <siege/platform/resource.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/wave.hpp>
-#include <siege/platform/bitmap.hpp>
 
 #if WIN32
 #include <siege/platform/win/file.hpp>
@@ -13,6 +12,7 @@ module;
 export module vol.shared;
 
 import std;
+import siege.platform.bitmap;
 import vol.maker;
 
 namespace siege::views

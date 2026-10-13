@@ -1,19 +1,38 @@
-#include <siege/platform/image.hpp>
+module;
+
 #include <siege/platform/stream.hpp>
 #include <siege/platform/win/com.hpp>
 #include <siege/platform/win/file.hpp>
-#include <exception>
-#include <spanstream>
-#include <memory>
-
-#undef NDEBUG
-#include <cassert>
 #include <siege/platform/win/wic.hpp>
 #include <VersionHelpers.h>
+#include <spanstream>
+
+export module siege.platform.image;
+
+import std;
+export import siege.platform.bitmap;
 
 namespace siege::platform::bitmap
 {
-  using windows_bmp_data = siege::platform::bitmap::windows_bmp_data;
+  export class platform_image
+  {
+  public:
+    explicit platform_image(std::span<windows_bmp_data>);
+    explicit platform_image(windows_bmp_data);
+    explicit platform_image(std::filesystem::path);
+    explicit platform_image(std::istream&, bool deep_copy = false);
+
+    std::size_t frame_count() const noexcept;
+    size get_size(std::size_t frame) const noexcept;
+
+    inline win32::wic::bitmap_source& at(std::size_t frame)
+    {
+      return frames.at(frame);
+    }
+
+  private:
+    std::vector<win32::wic::bitmap_source> frames;
+  };
 
   std::vector<win32::wic::bitmap_source> load(win32::wic::bitmap_decoder& decoder)
   {

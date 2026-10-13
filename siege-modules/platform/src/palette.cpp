@@ -1,9 +1,57 @@
-#include <optional>
-#include <siege/platform/palette.hpp>
+module;
+
+#include <siege/platform/endian_arithmetic.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
+
+export module siege.platform.palette;
+
+import std;
 
 namespace siege::platform::palette
 {
+  namespace endian = siege::platform;
+
+  export struct colour
+  {
+    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "r", "g", "b", "a" });
+
+    std::byte red;
+    std::byte green;
+    std::byte blue;
+    std::byte flags;
+  };
+
+  export struct colour_rgb
+  {
+    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "r", "g", "b" });
+
+    std::byte red;
+    std::byte green;
+    std::byte blue;
+  };
+
+  export inline bool operator==(const colour& left, const colour& right)
+  {
+    return left.red == right.red && left.green == right.green && left.blue == right.blue && left.flags == right.flags;
+  }
+
+  export inline bool operator<(const colour& left, const colour& right)
+  {
+    return std::tie(left.red, left.green, left.blue, left.flags) < std::tie(right.red, right.green, right.blue, right.flags);
+  }
+
+  // A big thanks to https://stackoverflow.com/questions/5392061/algorithm-to-check-similarity-of-colors and
+  // https://www.compuphase.com/cmetric.htm
+  export inline double colour_distance(const colour& e1, const colour& e2)
+  {
+    long rmean = ((long)e1.red + (long)e2.red) / 2;
+    long r = (long)e1.red - (long)e2.red;
+    long g = (long)e1.green - (long)e2.green;
+    long b = (long)e1.blue - (long)e2.blue;
+    return std::sqrt((((512 + rmean) * r * r) >> 8) + 4 * g * g + (((767 - rmean) * b * b) >> 8));
+  }
+
   using file_tag = std::array<std::byte, 4>;
 
   constexpr file_tag riff_tag = platform::to_tag<4>({ 'R', 'I', 'F', 'F' });
@@ -18,13 +66,7 @@ namespace siege::platform::palette
     endian::little_int16_t colour_count;
   };
 
-  auto expand(std::byte colour)
-  {
-    auto temp = int(colour) * 4;
-    return temp > 255 ? std::byte(255) : std::byte(temp);
-  }
-
-  bool is_microsoft_pal(std::istream& raw_data)
+  export bool is_microsoft_pal(std::istream& raw_data)
   {
     const auto start = raw_data.tellg();
     std::array<std::byte, 4> header{};
@@ -40,7 +82,7 @@ namespace siege::platform::palette
     return header == riff_tag && sub_header == pal_tag;
   }
 
-  std::vector<colour> get_pal_data(std::istream& raw_data)
+  export std::vector<colour> get_pal_data(std::istream& raw_data)
   {
     std::array<std::byte, 4> header{};
     endian::little_uint32_t file_size{};
@@ -104,7 +146,7 @@ namespace siege::platform::palette
     return colours;
   }
 
-  std::int32_t write_pal_data(std::ostream& raw_data, const std::vector<colour>& colours)
+  export std::int32_t write_pal_data(std::ostream& raw_data, const std::vector<colour>& colours)
   {
     raw_data.write(reinterpret_cast<const char*>(riff_tag.data()), sizeof(riff_tag));
 
@@ -126,4 +168,4 @@ namespace siege::platform::palette
 
     return sizeof(riff_tag) + sizeof(file_size) + file_size;
   }
-}// namespace siege::content::pal
+}// namespace siege::platform::palette

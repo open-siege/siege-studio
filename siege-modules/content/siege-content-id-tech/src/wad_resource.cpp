@@ -4,12 +4,12 @@ module;
 #include <siege/platform/stream.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 #include <siege/platform/wave.hpp>
-#include <siege/platform/palette.hpp>
-#include <siege/platform/bitmap.hpp>
 
 export module siege.resource.wad;
 
 import std;
+import siege.platform.palette;
+import siege.platform.bitmap;
 
 namespace siege::resource::wad
 {
