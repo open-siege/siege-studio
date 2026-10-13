@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <SDKDDKVer.h>
-#include <siege/platform/installation_module.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/threading.hpp>
@@ -19,6 +19,8 @@
 #include <future>
 #include <filesystem>
 #include <ranges>
+
+import siege.platform.installation;
 
 namespace siege::resource
 {

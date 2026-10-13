@@ -6,7 +6,7 @@ set_property(TARGET siege-std PROPERTY CXX_STANDARD 23)
 target_include_directories(siege-std PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 if (WIN32)
-    add_library(siege-win-core STATIC src/win-core.cpp src/extension_module.cpp)
+    add_library(siege-win-core STATIC src/win-core.cpp src/extension_module.cpp src/installation_module.cpp)
     set_property(TARGET siege-win-core PROPERTY CXX_STANDARD 23)
     set_property(TARGET siege-win-core PROPERTY CXX_SCAN_FOR_MODULES ON)
     target_compile_definitions(siege-win-core PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_PC_APP)

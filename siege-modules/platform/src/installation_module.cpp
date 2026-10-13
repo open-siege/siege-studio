@@ -1,17 +1,15 @@
-#ifndef SIEGE_INSTALLATION_MODULE_HPP
-#define SIEGE_INSTALLATION_MODULE_HPP
+module;
 
-#include <optional>
-#include <filesystem>
-#include <array>
-#include <list>
-#include <span>
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/shared.hpp>
 
+export module siege.platform.installation;
+
+import std;
+
 namespace siege::platform
 {
-  struct game_storage_properties
+  export struct game_storage_properties
   {
     std::size_t struct_size = sizeof(game_storage_properties);
     std::uint32_t number_of_discs = 0;
@@ -19,7 +17,7 @@ namespace siege::platform
     std::array<fs_char, 1024> default_install_path{};
   };
 
-  struct path_rule
+  export struct path_rule
   {
     const fs_char* source;
     const fs_char* destination;
@@ -31,13 +29,13 @@ namespace siege::platform
     path_enforcement enforcement = required;
   };
 
-  struct installation_variable
+  export struct installation_variable
   {
     const fs_char* name;
     const fs_char* label;
   };
 
-  using installation_option = installation_variable;
+  export using installation_option = installation_variable;
 
   // installation_option* get_options_for_variable(const fs_char* variable_name) noexcept
   // std::errc apply_post_install_steps() noexcept
@@ -45,7 +43,7 @@ namespace siege::platform
   using apply_post_install_steps = std::errc() noexcept;
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
-  class installation_module : public win32::module
+  export class installation_module : public win32::module
   {
     using base = win32::module;
     get_options_for_variable* get_options_for_variable_proc = nullptr;
@@ -191,5 +189,3 @@ namespace siege::platform
   };
 
 }// namespace siege::platform
-
-#endif

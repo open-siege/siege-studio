@@ -1,7 +1,9 @@
 #include <array>
-#include <siege/platform/installation_module.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/file.hpp>
 #include <filesystem>
+
+import siege.platform.installation;
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
