@@ -5,7 +5,8 @@
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/basic_window.hpp>
 #include <siege/platform/win/window_module.hpp>
-#include <siege/platform/presentation_module.hpp>
+#include <siege/platform/stream.hpp>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <utility>
@@ -19,6 +20,7 @@
 #include <unordered_set>
 
 import siege.platform.extension;
+import siege.platform.presentation;
 
 namespace siege::views
 {

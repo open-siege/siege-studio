@@ -1,21 +1,12 @@
-#ifndef SIEGE_PRESENTATION_MODULE_HPP
-#define SIEGE_PRESENTATION_MODULE_HPP
+module;
 
-#include <memory>
-#include <filesystem>
-#include <stdexcept>
-#include <expected>
-#include <list>
-#include <string>
-#include <vector>
-#include <set>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
 
-// This is not yet cross platform code. But the plan is to make it so.
-#if WIN32
-#include <siege/platform/win/window_module.hpp>
-#endif
+export module siege.platform.presentation;
+
+import std;
 
 namespace siege::platform
 {
@@ -24,13 +15,12 @@ namespace siege::platform
   using get_supported_extensions_for_category = std::errc(const char16_t*, std::size_t count, const siege::fs_char** strings, std::size_t* fetched);
   using is_stream_supported = std::errc(storage_info* data);
 
-// Win32 only methods get to return HRESULT. This helps C# interop as well.
 #if WIN32
   using get_window_class_for_stream = HRESULT(storage_info* data, wchar_t**);
 #endif
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
-  class presentation_module : public win32::window_module
+  export class presentation_module : public win32::window_module
   {
     using base = win32::window_module;
     get_supported_extensions* get_supported_extensionsProc = nullptr;
@@ -71,7 +61,7 @@ namespace siege::platform
 
       for (auto const& dir_entry : std::filesystem::directory_iterator{ search_path })
       {
-        if ((dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL") 
+        if ((dir_entry.path().extension() == ".dll" || dir_entry.path().extension() == ".DLL")
             && dir_entry.path().stem().wstring().find(L"siege-presentation") != std::wstring::npos)
         {
           dll_paths.insert(dir_entry.path());
@@ -87,7 +77,7 @@ namespace siege::platform
         {
         }
       });
-      
+
       return loaded_modules;
     }
 
@@ -159,6 +149,3 @@ namespace siege::platform
   };
 
 }// namespace siege::platform
-
-
-#endif// !SIEGEPLUGINHPP

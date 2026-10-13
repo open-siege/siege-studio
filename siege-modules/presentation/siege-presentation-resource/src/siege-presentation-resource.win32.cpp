@@ -1,6 +1,7 @@
 
 #include <siege/platform/win/hresult.hpp>
-#include <siege/platform/presentation_module.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/stream.hpp>
 
 import vol.shared;
 import vol.views;

@@ -5,7 +5,7 @@ module;
 #include <siege/platform/win/menu.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
-#include <siege/platform/presentation_module.hpp>
+#include <siege/platform/win/window_module.hpp>
 #include <siege/platform/resource.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/basic_window.hpp>
@@ -17,6 +17,7 @@ export module vol.views;
 
 import std;
 import vol.shared;
+import siege.platform.presentation;
 
 namespace siege::views
 {

@@ -5,7 +5,8 @@
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/file.hpp>
-#include <siege/platform/presentation_module.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/stream.hpp>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
@@ -17,6 +18,8 @@
 #include <unordered_set>
 #include <filesystem>
 #include <spanstream>
+
+import siege.platform.presentation;
 
 namespace siege::views
 {
@@ -306,7 +309,8 @@ namespace siege::views
           .hwndTrack = separator,
           .dwHoverTime = HOVER_DEFAULT
         };
-        assert(::TrackMouseEvent(&event) == TRUE);
+        auto tracked = ::TrackMouseEvent(&event);
+        assert(tracked == TRUE);
       }
 
       repopulate_tree_view(fs::current_path());
@@ -749,7 +753,8 @@ namespace siege::views
 
         if (tab_item->lParam)
         {
-          assert(win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(tab_rect));
+          auto positioned = win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(tab_rect);
+          assert(positioned);
         }
       }
 
@@ -986,7 +991,8 @@ namespace siege::views
 
       auto current_index = tab_control.GetCurrentSelection();
 
-      assert(::DestroyWindow(win32::hwnd_t(item->lParam)) == TRUE);
+      auto destroyed = ::DestroyWindow(win32::hwnd_t(item->lParam));
+      assert(destroyed == TRUE);
       tab_control.DeleteItem(index);
 
       if (index == current_index)

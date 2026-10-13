@@ -26,8 +26,10 @@ if (WIN32)
         src/registry.cpp
         src/capabilities.cpp
         src/platform_image.win32.cpp
-        src/http.win32.cpp)
+        src/http.win32.cpp
+        src/presentation_module.cpp)
     set_property(TARGET siege-win-desktop PROPERTY CXX_STANDARD 23)
+    set_property(TARGET siege-win-desktop PROPERTY CXX_SCAN_FOR_MODULES ON)
     target_compile_definitions(siege-win-desktop PRIVATE WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
     target_include_directories(siege-win-desktop PUBLIC ${PROJECT_SOURCE_DIR}/include)
     target_link_libraries(siege-win-desktop PUBLIC siege-win-core user32)
