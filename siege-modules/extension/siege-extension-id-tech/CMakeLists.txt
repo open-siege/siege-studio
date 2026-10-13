@@ -15,19 +15,6 @@ if (WIN32)
     add_library(siege-extension-id-tech-3-0 STATIC src/id-tech-3-0-shared.cpp)
     target_link_libraries(siege-extension-id-tech-3-0 PUBLIC siege-extension-id-tech-shared)
 
-    add_library(siege-extension-vampire-shared STATIC src/vampire-shared.cpp)
-    target_link_libraries(siege-extension-vampire-shared PUBLIC siege-extension-id-tech-shared)
-
-    add_library(siege-extension-take-no-prisoners SHARED src/take-no-prisoners.cpp src/vampire.def)
-    add_library(siege-extension-mageslayer SHARED src/mageslayer.cpp src/vampire.def)
-
-    set(VAMPIRE_TARGETS siege-extension-take-no-prisoners
-                        siege-extension-mageslayer)
-
-    foreach(EXT_TARGET IN ITEMS ${VAMPIRE_TARGETS})
-        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-vampire-shared)
-    endforeach()
-
     add_library(siege-extension-quake SHARED src/quake.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2 SHARED src/hexen-2.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2-praevus SHARED src/hexen-2-praevus.cpp src/hexen-2-praevus.def)
