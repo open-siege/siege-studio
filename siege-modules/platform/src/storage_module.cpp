@@ -1,31 +1,24 @@
-#ifndef SIEGE_STORAGE_MODULE_HPP
-#define SIEGE_STORAGE_MODULE_HPP
+module;
 
-#include <memory>
-#include <filesystem>
-#include <stdexcept>
-#include <expected>
-#include <list>
-#include <string>
-#include <vector>
-#include <set>
-#include <functional>
-#include <system_error>
+#include <siege/platform/win/module.hpp>
 #include <siege/platform/stream.hpp>
 #include <siege/platform/resource.hpp>
-#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/shared.hpp>
+
+export module siege.platform.storage;
+
+import std;
 
 namespace siege::platform
 {
-  using fs_char = std::filesystem::path::value_type;
   using stream_is_resource_readable = std::errc(storage_info* data);
   using create_reader_context = std::errc(storage_info* data, resource_reader_context** storage);
-  using get_reader_folder_listing = std::errc(resource_reader_context* context, const fs_char* parent_path, std::size_t count, const fs_char** folders, std::size_t*);
-  using get_reader_file_listing = std::errc(resource_reader_context* context, const fs_char* parent_path, std::size_t, const fs_char** folders, std::size_t*);
-  using extract_file_contents = std::errc(resource_reader_context* context, const fs_char* file_path, std::size_t size, std::byte* buffer, std::size_t* written);
+  using get_reader_folder_listing = std::errc(resource_reader_context* context, const siege::fs_char* parent_path, std::size_t count, const siege::fs_char** folders, std::size_t*);
+  using get_reader_file_listing = std::errc(resource_reader_context* context, const siege::fs_char* parent_path, std::size_t, const siege::fs_char** folders, std::size_t*);
+  using extract_file_contents = std::errc(resource_reader_context* context, const siege::fs_char* file_path, std::size_t size, std::byte* buffer, std::size_t* written);
   using destroy_reader_context = std::errc(resource_reader_context* context);
 
-  class storage_module : public win32::module
+  export class storage_module : public win32::module
   {
     using base = win32::module;
 
@@ -200,6 +193,3 @@ namespace siege::platform
   };
 
 }// namespace siege::platform
-
-
-#endif// !SIEGEPLUGINHPP

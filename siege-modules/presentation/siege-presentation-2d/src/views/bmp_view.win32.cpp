@@ -8,12 +8,14 @@ module;
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/theming.hpp>
-#include <siege/platform/storage_module.hpp>
+#include <siege/platform/win/window_module.hpp>
+#include <siege/platform/stream.hpp>
 
 export module bmp.views;
 
 import std;
 import bmp.shared;
+import siege.platform.storage;
 
 namespace siege::views
 {
