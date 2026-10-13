@@ -1,12 +1,12 @@
 module;
 #include <glm/gtx/quaternion.hpp>
-#include <siege/content/renderable_shape.hpp>
 
 export module siege.content.wtb.renderable;
 
 import std;
 import siege.content.wtb;
 import siege.content.bwd;
+export import siege.content.renderable;
 
 namespace siege::content::wtb
 {

@@ -1,15 +1,9 @@
-#include <iostream>
-#include <iterator>
-#include <execution>
-#include <algorithm>
-#include <bitset>
-#include <utility>
-#include <unordered_map>
 #include <siege/platform/shared.hpp>
-#include <siege/content/obj_renderer.hpp>
 
+import std;
 import siege.content.dts;
 import siege.content.dts.renderable;
+import siege.content.obj;
 
 namespace fs = std::filesystem;
 namespace dts = siege::content::dts::darkstar;

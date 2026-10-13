@@ -1,15 +1,13 @@
-#ifndef DARKSTARDTSCONVERTER_OBJ_RENDERER_HPP
-#define DARKSTARDTSCONVERTER_OBJ_RENDERER_HPP
+module;
 
-#include <string_view>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <siege/content/renderable_shape.hpp>
+export module siege.content.obj;
+
+import std;
+export import siege.content.renderable;
 
 namespace siege::content
 {
-  struct obj_renderer final : shape_renderer
+  export struct obj_renderer final : shape_renderer
   {
     std::optional<std::string> new_face_str = std::nullopt;
     std::size_t face_count = 0;
@@ -65,6 +63,4 @@ namespace siege::content
       output << "\tvt " << vertex.x << ' ' << vertex.y << '\n';
     }
   };
-
 }
-#endif//DARKSTARDTSCONVERTER_OBJ_RENDERER_HPP

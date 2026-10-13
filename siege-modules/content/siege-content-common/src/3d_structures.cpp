@@ -1,22 +1,25 @@
-#ifndef DARKSTARDTSCONVERTER_3D_STRUCTURES_HPP
-#define DARKSTARDTSCONVERTER_3D_STRUCTURES_HPP
+module;
 
-#include <array>
 #include <climits>
 #include <siege/platform/shared.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
 
+export module siege.content.structures;
+
+import std;
+
 namespace siege::content
 {
   namespace endian = siege::platform;
-  struct texture_vertex
+
+  export struct texture_vertex
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y" });
     float x;
     float y;
   };
 
-  struct vector3f
+  export struct vector3f
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z" });
     float x;
@@ -24,7 +27,7 @@ namespace siege::content
     float z;
   };
 
-  struct vector4f
+  export struct vector4f
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "w" });
     float x;
@@ -33,34 +36,34 @@ namespace siege::content
     float w;
   };
 
-  inline vector3f operator+(const vector3f& left, const vector3f& right)
+  export inline vector3f operator+(const vector3f& left, const vector3f& right)
   {
     return { left.x + right.x, left.y + right.y, left.z + right.z };
   }
 
-  inline vector3f operator-(const vector3f& left, const vector3f& right)
+  export inline vector3f operator-(const vector3f& left, const vector3f& right)
   {
     return { left.x - right.x, left.y - right.y, left.z - right.z };
   }
 
-  inline vector3f operator+=(vector3f& left, const vector3f& right)
+  export inline vector3f operator+=(vector3f& left, const vector3f& right)
   {
     left = left + right;
     return left;
   }
 
-  inline vector3f operator*(const vector3f& left, const vector3f& right)
+  export inline vector3f operator*(const vector3f& left, const vector3f& right)
   {
     return { left.x * right.x, left.y * right.y, left.z * right.z };
   }
 
-  inline vector3f operator*=(vector3f& left, const vector3f& right)
+  export inline vector3f operator*=(vector3f& left, const vector3f& right)
   {
     left = left * right;
     return left;
   }
 
-  struct vector3f_pair
+  export struct vector3f_pair
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "min", "max" });
     vector3f min;
@@ -69,7 +72,7 @@ namespace siege::content
 
   static_assert(sizeof(vector3f) == sizeof(std::array<float, 3>));
 
-  struct vector3s
+  export struct vector3s
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z" });
     endian::little_int16_t x;
@@ -77,7 +80,7 @@ namespace siege::content
     endian::little_int16_t z;
   };
 
-  struct quaternion4s
+  export struct quaternion4s
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "w" });
     endian::little_int16_t x;
@@ -86,7 +89,7 @@ namespace siege::content
     endian::little_int16_t w;
   };
 
-  struct quaternion4f
+  export struct quaternion4f
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "w" });
     float x;
@@ -95,12 +98,12 @@ namespace siege::content
     float w;
   };
 
-  inline quaternion4f to_float(const quaternion4f& other)
+  export inline quaternion4f to_float(const quaternion4f& other)
   {
     return other;
   }
 
-  inline quaternion4f to_float(const quaternion4s& other)
+  export inline quaternion4f to_float(const quaternion4s& other)
   {
     constexpr std::int16_t max = SHRT_MAX;
 
@@ -114,7 +117,7 @@ namespace siege::content
 
   static_assert(sizeof(quaternion4s) == sizeof(std::array<endian::little_int16_t, 4>));
 
-  struct rgb_data
+  export struct rgb_data
   {
     KEYS_CONSTEXPR static auto keys = platform::make_keys({ "red", "green", "blue", "rgbFlags" });
 
@@ -124,6 +127,3 @@ namespace siege::content
     std::uint8_t rgb_flags;
   };
 }
-
-
-#endif//DARKSTARDTSCONVERTER_3D_STRUCTURES_HPP

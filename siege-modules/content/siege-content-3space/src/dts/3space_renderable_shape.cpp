@@ -1,7 +1,12 @@
-#include <functional>
-#include <siege/content/renderable_shape.hpp>
-#include <siege/content/dts/3space.hpp>
+module;
+
 #include <siege/platform/shared.hpp>
+
+export module siege.content.dts.three_space.renderable;
+
+import std;
+export import siege.content.renderable;
+export import siege.content.dts.three_space;
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -339,7 +344,7 @@ namespace siege::content::dts::three_space
     v1::shape_item shape;
   };
 
-  renderable_shape_value make_renderable_shape(v1::shape_item data)
+  export renderable_shape_value make_renderable_shape(v1::shape_item data)
   {
     return renderable_shape_value{ dts_renderable_shape{ std::move(data) } };
   }

@@ -6,11 +6,11 @@ module;
 
 // TODO is this actually cros-platform?
 #include <GL/GL.h>
-#include <siege/content/renderable_shape.hpp>
 
 export module gl.renderer;
 
 import std;
+import siege.content.renderable;
 
 namespace siege::views
 {

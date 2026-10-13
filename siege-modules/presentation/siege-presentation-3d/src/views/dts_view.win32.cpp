@@ -11,7 +11,6 @@ module;
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/theming.hpp>
-#include <siege/content/obj_renderer.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <GL/GL.h>
 
@@ -20,6 +19,7 @@ export module dts.views;
 import std;
 import dts.shared;
 import gl.renderer;
+import siege.content.obj;
 
 namespace siege::views
 {

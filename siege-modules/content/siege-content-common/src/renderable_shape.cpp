@@ -1,21 +1,17 @@
-#ifndef RENDERABLE_SHAPE_HPP
-#define RENDERABLE_SHAPE_HPP
+module;
 
-#include <string>
-#include <vector>
-#include <optional>
-#include <any>
-#include <variant>
-#include <unordered_map>
-#include "3d_structures.hpp"
+export module siege.content.renderable;
+
+import std;
+export import siege.content.structures;
 
 namespace siege::content
 {
-  struct sequence_info;
-  struct material;
-  struct shape_renderer;
+  export struct sequence_info;
+  export struct material;
+  export struct shape_renderer;
 
-  struct renderable_shape
+  export struct renderable_shape
   {
     virtual std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const = 0;
     virtual std::vector<std::string> get_detail_levels() const = 0;
@@ -26,7 +22,7 @@ namespace siege::content
     virtual ~renderable_shape() = default;
   };
 
-  struct shape_renderer
+  export struct shape_renderer
   {
     virtual void update_node(std::optional<std::string_view> parent_node_name, std::string_view node_name) = 0;
     virtual void update_object(std::optional<std::string_view> parent_node_name, std::string_view object_name) = 0;
@@ -42,7 +38,7 @@ namespace siege::content
     shape_renderer(shape_renderer&&) = delete;
   };
 
-  struct sub_sequence_info
+  export struct sub_sequence_info
   {
     std::int32_t node_index;
     std::string node_name;
@@ -55,7 +51,7 @@ namespace siege::content
     bool enabled;
   };
 
-  struct sequence_info
+  export struct sequence_info
   {
     std::int32_t index;
     std::string name;
@@ -63,12 +59,12 @@ namespace siege::content
     std::vector<sub_sequence_info> sub_sequences;
   };
 
-  inline std::string to_string(const rgb_data& data)
+  export inline std::string to_string(const rgb_data& data)
   {
     return "rgba(" + std::to_string(data.red) + ", " + std::to_string(data.green) + ", " + std::to_string(data.blue) + ", " + std::to_string(data.rgb_flags) + ")";
   }
 
-  struct material
+  export struct material
   {
     using metadata_type = std::variant<std::int32_t, std::uint32_t, std::int16_t, std::uint16_t, float, rgb_data>;
     std::string filename;
@@ -79,12 +75,12 @@ namespace siege::content
 
       return std::visit([](const auto& val) {
         return to_string(val);
-      }, data);
+      },
+        data);
     }
   };
 
-  
-  class renderable_shape_value
+  export class renderable_shape_value
   {
   public:
     template<typename TTest>
@@ -110,7 +106,6 @@ namespace siege::content
       return get_base(raw)->get_materials();
     }
 
-    
     inline void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
     {
       return get_base(const_cast<std::any&>(raw))->render_shape(renderer, detail_level_indexes, sequences);
@@ -126,5 +121,3 @@ namespace siege::content
     renderable_shape* (*get_base)(std::any& raw);
   };
 }
-
-#endif//DARKSTARDTSCONVERTER_RENDERABLE_SHAPE_HPP

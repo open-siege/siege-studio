@@ -1,12 +1,12 @@
 module;
 
-#include <siege/content/renderable_shape.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 export module siege.content.dts.renderable;
 
 import std;
 import siege.content.dts;
+export import siege.content.renderable;
 
 template<class... Ts>
 struct overloaded : Ts...

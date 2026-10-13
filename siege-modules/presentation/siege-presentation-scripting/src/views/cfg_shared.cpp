@@ -1,5 +1,6 @@
 module;
 
+#include <siege/platform/shared.hpp>
 #include <siege/platform/stream.hpp>
 
 export module cfg.shared;

@@ -2,11 +2,11 @@ module;
 
 #include <siege/platform/shared.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
-#include <siege/content/3d_structures.hpp>
 
 export module siege.content.dts;
 
 import std;
+export import siege.content.structures;
 
 // DTS - Dynamix ThreeSpace Shape v3 for 3Space v3 (Starsiege, Tribes, Trophy Bass 3D, Driver's Education)
 
