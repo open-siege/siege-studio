@@ -1,9 +1,13 @@
-#include <optional>
-#include <string_view>
-#include <algorithm>
-#include <siege/extension/shared.hpp>
-#include "id-tech-shared.hpp"
+module;
 
+#include <cassert>
+#include <siege/extension/shared.hpp>
+
+export module siege.extension.vampire;
+
+import std;
+import siege.extension.id_tech;
+import siege.configuration.shared;
 import siege.configuration.id_tech;
 
 using siege::platform::input_mapping_ex;
@@ -110,7 +114,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
 }
 }
 
-std::optional<std::string_view> mouse_key_for_vkey(const input_mapping_ex& mapping) noexcept
+export std::optional<std::string_view> mouse_key_for_vkey(const input_mapping_ex& mapping) noexcept
 {
   if (mapping.vkey == VK_LBUTTON)
   {
@@ -130,7 +134,7 @@ std::optional<std::string_view> mouse_key_for_vkey(const input_mapping_ex& mappi
   return std::nullopt;
 }
 
-std::optional<input_mapping_ex> vkey_for_mouse_key(const std::string_view& mapping) noexcept
+export std::optional<input_mapping_ex> vkey_for_mouse_key(const std::string_view& mapping) noexcept
 {
   input_mapping_ex result{};
   result.vkey = VK_LBUTTON;
@@ -155,7 +159,7 @@ std::optional<input_mapping_ex> vkey_for_mouse_key(const std::string_view& mappi
   return std::nullopt;
 }
 
-std::optional<std::string_view> joy_key_for_vkey(const input_mapping_ex& mapping) noexcept
+export std::optional<std::string_view> joy_key_for_vkey(const input_mapping_ex& mapping) noexcept
 {
   constexpr static std::array<std::string_view, 15> buttons{ {
     "joy1"sv,
@@ -264,7 +268,7 @@ constexpr auto& get_special_keys()
   return special_keys;
 }
 
-std::optional<std::string_view> bind_key_for_vkey(const input_mapping_ex& mapping) noexcept
+export std::optional<std::string_view> bind_key_for_vkey(const input_mapping_ex& mapping) noexcept
 {
   auto is_valid_key = [&](auto& key) {
     return key.vkey == mapping.vkey;
@@ -286,7 +290,7 @@ std::optional<std::string_view> bind_key_for_vkey(const input_mapping_ex& mappin
   return std::nullopt;
 }
 
-std::optional<input_mapping_ex> vkey_for_bind_key(const std::string_view& mapping) noexcept
+export std::optional<input_mapping_ex> vkey_for_bind_key(const std::string_view& mapping) noexcept
 {
   auto is_valid_key = [&](auto& key) {
     return key.name == mapping;
@@ -328,7 +332,7 @@ std::optional<input_mapping_ex> vkey_for_bind_key(const std::string_view& mappin
   return std::nullopt;
 }
 
-std::optional<std::string_view> pov_key_for_vkey(const input_mapping_ex& mapping) noexcept
+export std::optional<std::string_view> pov_key_for_vkey(const input_mapping_ex& mapping) noexcept
 {
   if (mapping.hardware_input_type == controller_input_type::hat && mapping.hardware_index == 0)
   {

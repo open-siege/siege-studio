@@ -1,26 +1,20 @@
-#include <cstring>
-#include <cstdint>
-#include <algorithm>
-#include <array>
-#include <unordered_set>
-#include <utility>
-#include <thread>
-#include <string_view>
-#include <fstream>
-#include <cassert>
+module;
+
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
-#include "id-tech-shared.hpp"
+export module siege.extension.id_tech.v2_0;
 
-import siege.resource.pak;
+import std;
+import siege.extension.id_tech;
+import siege.configuration.shared;
 import siege.configuration.id_tech;
+import siege.resource.pak;
 import siege.resource.zip;
 import siege.resource.cab;
 import siege.resource.iso;
-
 
 extern "C" {
 

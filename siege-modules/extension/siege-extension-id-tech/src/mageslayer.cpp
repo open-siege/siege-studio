@@ -1,20 +1,15 @@
-#include <cstring>
-#include <cstdint>
-#include <algorithm>
-#include <array>
-#include <unordered_set>
-#include <utility>
-#include <thread>
-#include <string_view>
-#include <fstream>
-#include <cassert>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include "id-tech-shared.hpp"
+#include <cassert>
 
+
+import std;
+import siege.extension.id_tech;
+import siege.configuration.shared;
 import siege.configuration.id_tech;
+import siege.extension.vampire;
 
 using siege::platform::hardware_context;
 using siege::platform::game_action;
@@ -33,13 +28,6 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 namespace fs = std::filesystem;
 namespace stl = std::ranges;
 using namespace std::literals;
-
-std::optional<std::string_view> bind_key_for_vkey(const input_mapping_ex& mapping) noexcept;
-std::optional<std::string_view> mouse_key_for_vkey(const input_mapping_ex& mapping) noexcept;
-std::optional<input_mapping_ex> vkey_for_mouse_key(const std::string_view& mapping) noexcept;
-std::optional<input_mapping_ex> vkey_for_bind_key(const std::string_view& mapping) noexcept;
-std::optional<std::string_view> joy_key_for_vkey(const input_mapping_ex& mapping) noexcept;
-std::optional<std::string_view> pov_key_for_vkey(const input_mapping_ex& mapping) noexcept;
 
 constexpr std::string_view str(const std::array<char, 32>& data) noexcept
 {
@@ -529,9 +517,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
 
   return std::errc{};
 }
-
-predefined_string*
-  get_predefined_id_tech_2_map_command_line_settings_with_extension(const wchar_t* base_dir, bool include_zip, std::string_view map_ext) noexcept;
 
 predefined_string*
   get_predefined_string_command_line_settings(const wchar_t* name) noexcept

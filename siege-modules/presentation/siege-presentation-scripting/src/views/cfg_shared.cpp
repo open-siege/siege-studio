@@ -1,10 +1,10 @@
 module;
 
-#include <siege/configuration/shared.hpp>
 #include <siege/platform/stream.hpp>
 
 export module cfg.shared;
 import std;
+import siege.configuration.shared;
 import siege.configuration.id_tech;
 
 namespace siege::views

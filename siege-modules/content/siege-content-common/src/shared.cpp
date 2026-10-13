@@ -1,10 +1,164 @@
-#include <siege/configuration/shared.hpp>
-#include <algorithm>
+module;
+
+#include <siege/platform/shared.hpp>
 #include <siege/platform/endian_arithmetic.hpp>
+
+export module siege.configuration.shared;
+
+import std;
 
 namespace siege::configuration
 {
   namespace endian = siege::platform;
+
+  export struct key_type
+  {
+    inline key_type(std::string_view key) : data(std::array<std::string_view, 1>{ key }) {}
+
+    inline key_type(std::vector<std::string_view> key) : data(std::move(key)) {}
+
+    inline key_type(std::initializer_list<std::string_view> key)
+    {
+      if (key.size() == 1)
+      {
+        data = std::array<std::string_view, 1>{ *key.begin() };
+      }
+      else if (key.size() == 2)
+      {
+        data = std::array<std::string_view, 2>{ *key.begin(), *std::next(key.begin()) };
+      }
+      else
+      {
+        data = std::vector(key);
+      }
+    }
+
+    inline bool operator==(std::string_view rhs) const
+    {
+      return std::visit([&](auto& a) {
+        if (a.size() > 0)
+        {
+          return a[0] == rhs;
+        }
+
+        return false;
+      },
+        data);
+    }
+
+    inline bool empty() const
+    {
+      return std::visit([&](auto& a) -> bool {
+        return a.empty();
+      },
+        data);
+    }
+
+    inline std::string_view at(std::size_t index) const
+    {
+      return std::visit([&](auto& a) -> std::string_view {
+        if (a.empty())
+        {
+          return "";
+        }
+
+        if (index > a.size() - 1)
+        {
+          return "";
+        }
+
+        return a[index];
+      },
+        data);
+    }
+
+    inline bool operator==(const key_type& rhs) const
+    {
+      if (data.index() == rhs.data.index())
+      {
+        return data == rhs.data;
+      }
+
+      return std::visit([&](auto& a) {
+        return std::visit([&](auto& b) {
+          if (a.size() == b.size())
+          {
+            return std::equal(a.begin(), a.end(), b.begin());
+          }
+
+          return false;
+        },
+          rhs.data);
+      },
+        data);
+    }
+
+    inline bool operator!=(const key_type& rhs) const
+    {
+      return !(*this == rhs);
+    }
+
+    template<std::size_t ArraySize>
+    inline std::array<std::string_view, ArraySize> to_array() const
+    {
+      if (std::holds_alternative<std::array<std::string_view, ArraySize>>(data))
+      {
+        return std::get<std::array<std::string_view, ArraySize>>(data);
+      }
+
+      return std::visit([](auto& value) {
+        std::array<std::string_view, ArraySize> result;
+
+        if (value.size() > ArraySize)
+        {
+          std::copy_n(value.begin(), ArraySize, result.begin());
+        }
+        else
+        {
+          std::copy_n(value.begin(), value.size(), result.begin());
+        }
+
+        return result;
+      },
+        data);
+    }
+
+    std::variant<std::array<std::string_view, 1>, std::array<std::string_view, 2>, std::vector<std::string_view>> data;
+  };
+
+  export class text_game_config
+  {
+  public:
+    struct config_line
+    {
+      std::string_view raw_line;
+      key_type key_segments;
+      key_type value;
+    };
+
+    using persist = void(const std::any&, const std::vector<config_line>&, std::ostream&);
+
+    text_game_config(std::any&& context, persist&);
+    text_game_config(persist&);
+    text_game_config(std::any&& context, std::unique_ptr<char[]>&&, std::vector<config_line>&&, persist&);
+
+    std::vector<key_type> keys() const;
+    bool contains(key_type key) const;
+    key_type find(key_type key) const;
+    std::vector<config_line> entries_for(key_type key) const;
+    text_game_config&& emplace(key_type key, key_type value);
+    text_game_config&& remove(key_type key);
+
+    void save(std::ostream&) const;
+
+  private:
+    persist& save_config;
+    std::any context;
+    std::shared_ptr<const char[]> raw_data;
+    std::vector<config_line> line_entries;
+  };
+
+  export bool is_ascii_text_config(std::istream&);
 
   text_game_config::text_game_config(std::any&& context, text_game_config::persist& save_config)
     : save_config(save_config)
@@ -50,7 +204,6 @@ namespace siege::configuration
     return iter->value;
   }
 
-
   std::vector<text_game_config::config_line> text_game_config::entries_for(key_type key) const
   {
     auto count = std::count_if(line_entries.rbegin(), line_entries.rend(), [&](auto& entry) { return entry.key_segments == key; });
@@ -73,7 +226,6 @@ namespace siege::configuration
 
     return results;
   }
-
 
   bool text_game_config::contains(key_type key) const
   {

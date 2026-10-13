@@ -3,11 +3,11 @@ module;
 #include <limits>
 #include <memory>
 #include <any>
-#include <siege/configuration/shared.hpp>
 
 export module siege.configuration.ini;
 
 import std;
+import siege.configuration.shared;
 
 
 namespace siege::configuration::common::ini

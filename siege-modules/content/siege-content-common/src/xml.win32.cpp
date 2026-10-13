@@ -1,6 +1,5 @@
 module;
 
-#include <siege/configuration/shared.hpp>
 #include <siege/platform/win/wic.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <xmllite.h>
@@ -14,6 +13,7 @@ module;
 export module siege.configuration.xml;
 
 import std;
+import siege.configuration.shared;
 
 struct xml_element
 {

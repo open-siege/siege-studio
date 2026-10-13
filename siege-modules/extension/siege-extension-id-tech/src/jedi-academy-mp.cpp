@@ -1,21 +1,15 @@
-#include <cstring>
-#include <cstdint>
-#include <algorithm>
-#include <array>
-#include <unordered_set>
-#include <utility>
-#include <thread>
-#include <string_view>
-#include <fstream>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
-#include "id-tech-shared.hpp"
 
+
+
+import std;
+import siege.extension.id_tech;
+import siege.configuration.shared;
 import siege.configuration.id_tech;
-
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -266,9 +260,6 @@ predefined_int*
 
   return nullptr;
 }
-
-predefined_string*
-  get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept;
 
 predefined_string*
   get_predefined_string_command_line_settings(const wchar_t* name) noexcept

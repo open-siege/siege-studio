@@ -1,10 +1,10 @@
 module;
 
-#include <siege/configuration/shared.hpp>
 
 export module siege.configuration.id_tech;
 
 import std;
+import siege.configuration.shared;
 
 namespace siege::configuration::id_tech
 {

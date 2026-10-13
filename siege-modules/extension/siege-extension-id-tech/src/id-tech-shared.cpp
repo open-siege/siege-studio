@@ -1,30 +1,115 @@
-#include <cstring>
-#include <cstdint>
-#include <algorithm>
-#include <array>
-#include <unordered_set>
-#include <utility>
-#include <thread>
-#include <string_view>
-#include <fstream>
+module;
+
 #include <cassert>
-#include <execution>
-#include <mutex>
+#include <cstring>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
+#include <siege/platform/extension_module.hpp>
 
-#include "id-tech-shared.hpp"
+export module siege.extension.id_tech;
 
-import siege.resource.pak;
+import std;
+import siege.configuration.shared;
 import siege.configuration.id_tech;
+import siege.resource.pak;
 import siege.resource.zip;
 import siege.resource.cab;
 import siege.resource.iso;
 
-namespace fs = std::filesystem;
+
+export using hardware_context = siege::platform::hardware_context;
+export using mouse_context = siege::platform::mouse_context;
+export using keyboard_context = siege::platform::keyboard_context;
+
+export std::optional<siege::configuration::text_game_config> load_config_from_file(std::filesystem::path real_file_path);
+export std::optional<siege::configuration::text_game_config> load_config_from_pak(std::filesystem::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path);
+export std::optional<siege::configuration::text_game_config> load_config_from_pk3(std::filesystem::path real_file_path, std::wstring pak_path, std::wstring pak_folder_path);
+
+export std::optional<std::pair<WORD, hardware_context>> key_to_vkey(std::string_view value);
+export std::optional<std::string> vkey_to_key(WORD vkey, hardware_context context);
+export std::optional<std::string_view> hardware_index_to_button_name_id_tech_2_0(WORD index);
+export std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0(WORD index);
+export std::optional<std::string_view> hardware_index_to_button_name_id_tech_3_0_from_zero(WORD index);
+export std::optional<std::string_view> dpad_name_id_tech_2_0(WORD index);
+export std::optional<std::string_view> dpad_name_id_tech_3_0(WORD index);
+export std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index);
+export std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD vkey, WORD index);
+export std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD vkey, WORD index);
+
+export void upsert_mouse_bindings(siege::configuration::text_game_config& config, siege::platform::mouse_binding& binding);
+export void upsert_keyboard_bindings(siege::configuration::text_game_config& config, siege::platform::keyboard_binding& binding);
+export void upsert_mouse_axis_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::mouse_binding& binding, mouse_context default_context = mouse_context::mouse);
+export void append_controller_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<WORD, std::string_view>> actions, siege::platform::controller_binding& binding);
+export void insert_string_setting_once(siege::platform::game_command_line_args& args, std::wstring_view name, std::wstring_view value);
+export void insert_string_setting_once(std::span<siege::platform::game_command_line_args::string_setting> settings, std::wstring_view name, std::wstring_view value);
+
+export struct mapping_context
+{
+  std::optional<std::string_view> (*index_to_axis)(WORD vkey, WORD index) = hardware_index_to_joystick_axis_id_tech_2_5;
+  std::optional<std::string_view> (*index_to_button)(WORD index) = hardware_index_to_button_name_id_tech_2_0;
+  std::optional<std::string_view> (*dpad_name)(WORD index) = dpad_name_id_tech_2_0;
+  std::string_view axis_set_prefix = "set";
+  bool supports_triggers_as_buttons = false;
+};
+
+export struct q3_mapping_context : mapping_context
+{
+  q3_mapping_context()
+  {
+    index_to_axis = hardware_index_to_joystick_axis_id_tech_3_0;
+    index_to_button = hardware_index_to_button_name_id_tech_3_0;
+    dpad_name = dpad_name_id_tech_3_0;
+    axis_set_prefix = "bind";
+    supports_triggers_as_buttons = true;
+  };
+};
+
+export struct raven_mapping_context : mapping_context
+{
+  raven_mapping_context()
+  {
+    index_to_axis = hardware_index_to_joystick_axis_id_tech_3_0;
+    index_to_button = hardware_index_to_button_name_id_tech_3_0_from_zero;
+    dpad_name = dpad_name_id_tech_3_0;
+    axis_set_prefix = "bind";
+    supports_triggers_as_buttons = true;
+  };
+};
+
+export void unbind_joystick_for_quake_1_config(siege::configuration::text_game_config& config);
+export void unbind_joystick_for_quake_2_config(siege::configuration::text_game_config& config);
+export void unbind_joystick_for_quake_3_config(siege::configuration::text_game_config& config, mapping_context context = q3_mapping_context{});
+export bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
+export void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<WORD> not_target_vkey = std::nullopt);
+
+export inline bool is_vkey_for_controller(WORD vkey)
+{
+  return vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
+}
+
+export inline bool is_vkey_for_mouse(WORD vkey)
+{
+  return vkey == VK_LBUTTON || vkey == VK_RBUTTON || vkey == VK_MBUTTON || vkey == VK_XBUTTON1 || vkey == VK_XBUTTON2;
+}
+
+export inline bool is_vkey_for_keyboard(WORD vkey)
+{
+  return !is_vkey_for_mouse(vkey) && !is_vkey_for_controller(vkey);
+}
+
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+
+export extern "C" std::errc apply_dpi_awareness(const wchar_t* exe_path_str);
+export extern "C" siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_2_map_command_line_settings_with_extension(const wchar_t* base_dir, bool include_zip, std::string_view map_ext) noexcept;
+export extern "C" siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_2_map_command_line_settings(const wchar_t* base_dir, bool include_zip) noexcept;
+export extern "C" siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs, bool (*partition)(std::wstring_view) = nullptr) noexcept;
+export extern "C" siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept;
+
+
+
+namespace fs = std::filesystem;
 
 const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_vkey_mapping()
 {

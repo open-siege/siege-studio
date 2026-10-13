@@ -2,40 +2,49 @@ cmake_minimum_required(VERSION 3.30)
 project(siege-extension-id-tech)
 
 if (WIN32)
-    add_library(siege-extension-id-tech-2-0 STATIC src/id-tech-shared.cpp src/id-tech-2-0-shared.cpp)
-    target_include_directories(siege-extension-id-tech-2-0 PUBLIC src)
-    
-    add_library(siege-extension-take-no-prisoners SHARED src/vampire-shared.cpp src/take-no-prisoners.cpp src/vampire.def)
-    add_library(siege-extension-mageslayer SHARED src/vampire-shared.cpp src/mageslayer.cpp src/vampire.def)
+    add_library(siege-extension-id-tech-shared STATIC src/id-tech-shared.cpp)
+    target_include_directories(siege-extension-id-tech-shared PUBLIC src)
+    target_link_libraries(siege-extension-id-tech-shared PUBLIC siege-extension siege-content-id-tech-resource siege-content-id-tech-scripting siege-content-common)
 
-    set(VAMPIRE_TARGETS siege-extension-take-no-prisoners 
-                        siege-extension-mageslayer) 
+    add_library(siege-extension-id-tech-2-0 STATIC src/id-tech-2-0-shared.cpp)
+    target_link_libraries(siege-extension-id-tech-2-0 PUBLIC siege-extension-id-tech-shared)
 
-    foreach(EXT_TARGET IN ITEMS ${ID_TECH_2_0_TARGETS})
-        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-0)
+    add_library(siege-extension-id-tech-2-5 STATIC src/id-tech-2-5-shared.cpp)
+    target_link_libraries(siege-extension-id-tech-2-5 PUBLIC siege-extension-id-tech-shared)
+
+    add_library(siege-extension-id-tech-3-0 STATIC src/id-tech-3-0-shared.cpp)
+    target_link_libraries(siege-extension-id-tech-3-0 PUBLIC siege-extension-id-tech-shared)
+
+    add_library(siege-extension-vampire-shared STATIC src/vampire-shared.cpp)
+    target_link_libraries(siege-extension-vampire-shared PUBLIC siege-extension-id-tech-shared)
+
+    add_library(siege-extension-take-no-prisoners SHARED src/take-no-prisoners.cpp src/vampire.def)
+    add_library(siege-extension-mageslayer SHARED src/mageslayer.cpp src/vampire.def)
+
+    set(VAMPIRE_TARGETS siege-extension-take-no-prisoners
+                        siege-extension-mageslayer)
+
+    foreach(EXT_TARGET IN ITEMS ${VAMPIRE_TARGETS})
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-vampire-shared)
     endforeach()
 
-    
     add_library(siege-extension-quake SHARED src/quake.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2 SHARED src/hexen-2.cpp src/id-tech-2.def)
     add_library(siege-extension-hexen-2-praevus SHARED src/hexen-2-praevus.cpp src/hexen-2-praevus.def)
     add_library(siege-extension-cia-operative SHARED src/cia-operative.cpp src/id-tech-2.def)
     add_library(siege-extension-laser-arena SHARED src/laser-arena.cpp src/id-tech-2.def)
     add_library(siege-extension-battle-metal SHARED src/battle-metal.cpp src/id-tech-2.def)
-    
-    set(ID_TECH_2_0_TARGETS siege-extension-quake 
-                            siege-extension-hexen-2 
-                            siege-extension-hexen-2-praevus 
+
+    set(ID_TECH_2_0_TARGETS siege-extension-quake
+                            siege-extension-hexen-2
+                            siege-extension-hexen-2-praevus
                             siege-extension-cia-operative
                             siege-extension-laser-arena
-                            siege-extension-battle-metal) 
+                            siege-extension-battle-metal)
 
     foreach(EXT_TARGET IN ITEMS ${ID_TECH_2_0_TARGETS})
         target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-0)
     endforeach()
-
-    add_library(siege-extension-id-tech-2-5 STATIC src/id-tech-shared.cpp src/id-tech-2-5-shared.cpp)
-    target_include_directories(siege-extension-id-tech-2-5 PUBLIC src)
 
     add_library(siege-extension-anachronox SHARED src/anox.cpp src/anox.def)
     add_library(siege-extension-quake-2 SHARED src/quake-2.cpp src/id-tech-2.5.def)
@@ -45,22 +54,17 @@ if (WIN32)
     add_library(siege-extension-sin SHARED src/sin.cpp src/id-tech-2.5.def)
     add_library(siege-extension-soldier-of-fortune SHARED src/sof.cpp src/id-tech-2.5-sof.def)
 
-    set(ID_TECH_2_5_TARGETS siege-extension-anachronox 
+    set(ID_TECH_2_5_TARGETS siege-extension-anachronox
                             siege-extension-quake-2
                             siege-extension-heretic-2
                             siege-extension-daikatana
                             siege-extension-kingpin
                             siege-extension-sin
-                            siege-extension-soldier-of-fortune
-    ) 
-    
-    
+                            siege-extension-soldier-of-fortune)
+
     foreach(EXT_TARGET IN ITEMS ${ID_TECH_2_5_TARGETS})
         target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-2-5)
     endforeach()
-
-    add_library(siege-extension-id-tech-3-0 STATIC src/id-tech-shared.cpp src/id-tech-3-0-shared.cpp)
-    target_include_directories(siege-extension-id-tech-3-0 PUBLIC src)
 
     add_library(siege-extension-return-to-castle-wolf-sp SHARED src/wolf-sp.cpp src/id-tech-3.def)
     add_library(siege-extension-return-to-castle-wolf-mp SHARED src/wolf-mp.cpp src/id-tech-3.def)
@@ -82,7 +86,7 @@ if (WIN32)
     add_library(siege-extension-quake-live SHARED src/quake-live.cpp src/id-tech-3.def)
     add_library(siege-extension-space-trader SHARED src/space-trader.cpp src/space-trader.def)
     add_library(siege-extension-iron-grip SHARED src/iron-grip.cpp src/id-tech-3.def)
-    
+
     add_library(siege-extension-fakk-2 SHARED src/fakk-2.cpp src/fakk-2.def)
     add_library(siege-extension-alice SHARED src/alice.cpp src/id-tech-3.def)
     add_library(siege-extension-allied-assault SHARED src/allied-assault.cpp src/id-tech-3-moh.def)
@@ -90,21 +94,45 @@ if (WIN32)
     add_library(siege-extension-allied-assault-spearhead SHARED src/allied-assault-spearhead.cpp src/id-tech-3-moh.def)
     add_library(siege-extension-pacific-assault SHARED src/pacific-assault.cpp src/id-tech-3-moh.def)
 
-    
+    set(ID_TECH_3_0_TARGETS siege-extension-return-to-castle-wolf-sp
+                            siege-extension-return-to-castle-wolf-mp
+                            siege-extension-wolf-et
+                            siege-extension-elite-force-sp
+                            siege-extension-elite-force-mp
+                            siege-extension-elite-force-2
+                            siege-extension-jedi-outcast-sp
+                            siege-extension-jedi-academy-sp
+                            siege-extension-jedi-outcast-mp
+                            siege-extension-jedi-academy-mp
+                            siege-extension-soldier-of-fortune-2-sp
+                            siege-extension-soldier-of-fortune-2-mp
+                            siege-extension-call-of-duty-sp
+                            siege-extension-call-of-duty-uo-sp
+                            siege-extension-call-of-duty-mp
+                            siege-extension-call-of-duty-uo-mp
+                            siege-extension-quake-3
+                            siege-extension-quake-live
+                            siege-extension-space-trader
+                            siege-extension-iron-grip
+                            siege-extension-fakk-2
+                            siege-extension-alice
+                            siege-extension-allied-assault
+                            siege-extension-allied-assault-breakthrough
+                            siege-extension-allied-assault-spearhead
+                            siege-extension-pacific-assault)
+
+    foreach(EXT_TARGET IN ITEMS ${ID_TECH_3_0_TARGETS})
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-3-0)
+    endforeach()
+
     get_property(ID_TECH_TARGETS
                 DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
 
     foreach(EXT_TARGET IN ITEMS ${ID_TECH_TARGETS})
-        get_target_property(TARGET_TYPE ${EXT_TARGET} TYPE)
-
-        if (${TARGET_TYPE} STREQUAL "STATIC_LIBRARY" OR EXT_TARGET IN_LIST ID_TECH_2_0_TARGETS OR EXT_TARGET IN_LIST ID_TECH_2_5_TARGETS)
-            continue()
-        endif()
-        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension-id-tech-3-0)
-    endforeach()
-
-    foreach(EXT_TARGET IN ITEMS ${ID_TECH_TARGETS})
         set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
-	    target_link_libraries(${EXT_TARGET} PRIVATE siege-extension siege-content-id-tech-resource siege-content-id-tech-scripting)
+        get_target_property(TARGET_TYPE ${EXT_TARGET} TYPE)
+        if (${TARGET_TYPE} STREQUAL "SHARED_LIBRARY")
+            target_link_libraries(${EXT_TARGET} PRIVATE siege-extension siege-content-id-tech-resource siege-content-id-tech-scripting)
+        endif()
     endforeach()
 endif()
