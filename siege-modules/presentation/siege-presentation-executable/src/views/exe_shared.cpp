@@ -4,8 +4,6 @@ module;
 #include <siege/platform/win/module.hpp>
 #include <siege/platform/win/registry.hpp>
 #include <siege/platform/shared.hpp>
-#include <siege/platform/extension_module.hpp>
-#include <siege/platform/extension_module_client.hpp>
 #include <xinput.h>
 #define DIRECTINPUT_VERSION 0x800
 #include <dinput.h>// DIJOYSTATE only
@@ -17,6 +15,7 @@ module;
 export module exe.shared;
 
 import std;
+export import siege.platform.extension;
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;

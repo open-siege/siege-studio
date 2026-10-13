@@ -3,23 +3,14 @@ project(siege-extension-3space)
 
 if (WIN32)
     add_library(siege-extension-starsiege SHARED src/starsiege.cpp src/starsiege.def)
-    set_target_properties(siege-extension-starsiege PROPERTIES CXX_STANDARD 23)
-    target_link_libraries(siege-extension-starsiege PRIVATE siege-extension)
-
     add_library(siege-extension-tribes SHARED src/tribes.cpp src/starsiege.def)
-    set_target_properties(siege-extension-tribes PROPERTIES CXX_STANDARD 23)
-    target_link_libraries(siege-extension-tribes PRIVATE siege-extension)
-
     add_library(siege-extension-mask-of-eternity SHARED src/moe.cpp src/darkstar.def)
-    set_target_properties(siege-extension-mask-of-eternity PROPERTIES CXX_STANDARD 23)
-    target_link_libraries(siege-extension-mask-of-eternity PRIVATE siege-extension)
-
     add_library(siege-extension-red-baron-3d-sp SHARED src/red-baron-3d-sp.cpp src/3space.def)
-    set_target_properties(siege-extension-red-baron-3d-sp PROPERTIES CXX_STANDARD 23)
-    target_link_libraries(siege-extension-red-baron-3d-sp PRIVATE siege-extension)
-
     add_library(siege-extension-red-baron-3d-mp SHARED src/red-baron-3d-mp.cpp src/3space.def)
-    set_target_properties(siege-extension-red-baron-3d-mp PROPERTIES CXX_STANDARD 23)
-    target_link_libraries(siege-extension-red-baron-3d-mp PRIVATE siege-extension)
 
+    get_property(EXT_TARGETS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(EXT_TARGET IN ITEMS ${EXT_TARGETS})
+        set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
+        target_link_libraries(${EXT_TARGET} PRIVATE siege-extension)
+    endforeach()
 endif()

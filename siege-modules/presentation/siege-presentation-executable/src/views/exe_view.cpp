@@ -1,4 +1,4 @@
-﻿module;
+module;
 
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/drawing.hpp>
@@ -7,7 +7,6 @@
 #include <siege/platform/win/dialog.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/threading.hpp>
-#include <siege/platform/extension_module.hpp>
 #include <siege/extension/input_filter.hpp>
 #include <Knownfolders.h>
 

@@ -3,6 +3,8 @@
 #include <siege/extension/shared.hpp>
 
 
+import siege.platform.extension;
+
 extern "C" {
 using namespace std::literals;
 

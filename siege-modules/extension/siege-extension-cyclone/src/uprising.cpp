@@ -2,6 +2,7 @@
 #include <cassert>
 #include <utility>
 
+import siege.platform.extension;
 import siege.configuration.uprising;
 
 namespace fs = std::filesystem;

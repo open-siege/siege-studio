@@ -2,15 +2,16 @@ module;
 
 #include <cassert>
 #include <cstring>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/file.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <detours.h>
 #include <siege/extension/shared.hpp>
-#include <siege/platform/extension_module.hpp>
 
 export module siege.extension.id_tech;
 
 import std;
+export import siege.platform.extension;
 import siege.configuration.shared;
 import siege.configuration.id_tech;
 import siege.resource.pak;

@@ -17,7 +17,7 @@ if (WIN32)
                 DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
 
     foreach(EXT_TARGET IN ITEMS ${OTHER_TARGETS})
-        set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23)
+        set_target_properties(${EXT_TARGET} PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
         target_link_libraries(${EXT_TARGET} PRIVATE siege-extension)
     endforeach()
 endif()

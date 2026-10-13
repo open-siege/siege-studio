@@ -1,7 +1,6 @@
 module;
 
 #include <siege/platform/win/dialog.hpp>
-#include <siege/platform/extension_module.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/capabilities.hpp>
 #include <hidusage.h>

@@ -1,11 +1,10 @@
-﻿module;
+module;
 
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/window_module.hpp>
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
-#include <siege/platform/extension_module.hpp>
 #include <siege/extension/input_filter.hpp>
 #include <detours.h>
 #include <imagehlp.h>

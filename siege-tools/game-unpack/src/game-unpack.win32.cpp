@@ -2,7 +2,6 @@
 
 #include <SDKDDKVer.h>
 #include <siege/platform/installation_module.hpp>
-#include <siege/platform/extension_module.hpp>
 #include <siege/platform/win/shell.hpp>
 #include <siege/platform/win/common_controls.hpp>
 #include <siege/platform/win/threading.hpp>

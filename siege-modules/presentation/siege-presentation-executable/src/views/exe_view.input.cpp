@@ -5,7 +5,6 @@ module;
 #include <siege/platform/win/drawing.hpp>
 #include <siege/platform/win/theming.hpp>
 #include <siege/platform/win/dialog.hpp>
-#include <siege/platform/extension_module.hpp>
 #include <siege/extension/input_filter.hpp>
 #include <hidusage.h>
 #include <xinput.h>

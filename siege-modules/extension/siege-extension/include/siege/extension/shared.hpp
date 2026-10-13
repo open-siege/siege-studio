@@ -7,8 +7,8 @@
 #include <string_view>
 #include <unordered_set>
 #include <fstream>
+#include <siege/platform/shared.hpp>
 #include <siege/platform/win/file.hpp>
-#include <siege/platform/extension_module.hpp>
 
 namespace siege
 {

@@ -12,6 +12,8 @@
 #include <detours.h>
 #include <siege/extension/shared.hpp>
 
+import siege.platform.extension;
+
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using namespace std::literals;
 

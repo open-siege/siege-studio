@@ -1,6 +1,5 @@
 module;
 #include <siege/platform/win/window.hpp>
-#include <siege/platform/extension_module.hpp>
 #include <siege/platform/win/capabilities.hpp>
 #include <optional>
 #include <array>

@@ -8,7 +8,6 @@
 #include <siege/platform/presentation_module.hpp>
 #include <siege/platform/win/threading.hpp>
 #include <siege/platform/win/shell.hpp>
-#include <siege/platform/extension_module_client.hpp>
 #include <utility>
 #include <future>
 #include <fstream>
@@ -18,6 +17,8 @@
 #include <mutex>
 #include <vector>
 #include <unordered_set>
+
+import siege.platform.extension;
 
 namespace siege::views
 {

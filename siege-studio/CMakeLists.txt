@@ -20,14 +20,17 @@ if (WIN32)
 					 src/views/sqlite_test.cpp)
 	set_source_files_properties(src/views/default_view.cpp PROPERTIES COMPILE_OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 	add_library(siege-studio-core SHARED ${STUDIO_FILES} src/siege-studio-core.def)
+	set_target_properties(siege-studio-core PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
 	target_compile_definitions(siege-studio-core PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
 	target_link_libraries(siege-studio-core PUBLIC siege-win-desktop Imagehlp)
 
 	add_library(siege-studio-core-static STATIC ${STUDIO_FILES})	
+	set_target_properties(siege-studio-core-static PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
 	target_compile_definitions(siege-studio-core-static PRIVATE UNICODE SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
 	target_link_libraries(siege-studio-core-static PUBLIC siege-win-desktop Imagehlp)
 
 	add_executable(siege-studio WIN32 src/siege-studio.cpp src/app-update.cpp src/siege-studio.manifest src/siege-studio.rc)
+	set_target_properties(siege-studio PROPERTIES CXX_STANDARD 23 CXX_SCAN_FOR_MODULES ON)
 	target_compile_definitions(siege-studio PRIVATE UNICODE
 	SIEGE_CHANNEL_TYPE=${SIEGE_CHANNEL_TYPE}
 	SIEGE_MAJOR_VERSION=${SIEGE_MAJOR_VERSION} SIEGE_MINOR_VERSION=${SIEGE_MINOR_VERSION})
