@@ -4,6 +4,8 @@
 * In the controllers dialog, keyboards and mice are named by number instead of "X".
 * The controllers dialog is rendered with the correct theme now.
 * Moved and renamed network fields for clarity. 
+* The name of the game extension is always shown
+* Settings for each game are grouped into more categories than just multiplayer and other.
 * Removed "scripting" tab from exe view and all function/variable name exports from each extension.
    * The idea was to have a reference for game scripts, but it's too basic for practical use.
    * The long term goal is to curate the various game commands and build around that instead.

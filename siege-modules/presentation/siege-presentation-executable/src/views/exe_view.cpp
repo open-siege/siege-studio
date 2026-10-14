@@ -566,7 +566,7 @@ namespace siege::views
           column.mask = column.mask | LVIF_PARAM | LVIF_GROUPID;
           column.sub_items = { setting.get_computed_display_value() };
           column.lParam = (LPARAM)setting_index;
-          column.iGroupId = setting.group_id;
+          column.iGroupId = static_cast<int>(setting.group_id);
 
           setting.persist = [setting_index, launch_table_hwnd = launch.launch_table.get(), &setting, persist = std::move(setting.persist)]() {
             persist();

@@ -44,12 +44,31 @@ namespace siege::views
 
     launch.launch_table.InsertGroup(-1, LVGROUP{
                                           .pszHeader = const_cast<wchar_t*>(L"Multiplayer Options"),
-                                          .iGroupId = 1,
+                                          .iGroupId = static_cast<int>(setting_group::networking),
                                           .state = LVGS_COLLAPSIBLE,
                                         });
+
+    launch.launch_table.InsertGroup(-1, LVGROUP{
+                                          .pszHeader = const_cast<wchar_t*>(L"Graphics Options"),
+                                          .iGroupId = static_cast<int>(setting_group::graphics),
+                                          .state = LVGS_COLLAPSIBLE,
+                                        });
+
+    launch.launch_table.InsertGroup(-1, LVGROUP{
+                                          .pszHeader = const_cast<wchar_t*>(L"Input Options"),
+                                          .iGroupId = static_cast<int>(setting_group::input),
+                                          .state = LVGS_COLLAPSIBLE,
+                                        });
+
+    launch.launch_table.InsertGroup(-1, LVGROUP{
+                                          .pszHeader = const_cast<wchar_t*>(L"Sound Options"),
+                                          .iGroupId = static_cast<int>(setting_group::sound),
+                                          .state = LVGS_COLLAPSIBLE,
+                                        });
+
     launch.launch_table.InsertGroup(-1, LVGROUP{
                                           .pszHeader = const_cast<wchar_t*>(L"Other Options"),
-                                          .iGroupId = 2,
+                                          .iGroupId = static_cast<int>(setting_group::other),
                                           .state = LVGS_COLLAPSIBLE,
                                         });
 

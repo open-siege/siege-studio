@@ -6,7 +6,6 @@ export module siege.platform.extension;
 
 import std;
 import win32.module;
-
 import siege.platform.shared;
 
 namespace siege::platform
@@ -151,6 +150,33 @@ namespace siege::platform
     const fs_char* preferred_exe_setting = FSL"";
     const fs_char* controller_enabled_setting = FSL"";
     const fs_char* mouse_enabled_setting = FSL"";
+    const fs_char* selected_map_setting = FSL"";
+    const fs_char* map_list_setting = FSL"";
+    const fs_char* custom_map_list_setting = FSL"";
+    const fs_char* max_players_setting = FSL"";
+    const fs_char* bot_count_setting = FSL "";
+    const fs_char* auto_balance_bots_setting = FSL "";
+    const fs_char* auto_teams_setting = FSL "";
+    const fs_char* max_time_limit_setting = FSL"";
+    const fs_char* max_score_limit_setting = FSL"";
+    const fs_char* multiplayer_game_mode_setting = FSL"";
+    const fs_char* multiplayer_game_flags_setting = FSL"";
+    const fs_char* predefined_resolution_setting = FSL"";
+    const fs_char* custom_width_setting = FSL"";
+    const fs_char* custom_height_setting = FSL"";
+    const fs_char* custom_refresh_rate_setting = FSL"";
+    const fs_char* v_sync_setting = FSL"";
+    const fs_char* fullscreen_setting = FSL"";
+    const fs_char* fov_setting = FSL"";
+    const fs_char* master_sound_enabled = FSL"";
+    const fs_char* sfx_enabled = FSL"";
+    const fs_char* music_enabled = FSL"";
+    const fs_char* voice_enabled = FSL"";
+    const fs_char* master_volume_setting = FSL"";
+    const fs_char* sfx_volume_setting = FSL"";
+    const fs_char* music_volume_setting = FSL"";
+    const fs_char* voice_volume_setting = FSL"";
+    const fs_char* sound_quality_setting = FSL"";
   };
 
   export template<typename TValue>

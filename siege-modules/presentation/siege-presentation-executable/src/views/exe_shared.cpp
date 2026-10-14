@@ -22,10 +22,21 @@ namespace fs = std::filesystem;
 namespace stl = std::ranges;
 using siege::platform::predefined_int;
 using siege::platform::predefined_string;
+using siege::platform::game_command_line_caps;
 
 namespace siege::views
 {
   export constexpr auto zt_fallback_ip = L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4";
+
+  export enum struct setting_group {
+    other = 1,
+    graphics,
+    sound,
+    input,
+    networking
+  };
+
+  setting_group get_group_for_setting(std::wstring_view name, const game_command_line_caps&);
 
   export struct input_action_binding
   {
@@ -80,7 +91,6 @@ namespace siege::views
 
   export struct game_setting
   {
-    using game_command_line_caps = siege::platform::game_command_line_caps;
     std::wstring setting_name;
     extension_setting_type type;
     std::variant<std::wstring, int, float, bool> value;
@@ -88,7 +98,7 @@ namespace siege::views
     std::wstring display_value;
     bool visible = true;
     bool enabled = true;
-    int group_id = 0;
+    setting_group group_id = setting_group::other;
     std::function<std::span<const siege::platform::predefined_string>(std::wstring_view name)> get_predefined_string;
     std::function<std::span<const siege::platform::predefined_int>(std::wstring_view name)> get_predefined_int;
     std::function<void()> persist = []() {};
@@ -476,19 +486,19 @@ namespace siege::views
 
   export std::span<const siege::fs_string_view> get_executable_formats() noexcept
   {
-    constexpr static auto exe_formats = std::array<siege::fs_string_view, 2>{ { FSL".exe", FSL".com" } };
+    constexpr static auto exe_formats = std::array<siege::fs_string_view, 2>{ { FSL ".exe", FSL ".com" } };
     return exe_formats;
   }
 
   export std::span<const siege::fs_string_view> get_library_formats() noexcept
   {
     constexpr static auto lib_formats = std::array<siege::fs_string_view, 6>{ {
-      FSL".dll",
-      FSL".ocx",
-      FSL".olb",
-      FSL".lib",
-      FSL".asi",
-      FSL".ovl",
+      FSL ".dll",
+      FSL ".ocx",
+      FSL ".olb",
+      FSL ".lib",
+      FSL ".asi",
+      FSL ".ovl",
     } };
 
     return lib_formats;
@@ -552,7 +562,6 @@ namespace siege::views
     bool has_listen = caps.listen_setting && !std::wstring_view(caps.listen_setting).empty();
     bool has_dedicated = caps.dedicated_setting && !std::wstring_view(caps.dedicated_setting).empty();
 
-#ifdef _DEBUG
     if (self.matching_extension)
     {
       self.launch_settings.emplace_back(game_setting{
@@ -560,10 +569,9 @@ namespace siege::views
         .type = extension_setting_type::computed_setting,
         .value = fs::path(self.matching_extension->GetModuleFileName()).stem().wstring(),
         .display_name = L"Extension Name",
-        .group_id = 2,
+        .group_id = setting_group::other,
       });
     }
-#endif
 
     std::vector<std::wstring_view> real_options;
 
@@ -637,7 +645,7 @@ namespace siege::views
         .type = extension_setting_type::env_setting,
         .value = has_extension_module(state) ? std::wstring{ pref_options[index] } : std::wstring{ pref_options_no_ext[index] },
         .display_name = L"Hosting",
-        .group_id = 1,
+        .group_id = setting_group::networking,
         .get_predefined_string = [real_options = std::move(real_options), results = std::vector<predefined_string>{}](auto name) mutable -> std::span<const siege::platform::predefined_string> {
           if (name == hosting_pref_name)
           {
@@ -817,7 +825,7 @@ namespace siege::views
         .type = extension_setting_type::string_setting,
         .value = std::wstring{},
         .display_name = L"Command Line Arguments",
-        .group_id = 2 });
+        .group_id = setting_group::other });
     }
 
     std::wstring_view dedicated_setting = caps.dedicated_setting ? caps.dedicated_setting : L"";
@@ -875,7 +883,7 @@ namespace siege::views
         .type = extension_setting_type::env_setting,
         .value = settings.last_ip_address.data(),
         .display_name = L"Broadcast Replacement IP",
-        .group_id = 1,
+        .group_id = setting_group::networking,
         .persist = persist_ip_address });
     }
 
@@ -895,7 +903,7 @@ namespace siege::views
           .type = extension_setting_type::string_setting,
           .value = settings.last_player_name.data(),
           .display_name = L"Player Name",
-          .group_id = has_ip ? 1 : 2,
+          .group_id = has_ip ? setting_group::networking : setting_group::other,
           .persist = [&state, &self]() {
             siege::platform::game_command_line_caps default_caps{};
             auto& caps = has_extension_module(state) && get_extension(state).caps ? *get_extension(state).caps : default_caps;
@@ -923,7 +931,7 @@ namespace siege::views
           .type = extension_setting_type::string_setting,
           .value = settings.last_ip_address.data(),
           .display_name = L"Server IP Address",
-          .group_id = 1,
+          .group_id = setting_group::networking,
           .persist = persist_ip_address });
 
         if (!listen_setting.empty() && setting == listen_setting)
@@ -959,7 +967,7 @@ namespace siege::views
         .type = extension_setting_type::string_setting,
         .value = L"",
         .display_name = setting,
-        .group_id = 2 });
+        .group_id = get_group_for_setting(setting, caps) });
 
       if (proc)
       {
@@ -1040,7 +1048,7 @@ namespace siege::views
         .value = L"",
         .display_name = setting,
         .visible = is_visible(setting, extension_setting_type::int_setting),
-        .group_id = 2,
+        .group_id = get_group_for_setting(setting, caps),
       });
 
       auto proc = get_extension(state).get_predefined_int_command_line_settings_proc;
@@ -1086,7 +1094,7 @@ namespace siege::views
         .value = L"",
         .display_name = setting,
         .visible = is_visible(setting, extension_setting_type::float_setting),
-        .group_id = 2 });
+        .group_id = get_group_for_setting(setting, caps) });
     }
 
     for (auto& setting : caps.flags)
@@ -1102,7 +1110,7 @@ namespace siege::views
         .value = L"",
         .display_name = setting,
         .visible = is_visible(setting, extension_setting_type::flag_setting),
-        .group_id = 2 });
+        .group_id = get_group_for_setting(setting, caps) });
     }
 
     if (can_support_zero_tier(state) && get_zero_tier_extension_folder_path(state))
@@ -1112,7 +1120,7 @@ namespace siege::views
         .type = extension_setting_type::env_setting,
         .value = (int)settings.zero_tier_enabled,
         .display_name = L"Enable Zero Tier",
-        .group_id = 1,
+        .group_id = setting_group::networking,
         .get_predefined_int = [results = std::vector<predefined_int>{
                                  predefined_int{
                                    .label = L"Yes",
@@ -1146,7 +1154,7 @@ namespace siege::views
         .type = extension_setting_type::env_setting,
         .value = network_id,
         .display_name = L"Zero Tier Network ID",
-        .group_id = 1,
+        .group_id = setting_group::networking,
         .persist = [&self]() {
           if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
                 return setting.setting_name == zt_network_id;
@@ -1166,14 +1174,14 @@ namespace siege::views
           .type = extension_setting_type::computed_setting,
           .value = zt_node_id,
           .display_name = L"Zero Tier Node ID",
-          .group_id = 1 });
+          .group_id = setting_group::networking });
 
         self.launch_settings.emplace_back(game_setting{
           .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
           .type = extension_setting_type::computed_setting,
           .value = get_preferred_last_ip(state, std::move(zt_node_id)),
           .display_name = L"Zero Tier Node IP Address",
-          .group_id = 1,
+          .group_id = setting_group::networking,
         });
       }
     }
@@ -3382,5 +3390,77 @@ namespace siege::views
     }
 
     return last_ip;
+  }
+
+  setting_group get_group_for_setting(std::wstring_view name, const game_command_line_caps& caps)
+  {
+    std::array<const fs_char*, 9> sound_settings{ {
+      caps.master_sound_enabled,
+      caps.sfx_enabled,
+      caps.music_enabled,
+      caps.voice_enabled,
+      caps.master_volume_setting,
+      caps.sfx_volume_setting,
+      caps.music_volume_setting,
+      caps.voice_volume_setting,
+      caps.sound_quality_setting,
+    } };
+
+    auto matches = [name](const fs_char* setting) { return setting && name == setting; };
+
+    if (stl::any_of(sound_settings, matches))
+    {
+      return setting_group::sound;
+    }
+
+    std::array<const fs_char*, 8> graphics_settings{ {
+      caps.render_backend_setting,
+      caps.v_sync_setting,
+      caps.predefined_resolution_setting,
+      caps.custom_width_setting,
+      caps.custom_height_setting,
+      caps.custom_refresh_rate_setting,
+      caps.fullscreen_setting,
+      caps.fov_setting,
+    } };
+
+    if (stl::any_of(graphics_settings, matches))
+    {
+      return setting_group::graphics;
+    }
+
+    std::array<const fs_char*, 2> input_settings{ {
+      caps.controller_enabled_setting,
+      caps.mouse_enabled_setting,
+    } };
+
+    if (stl::any_of(input_settings, matches))
+    {
+      return setting_group::input;
+    }
+
+    std::array<const fs_char*, 14> networking_settings{ {
+      caps.ip_connect_setting,
+      caps.port_connect_setting,
+      caps.listen_setting,
+      caps.dedicated_setting,
+      caps.map_list_setting,
+      caps.custom_map_list_setting,
+      caps.max_players_setting,
+      caps.bot_count_setting,
+      caps.auto_balance_bots_setting,
+      caps.auto_teams_setting,
+      caps.max_time_limit_setting,
+      caps.max_score_limit_setting,
+      caps.multiplayer_game_mode_setting,
+      caps.multiplayer_game_flags_setting,
+    } };
+
+    if (stl::any_of(networking_settings, matches))
+    {
+      return setting_group::networking;
+    }
+
+    return setting_group::other;
   }
 }// namespace siege::views
