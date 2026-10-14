@@ -68,11 +68,28 @@ export namespace win32
     {
       std::wstring filename(255, L'\0');
 
-      auto size = get_mapped_file_name(::GetCurrentProcess(), get(), filename.data(), filename.size());
+      auto size = get_mapped_file_name(::GetCurrentProcess(), get(), filename.data(), (DWORD)filename.size());
 
       if (size == 0)
       {
         return std::nullopt;
+      }
+
+      filename.resize(size);
+
+      // Fix for wine
+      constexpr std::wstring_view nt_prefix = L"\\??\\";
+      if (filename.starts_with(nt_prefix))
+      {
+        filename.erase(0, nt_prefix.size());
+
+        std::error_code ec;
+        if (!std::filesystem::exists(filename, ec))
+        {
+          return std::nullopt;
+        }
+
+        return filename;
       }
 
       std::wstring drive = L"A:";
@@ -83,7 +100,7 @@ export namespace win32
       {
         drive[0] = i;
 
-        auto vol_size = ::QueryDosDeviceW(drive.c_str(), buffer.data(), buffer.size());
+        auto vol_size = ::QueryDosDeviceW(drive.c_str(), buffer.data(), (DWORD)buffer.size());
 
         if (vol_size != 0)
         {
@@ -100,8 +117,6 @@ export namespace win32
         buffer.clear();
         buffer.resize(32);
       }
-
-      filename.erase(filename.find(L'\0'));
 
       return filename;
     }

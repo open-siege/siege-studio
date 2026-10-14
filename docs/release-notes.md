@@ -8,8 +8,7 @@
    * The idea was to have a reference for game scripts, but it's too basic for practical use.
    * The long term goal is to curate the various game commands and build around that instead.
 * Fixed incorrect ÜberTools label in default view.
-* Fixed menu bar not appearing in older versions of Windows or WINE. 
-* Fixed file extraction not working on WINE.
+* Fixed game discovery and file opening not working on WINE.
 * Added correct icon for controller view in launcher.
 * Keyboard/mouse settings don't show up for games with partial support (since it was always empty).
 * Fixed "Add to Firewall" adding the game to outbound rules instead of inbound. 
