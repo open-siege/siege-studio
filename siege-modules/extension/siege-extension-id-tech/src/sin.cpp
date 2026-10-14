@@ -1,15 +1,12 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/com.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
-
+#include <siege/platform/windows.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+import win32.com;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;
@@ -222,7 +219,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
   return std::errc{};
 }
 
-
 predefined_int*
   get_predefined_int_command_line_settings(const wchar_t* name) noexcept
 {
@@ -232,7 +228,6 @@ predefined_int*
   }
 
   auto name_str = std::wstring_view(name);
-
 
   if (name_str == L"gl_mode")
   {

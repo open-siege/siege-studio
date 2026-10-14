@@ -1,13 +1,9 @@
-
-#include <windows.h>
-#include <detours.h>
+#include <siege/extension/detours.hpp>
 #include <hidusage.h>
-#undef NDEBUG
 #include <cassert>
-#include <fstream>
-#include <algorithm>
-#include <optional>
-#include <siege/extension/input_filter.hpp>
+import std;
+import win32.window;
+import siege.extension.input_filter;
 
 extern "C" {
 
@@ -62,7 +58,7 @@ LRESULT CALLBACK LowLevelKeyboardProc(
 
     auto& state = siege::get_active_input_state();
 
-    auto device_id = LOWORD(info->dwExtraInfo);
+    auto device_id = win32::loword(info->dwExtraInfo);
 
     auto device_iter = std::find_if(state.devices.begin(), state.devices.end(), [&](auto& device) {
       return (device.type == RIM_TYPEKEYBOARD || device.type == RIM_TYPEHID) && device.id == device_id && device.enabled == 1;
@@ -91,9 +87,8 @@ LRESULT CALLBACK LowLevelKeyboardProc(
     lParam |= info->scanCode << 16;// Scan code
 
     thread_local std::array<WORD, 256> extended_states{};
-    WORD extra_state = HIWORD(info->dwExtraInfo);
+    WORD extra_state = win32::hiword(info->dwExtraInfo);
     extended_states[vk] = extra_state;
-
 
     std::array<BYTE, 256> flags{};
 
@@ -191,7 +186,7 @@ LRESULT CALLBACK GetMsgProc(
 
             if (header.dwType == RIM_TYPEKEYBOARD)
             {
-              device_id = LOWORD(input.data.keyboard.ExtraInformation);
+              device_id = win32::loword(input.data.keyboard.ExtraInformation);
             }
             else
             {
@@ -229,9 +224,8 @@ LRESULT CALLBACK GetMsgProc(
               std::array<BYTE, 256> flags{};
 
               thread_local std::array<WORD, 256> extended_states{};
-              WORD extra_state = HIWORD(input.data.keyboard.ExtraInformation);
+              WORD extra_state = win32::hiword(input.data.keyboard.ExtraInformation);
               extended_states[vk] = extra_state;
-
 
               if (::GetKeyboardState(flags.data()))
               {
@@ -286,7 +280,6 @@ next_hook:
 
   return ::CallNextHookEx(nullptr, code, wParam, lParam);
 }
-
 
 static auto* TrueGetAsyncKeyState = GetAsyncKeyState;
 static auto* TrueSetWindowHookExW = SetWindowsHookExW;
@@ -354,7 +347,6 @@ static std::array<std::pair<void**, void*>, 3> detour_functions{
   }
 };
 
-
 BOOL WINAPI DllMain(
   HINSTANCE hinstDLL,
   DWORD fdwReason,
@@ -372,15 +364,14 @@ BOOL WINAPI DllMain(
 
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
-      DetourRestoreAfterWith();
+      ::DetourRestoreAfterWith();
 
-      DetourTransactionBegin();
-      DetourUpdateThread(GetCurrentThread());
+      ::DetourTransactionBegin();
+      ::DetourUpdateThread(::GetCurrentThread());
 
-      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { ::DetourAttach(func.first, func.second); });
 
-      DetourTransactionCommit();
-
+      ::DetourTransactionCommit();
 
       RAWINPUTDEVICE Rid[1];
 
@@ -405,7 +396,8 @@ BOOL WINAPI DllMain(
         {
           Rid[0].dwFlags = RIDEV_REMOVE;
           Rid[0].hwndTarget = 0;
-          assert(::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == TRUE);
+          auto unregistered = ::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
+          assert(unregistered == TRUE);
           return FALSE;
         }
 
@@ -415,8 +407,10 @@ BOOL WINAPI DllMain(
         {
           Rid[0].dwFlags = RIDEV_REMOVE;
           Rid[0].hwndTarget = 0;
-          assert(::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == TRUE);
-          assert(::UnhookWindowsHookEx(cbt_hook) == TRUE);
+          auto unregistered = ::RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));
+          assert(unregistered == TRUE);
+          auto unhooked = ::UnhookWindowsHookEx(cbt_hook);
+          assert(unhooked == TRUE);
           return FALSE;
         }
 
@@ -445,30 +439,34 @@ BOOL WINAPI DllMain(
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-      DetourTransactionBegin();
-      DetourUpdateThread(GetCurrentThread());
+      ::DetourTransactionBegin();
+      ::DetourUpdateThread(::GetCurrentThread());
 
-      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
-      DetourTransactionCommit();
+      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { ::DetourDetach(func.first, func.second); });
+      ::DetourTransactionCommit();
 
       if (cbt_hook)
       {
-        assert(::UnhookWindowsHookEx(cbt_hook) == TRUE);
+        auto unhooked = ::UnhookWindowsHookEx(cbt_hook);
+        assert(unhooked == TRUE);
       }
 
       if (get_message_hook)
       {
-        assert(::UnhookWindowsHookEx(get_message_hook) == TRUE);
+        auto unhooked = ::UnhookWindowsHookEx(get_message_hook);
+        assert(unhooked == TRUE);
       }
 
       if (ll_keyboard_hook)
       {
-        assert(::UnhookWindowsHookEx(ll_keyboard_hook) == TRUE);
+        auto unhooked = ::UnhookWindowsHookEx(ll_keyboard_hook);
+        assert(unhooked == TRUE);
       }
 
       if (keyboard_hook)
       {
-        assert(::UnhookWindowsHookEx(keyboard_hook) == TRUE);
+        auto unhooked = ::UnhookWindowsHookEx(keyboard_hook);
+        assert(unhooked == TRUE);
       }
 
       RAWINPUTDEVICE Rid[1];

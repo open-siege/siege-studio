@@ -1,9 +1,11 @@
 #include <WinSock2.h>
 #include <ws2tcpip.h>
 #include <wsnwlink.h>
-#include <siege/platform/win/module.hpp>
+#include <siege/platform/windows.hpp>
 
 import std;
+import win32.module;
+
 import wsock32.shared;
 
 namespace fs = std::filesystem;

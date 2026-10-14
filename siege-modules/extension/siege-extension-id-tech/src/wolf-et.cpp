@@ -1,13 +1,11 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
+#include <siege/platform/windows.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -139,7 +137,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  
+
   if (auto config = load_config_from_pk3(L"etmain\\default.cfg", L"etmain/pak0.pk3", L"etmain/pak0.pk3"))
   {
     upsert_mouse_bindings(*config, *binding);
@@ -232,7 +230,6 @@ predefined_int*
   }
 
   auto name_str = std::wstring_view(name);
-
 
   if (name_str == L"r_mode")
   {

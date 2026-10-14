@@ -1,20 +1,20 @@
-#include <SDKDDKVer.h>
-#include <filesystem>
-#include <utility>
-#include <span>
-#include <optional>
-#include <string_view>
-#include <ranges>
-#include <set>
-#include <string>
-#include <fstream>
-#include <functional>
+#include <siege/platform/windows.hpp>
 #include <spanstream>
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/win/common_controls.hpp>
+#include <CommCtrl.h>
+#include <ShlObj.h>
+#include <shobjidl.h>
+
+import std;
+import win32.module;
+import win32.com;
+import win32.drawing;
+import win32.threading;
+import win32.common_controls;
+import win32.shell;
+
+import win32.window;
+
+import siege.platform.shared;
 
 #pragma comment(linker, \
   "\"/manifestdependency:type='win32' \
@@ -23,7 +23,6 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 namespace fs = std::filesystem;
 namespace stl = std::ranges;
-
 struct command_line_args
 {
   fs::path app_path;
@@ -483,3 +482,4 @@ std::vector<std::string> get_embedded_post_extract_commands()
 
   return results;
 }
+

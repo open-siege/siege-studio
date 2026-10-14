@@ -1,24 +1,20 @@
 module;
 
+#include <siege/platform/windows.hpp>
 #include <cassert>
-#include <cstring>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
 export module siege.extension.id_tech;
 
 import std;
-export import siege.platform.extension;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
-import siege.resource.pak;
-import siege.resource.zip;
+import siege.configuration.shared;
+import siege.extension.shared;
+export import siege.platform.extension;
+import siege.platform.shared;
 import siege.resource.cab;
 import siege.resource.iso;
-
+import siege.resource.pak;
+import siege.resource.zip;
 
 export using hardware_context = siege::platform::hardware_context;
 export using mouse_context = siege::platform::mouse_context;
@@ -107,8 +103,6 @@ export extern "C" siege::platform::game_command_line_predefined_setting<const wc
 export extern "C" siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_2_map_command_line_settings(const wchar_t* base_dir, bool include_zip) noexcept;
 export extern "C" siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs, bool (*partition)(std::wstring_view) = nullptr) noexcept;
 export extern "C" siege::platform::game_command_line_predefined_setting<const wchar_t*>* get_predefined_id_tech_3_map_command_line_settings(const wchar_t* base_dir) noexcept;
-
-
 
 namespace fs = std::filesystem;
 
@@ -339,7 +333,6 @@ std::optional<std::string_view> dpad_name_id_tech_3_0(WORD vkey)
     return std::nullopt;
   }
 }
-
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index)
 {
@@ -931,7 +924,6 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
       continue;
     }
 
-
     auto keyboard = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
       auto result = existing.action_name.data() == target && (existing.context == siege::platform::hardware_context::global || existing.context == siege::platform::hardware_context::keyboard);
 
@@ -1140,13 +1132,11 @@ predefined_string*
   }
 }
 
-
 predefined_string*
   get_predefined_id_tech_2_map_command_line_settings(const wchar_t* base_dir, bool include_zip) noexcept
 {
   return get_predefined_id_tech_2_map_command_line_settings_with_extension(base_dir, include_zip, ".bsp");
 }
-
 
 predefined_string*
   get_predefined_id_tech_3_map_command_line_settings_multiple(std::vector<const wchar_t*> base_dirs, bool (*partition)(std::wstring_view)) noexcept

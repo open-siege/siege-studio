@@ -1,15 +1,13 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
+#include <siege/platform/windows.hpp>
 #include <cassert>
-
-
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
 import siege.extension.vampire;
+import siege.platform.shared;
 
 using siege::platform::hardware_context;
 using siege::platform::game_action;
@@ -465,7 +463,6 @@ std::errc init_keyboard_inputs(keyboard_binding* binding) noexcept
   return std::errc{};
 }
 
-
 std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index) noexcept
 {
   if (binding == nullptr)
@@ -477,7 +474,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
   {
     return std::errc::invalid_argument;
   }
-
 
   std::array<std::pair<WORD, std::string_view>, 24> actions{
     {

@@ -1,7 +1,6 @@
-#include <array>
-#include <siege/platform/shared.hpp>
-
+import std;
 import siege.platform.installation;
+import siege.platform.shared;
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
@@ -22,26 +21,26 @@ extern game_storage_properties storage_properties = {
 };
 
 extern std::array<const fs_char*, 2> associated_extensions = {
-  FSL "siege-extension-earthsiege"
+  FSL"siege-extension-earthsiege"
 };
 
 // TODO get the correct mappings
-extern std::array<path_rule, 32> directory_mappings = { { { FSL "TAPES", FSL "=" },
-  { FSL "DATA", FSL "=" },
-  { FSL "SAV", FSL "=" },
-  { FSL "SIMVOICE", FSL "=" },
-  { FSL "AVI", FSL "=" },
-  { FSL "TAPES", FSL "=" },
-  { FSL "VOL", FSL "=" },
-  { FSL "VER95", FSL "." },
-  { FSL "<languageFolder>/BILLBRD", FSL "=" },
-  { FSL "<languageFolder>/ES2GUIDE.HLP", FSL "=" },
-  { FSL "<languageFolder>/LANGUAGE.INF", FSL "=" },
-  { FSL "<languageFolder>/README.WRI", FSL "=" },
-  { FSL "BWCC32.DLL", FSL "=" },
-  { FSL "CW3220.DLL", FSL "=" },
-  { FSL "SOSLIBS3.DLL", FSL "=" },
-  { FSL "SOSLIB.INI", FSL "=" },
-  { FSL "*.WIN", FSL "=" },
-  { FSL "*.STR", FSL "=" } } };
+extern std::array<path_rule, 32> directory_mappings = { { { FSL"TAPES", FSL"=" },
+  { FSL"DATA", FSL"=" },
+  { FSL"SAV", FSL"=" },
+  { FSL"SIMVOICE", FSL"=" },
+  { FSL"AVI", FSL"=" },
+  { FSL"TAPES", FSL"=" },
+  { FSL"VOL", FSL"=" },
+  { FSL"VER95", FSL"." },
+  { FSL"<languageFolder>/BILLBRD", FSL"=" },
+  { FSL"<languageFolder>/ES2GUIDE.HLP", FSL"=" },
+  { FSL"<languageFolder>/LANGUAGE.INF", FSL"=" },
+  { FSL"<languageFolder>/README.WRI", FSL"=" },
+  { FSL"BWCC32.DLL", FSL"=" },
+  { FSL"CW3220.DLL", FSL"=" },
+  { FSL"SOSLIBS3.DLL", FSL"=" },
+  { FSL"SOSLIB.INI", FSL"=" },
+  { FSL"*.WIN", FSL"=" },
+  { FSL"*.STR", FSL"=" } } };
 }

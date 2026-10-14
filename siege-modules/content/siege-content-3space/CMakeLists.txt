@@ -13,7 +13,8 @@ add_library(${PROJECT_NAME}-3d STATIC src/dts/dts_renderable_shape.cpp
                                       src/dts/3space.cpp 
                                       src/dts/3space_v2.cpp
                                       src/dts/3space_renderable_shape.cpp 
-                                      src/dts/darkstar.cpp)
+                                      src/dts/darkstar.cpp
+                                      src/dts/torque.cpp)
 
 target_link_libraries(${PROJECT_NAME}-3d PRIVATE ${PROJECT_NAME}-2d)
 

@@ -1,12 +1,16 @@
 module;
-
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/dialog.hpp>
+#include <siege/platform/windows.hpp>
+#include <cassert>
 #include <hidusage.h>
-#include <xinput.h>
+#include <CommCtrl.h>
 
 module exe.views;
+
+import std;
+import win32.window;
+import win32.dialog;
+
+import win32.common_controls;
 
 import exe.shared;
 
@@ -171,7 +175,6 @@ namespace siege::views
 
             info->second.last_state = std::move(new_state);
 
-
             // remove axes which have not moved enough
             changes = std::span(changes.begin(), std::remove_if(changes.begin(), changes.end(), [](auto& item) {
               return item.new_value < std::numeric_limits<std::uint16_t>::max() / 2;
@@ -208,8 +211,8 @@ namespace siege::views
     }
 
     return std::make_optional<selected_input>(
-      LOWORD(result),
-      static_cast<siege::platform::hardware_context>(HIWORD(result)));
+      win32::loword(result),
+      static_cast<siege::platform::hardware_context>(win32::hiword(result)));
   }
 
   std::optional<raw_selected_input> get_raw_input_from_dialog(win32::window_ref parent_ref, HANDLE controller, controller_state& state, std::optional<input_type> input_restriction)
@@ -265,7 +268,6 @@ namespace siege::views
 
           auto new_state = get_raw_state_for_handle(*state, (HRAWINPUT)lparam);
 
-
           if (input_restriction == std::nullopt || input_restriction == input_type::button)
           {
             for (auto i = 0U; i < sizeof(new_state.rgbButtons); ++i)
@@ -318,8 +320,8 @@ namespace siege::views
     }
 
     return std::make_optional<raw_selected_input>(
-      LOWORD(result),
-      static_cast<input_type>(HIWORD(result)));
+      win32::loword(result),
+      static_cast<input_type>(win32::hiword(result)));
   }
 
 }// namespace siege::views

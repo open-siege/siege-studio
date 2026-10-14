@@ -1,12 +1,11 @@
 // WTB - MechWarrior 2 - individual mesh shape
-module;
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
+export module siege.content.wtb;
 
 import std;
 
-export module siege.content.wtb;
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::content::wtb
 {
@@ -191,6 +190,5 @@ namespace siege::content::wtb
 //                 polygons.append(polygon[2:][:count])
 
 //             offset += struct.calcsize(fmt)
-
 
 //     return (points, polygons)

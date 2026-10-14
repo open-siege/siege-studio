@@ -1,0 +1,49 @@
+# Default to CRLF so Visual Studio / MSVC tooling does not constantly
+# rewrite working-tree line endings on Windows.
+* text=auto eol=crlf
+
+# Explicit source / text types
+*.c text eol=crlf
+*.cc text eol=crlf
+*.cpp text eol=crlf
+*.cxx text eol=crlf
+*.h text eol=crlf
+*.hpp text eol=crlf
+*.hxx text eol=crlf
+*.inl text eol=crlf
+*.ixx text eol=crlf
+*.cmake text eol=crlf
+*.txt text eol=crlf
+*.md text eol=crlf
+*.json text eol=crlf
+*.yml text eol=crlf
+*.yaml text eol=crlf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.rc text eol=crlf
+*.idl text eol=crlf
+*.def text eol=crlf
+*.manifest text eol=crlf
+
+# Leave binaries alone
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.lib binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.obj binary
+*.o binary
+*.a binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

@@ -1,11 +1,10 @@
-module;
-
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/resource.hpp>
-
 export module siege.resource.trophy_bass;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
 
 namespace siege::resource::vol::trophy_bass
 {

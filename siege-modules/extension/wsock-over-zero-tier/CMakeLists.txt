@@ -11,7 +11,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
          CXX_STANDARD_REQUIRED ON
          CXX_SCAN_FOR_MODULES ON
      )
-    target_link_libraries(wsock32-in-proc-client PRIVATE siege-win-core)
+    target_link_libraries(wsock32-in-proc-client PRIVATE siege-win-desktop)
 
     add_library(wsock-backend-ws2_32 SHARED src/wsock32-common-shared.cpp src/wsock-backend-ws2_32.cpp src/wsock-backend.def)
     target_compile_definitions(wsock-backend-ws2_32 PRIVATE USE_WINSOCK2=TRUE)
@@ -56,7 +56,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
         CXX_SCAN_FOR_MODULES ON
     )
     target_compile_definitions(ws2_32-rpc-client PRIVATE USE_WINSOCK2=TRUE)
-    target_link_libraries(ws2_32-rpc-client PRIVATE siege-win-core siege-extension ws2_32)
+    target_link_libraries(ws2_32-rpc-client PRIVATE siege-win-desktop siege-extension ws2_32)
 
     add_executable(ws2_32-rpc-server WIN32 src/wsock32-common-shared.cpp src/wsock32-rpc.cpp src/ws2_32-rpc-server.cpp)
     set_target_properties(ws2_32-rpc-server PROPERTIES
@@ -64,7 +64,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
         CXX_STANDARD_REQUIRED ON
         CXX_SCAN_FOR_MODULES ON
     )
-    target_link_libraries(ws2_32-rpc-server PRIVATE siege-win-core ws2_32)
+    target_link_libraries(ws2_32-rpc-server PRIVATE siege-win-desktop ws2_32)
 
     add_executable(wsock32-tests src/wsock32.test.cpp)
     set_target_properties(wsock32-tests PROPERTIES
@@ -73,7 +73,7 @@ if (WIN32 AND IS_DIRECTORY ${CMAKE_SOURCE_DIR}/libzt)
         CXX_SCAN_FOR_MODULES ON
     )
     target_include_directories(wsock32-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(wsock32-tests PRIVATE Catch2::Catch2WithMain siege-platform ws2_32)
+    target_link_libraries(wsock32-tests PRIVATE Catch2::Catch2WithMain siege-win-desktop ws2_32)
 
     add_dependencies(wsock32-tests
         wsock32-in-proc-client

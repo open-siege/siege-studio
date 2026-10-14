@@ -1,12 +1,11 @@
 // ERF - MechWarrior 4 mesh data
-module;
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.content.erf;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::content::erf
 {
@@ -126,9 +125,7 @@ namespace siege::content::erf
 //     normalFmt = "<3f"
 //     return readArray(offset, rawData, normalFmt, numNormals)
 
-
 // convertErf.py
-
 
 // import sys
 // import json
@@ -277,7 +274,6 @@ namespace siege::content::erf
 //                 meshes.append((name, verts, uvVerts, faces));
 //                 i += 1
 //         mechBody[partName] = meshes
-
 
 //     except Exception as e:
 //         print e

@@ -1,2 +1,2 @@
-#include <siege/extension/input_filter.hpp>
-#include <siege/extension/shared.hpp>
+import siege.extension.input_filter;
+import siege.extension.shared;

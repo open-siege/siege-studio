@@ -1,26 +1,24 @@
-#ifndef SIEGE_DEFAULT_VIEW_HPP
-#define SIEGE_DEFAULT_VIEW_HPP
+#include <siege/platform/windows.hpp>
+#include <CommCtrl.h>
+#include <ShlObj.h>
+#include <commoncontrols.h>
+import std;
+import win32.file;
+import win32.window;
+import win32.drawing;
 
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <utility>
-#include <future>
-#include <fstream>
-#include <execution>
-#include <array>
-#include <atomic>
-#include <mutex>
-#include <vector>
-#include <unordered_set>
+import win32.wic;
+import win32.threading;
+
+import win32.window;
+import win32.common_controls;
+import win32.shell;
+import win32.theming;
 
 import siege.platform.extension;
 import siege.platform.presentation;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::views
 {
@@ -189,7 +187,6 @@ namespace siege::views
     { L"Space Trader: Merchant Marine"sv, L"id_tech-3.0"sv, L"siege-extension-space-trader"sv, std::array<std::wstring_view, 8>{ { L".pk3", L".jpg", L".cfg", L".wav" } } },
   } };
 
-
   // TODO remove embedding of dlls from debug builds
   // TODO scale icons by system scale settings
   struct default_view final : win32::basic_window<default_view>
@@ -211,7 +208,7 @@ namespace siege::views
     win32::gdi::icon logo_icon;
 
     std::map<fs::path, bool> detected_paths;
-    std::map<win32::wparam_t, int> item_groups;
+    std::map<WPARAM, int> item_groups;
     std::array<std::wstring, 3> column_filters{};
     bool ui_updates_active = true;
     std::atomic<bool> flush_scheduled{ false };
@@ -237,7 +234,7 @@ namespace siege::views
 
     //      std::string url = "https://github.com/open-siege/open-siege/wiki/" + extension;
     //"This particular file is not yet supported by Siege Studio.\nThough, you can still read about it on our wiki.\nClick the link below to find out more."
-    default_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    default_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       logo_icon.reset((HICON)::LoadImageW(params.hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0));
     }
@@ -313,7 +310,6 @@ namespace siege::views
       logo = *win32::CreateWindowExW<win32::static_control>(CREATESTRUCTW{ .hwndParent = *this, .style = WS_CHILD | WS_VISIBLE | SS_ICON | SS_REALSIZECONTROL });
 
       logo.SetIcon(logo_icon.get());
-
 
       auto normal_target = ::MulDiv(24, win32::get_dpi_awareness_for_window(*this), USER_DEFAULT_SCREEN_DPI);
       auto large_shell_images = win32::create_dpi_shell_image_list(normal_target);
@@ -444,7 +440,6 @@ namespace siege::views
 
         game_item.sub_items.emplace_back(L"Not detected");
 
-
         auto format_size = std::count_if(game.supported_file_formats.begin(), game.supported_file_formats.end(), [](auto& format) {
           return !format.empty();
         });
@@ -463,7 +458,6 @@ namespace siege::views
         }
 
         game_item.sub_items.emplace_back(temp);
-
 
         auto new_item = supported_games_by_engine.InsertRow(game_item);
 
@@ -758,7 +752,6 @@ namespace siege::views
 
         root->second.emplace_back(path);
       }
-
 
       std::for_each(std::execution::par, roots.begin(), roots.end(), [&, this](auto& root_path) {
         auto bad_iter = std::remove_if(root_path.second.begin(), root_path.second.end(), [](auto& path) {
@@ -1265,7 +1258,7 @@ namespace siege::views
       case WM_CREATE:
         return wm_create();
       case WM_SIZE:
-        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_FLUSH_DETECTIONS:
         if (ui_updates_active)
         {
@@ -1298,4 +1291,3 @@ namespace siege::views
   }
 }// namespace siege::views
 
-#endif

@@ -1,15 +1,12 @@
-module;
-
-#include <siege/platform/tagged_data.hpp>
-#include <siege/platform/stream.hpp>
-#include <bitset>
-
 export module siege.content.tim;
 
 import std;
+
 import siege.platform.bitmap;
 import siege.platform.palette;
-
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.tagged_data;
 
 namespace siege::content::tim
 {
@@ -151,7 +148,6 @@ namespace siege::content::tim
     return colour;
   }
 
-
   export platform::bitmap::windows_bmp_data get_tim_data_as_bitmap(std::istream& raw_data)
   {
     tim_data temp = get_tim_data(raw_data);
@@ -220,6 +216,5 @@ namespace siege::content::tim
 
     return result;
   }
-
 
 }// namespace siege::content::tim

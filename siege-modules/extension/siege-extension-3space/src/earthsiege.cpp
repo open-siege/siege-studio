@@ -1,7 +1,6 @@
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
+import std;
+import siege.extension.shared;
+import siege.platform.shared;
 
 extern "C" {
 using namespace std::literals;
@@ -9,7 +8,6 @@ using namespace std::literals;
 constexpr static std::array<std::string_view, 11> verification_strings = { {
   "GAME.DIC"sv,
 } };
-
 
 std::errc executable_is_supported(const wchar_t* filename) noexcept
 {

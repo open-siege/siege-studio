@@ -1,12 +1,10 @@
-module;
-
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/shared.hpp>
-
 export module siege.content.fnt;
 
 import std;
+
 import siege.content.bmp;
+import siege.platform.endian;
+import siege.platform.shared;
 
 namespace siege::content::fnt
 {

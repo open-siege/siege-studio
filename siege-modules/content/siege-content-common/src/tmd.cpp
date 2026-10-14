@@ -1,15 +1,10 @@
-module;
-
-#include <array>
-#include <variant>
-#include <any>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.content.tmd;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
 
 // TMD - PlayStation standard model format. Embedded inside of BND files from Colony Wars
 
@@ -24,7 +19,6 @@ namespace siege::content::tmd
     endian::little_uint16_t z;
     endian::little_uint16_t padding;
   };
-
 
   constexpr static std::uint8_t magic_number = 65;
 

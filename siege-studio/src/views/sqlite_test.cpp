@@ -1,10 +1,11 @@
+#include <siege/platform/windows.hpp>
 #include <winsqlite/winsqlite3ext.h>
-SQLITE_EXTENSION_INIT1
-#include <memory>
-#include <string_view>
-#include <span>
 #include <cassert>
-#include <siege/platform/win/basic_window.hpp>
+
+import std;
+import win32.window;
+
+SQLITE_EXTENSION_INIT1
 
 struct vtable : sqlite3_vtab
 {
@@ -77,7 +78,6 @@ int SQLITE_CALLBACK Create(sqlite3* db, void* aux, int argc, const char* const* 
   return SQLITE_OK;
 }
 
-
 int SQLITE_CALLBACK Destroy(sqlite3_vtab* vtab)
 {
   vtable* real = static_cast<vtable*>(vtab);
@@ -85,7 +85,6 @@ int SQLITE_CALLBACK Destroy(sqlite3_vtab* vtab)
   sqlite3_api->free(vtab);
   return 0;
 }
-
 
 int SQLITE_CALLBACK Connect(sqlite3* db, void* pAux, int argc, const char* const* argv, sqlite3_vtab** vtab, char**)
 {
@@ -225,7 +224,6 @@ int SQLITE_CALLBACK Filter(sqlite3_vtab_cursor* cur, int idxNum, const char* idx
     real->end = table->handles.end();
   }
 
-
   return SQLITE_OK;
 }
 
@@ -319,7 +317,6 @@ int SQLITE_CALLBACK test_vtab_init(sqlite3* db, char** pzErrMsg, const sqlite3_a
   auto result = sqlite3_api->create_module(db, "magic_module", &module, 0);
   return result;
 }
-
 
 /*
 int iVersion;

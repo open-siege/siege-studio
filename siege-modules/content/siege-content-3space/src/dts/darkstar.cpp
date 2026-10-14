@@ -1,18 +1,15 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.content.dts;
 
 import std;
+
 export import siege.content.structures;
+import siege.platform.endian;
+import siege.platform.shared;
 
 // DTS - Dynamix ThreeSpace Shape v3 for 3Space v3 (Starsiege, Tribes, Trophy Bass 3D, Driver's Education)
 
 namespace siege::content::dts::darkstar
 {
-
   namespace endian = siege::platform;
   export using file_tag = std::array<std::byte, 4>;
 
@@ -38,7 +35,7 @@ namespace siege::content::dts::darkstar
   {
     export struct header
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numVerts",
+      constexpr static auto keys = platform::make_keys({ "numVerts",
         "vertsPerFrame",
         "numTextureVerts",
         "numFaces",
@@ -59,7 +56,7 @@ namespace siege::content::dts::darkstar
 
     export struct vertex
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "normal" });
+      constexpr static auto keys = platform::make_keys({ "x", "y", "z", "normal" });
       std::uint8_t x;
       std::uint8_t y;
       std::uint8_t z;
@@ -68,7 +65,7 @@ namespace siege::content::dts::darkstar
 
     static_assert(sizeof(vertex) == sizeof(std::int32_t));
 
-    export inline vector3f operator*(const vertex& left, const vector3f& right)
+    export vector3f operator*(const vertex& left, const vector3f& right)
     {
       vector3f result{};
 
@@ -79,8 +76,7 @@ namespace siege::content::dts::darkstar
       return result;
     }
 
-
-    export inline vector3f operator+(const vertex& left, const vector3f& right)
+    export vector3f operator+(const vertex& left, const vector3f& right)
     {
       vector3f result{};
 
@@ -95,7 +91,7 @@ namespace siege::content::dts::darkstar
 
     export struct face
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "vi1", "ti1", "vi2", "ti2", "vi3", "ti3", "material" });
+      constexpr static auto keys = platform::make_keys({ "vi1", "ti1", "vi2", "ti2", "vi3", "ti3", "material" });
       endian::little_int32_t vi1;
       endian::little_int32_t ti1;
       endian::little_int32_t vi2;
@@ -107,7 +103,7 @@ namespace siege::content::dts::darkstar
 
     export struct frame
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "firstVert" });
+      constexpr static auto keys = platform::make_keys({ "firstVert" });
       endian::little_int32_t first_vert;
     };
 
@@ -115,7 +111,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = std::string_view{ "TS::CelAnimMesh" };
       constexpr static auto version = 1;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+      constexpr static auto keys = platform::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
       v1::header header;
       std::vector<vertex> vertices;
@@ -129,7 +125,7 @@ namespace siege::content::dts::darkstar
   {
     export struct header
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numVerts",
+      constexpr static auto keys = platform::make_keys({ "numVerts",
         "vertsPerFrame",
         "numTextureVerts",
         "numFaces",
@@ -154,7 +150,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v1::mesh::type_name;
       constexpr static auto version = 2;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+      constexpr static auto keys = platform::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
       v2::header header;
       std::vector<v1::vertex> vertices;
@@ -168,7 +164,7 @@ namespace siege::content::dts::darkstar
   {
     export struct header
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numVerts",
+      constexpr static auto keys = platform::make_keys({ "numVerts",
         "vertsPerFrame",
         "numTextureVerts",
         "numFaces",
@@ -187,7 +183,7 @@ namespace siege::content::dts::darkstar
 
     export struct frame
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "firstVert", "scale", "origin" });
+      constexpr static auto keys = platform::make_keys({ "firstVert", "scale", "origin" });
       endian::little_int32_t first_vert;
       vector3f scale;
       vector3f origin;
@@ -197,7 +193,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v1::mesh::type_name;
       constexpr static auto version = 3;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
+      constexpr static auto keys = platform::make_keys({ "header", "vertices", "textureVertices", "faces", "frames" });
 
       v3::header header;
       std::vector<v1::vertex> vertices;
@@ -212,7 +208,7 @@ namespace siege::content::dts::darkstar
   {
     export struct header
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numDetails",
+      constexpr static auto keys = platform::make_keys({ "numDetails",
         "numMaterials" });
       endian::little_int32_t num_details;
       endian::little_int32_t num_materials;
@@ -220,7 +216,7 @@ namespace siege::content::dts::darkstar
 
     export struct material
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "flags", "alpha", "index", "rgbData", "fileName" });
+      constexpr static auto keys = platform::make_keys({ "flags", "alpha", "index", "rgbData", "fileName" });
 
       endian::little_int32_t flags;
       float alpha;
@@ -234,7 +230,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = std::string_view{ "TS::MaterialList" };
       constexpr static auto version = 2;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header", "materials" });
+      constexpr static auto keys = platform::make_keys({ "header", "materials" });
 
       v2::header header;
       std::vector<material> materials;
@@ -245,7 +241,7 @@ namespace siege::content::dts::darkstar
   {
     export struct material
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction" });
+      constexpr static auto keys = platform::make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction" });
 
       endian::little_int32_t flags;
       float alpha;
@@ -263,7 +259,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v2::material_list::type_name;
       constexpr static auto version = 3;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header", "materials" });
+      constexpr static auto keys = platform::make_keys({ "header", "materials" });
 
       v2::header header;
       std::vector<material> materials;
@@ -274,7 +270,7 @@ namespace siege::content::dts::darkstar
   {
     export struct material
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction", "useDefaultProperties" });
+      constexpr static auto keys = platform::make_keys({ "flags", "alpha", "index", "rgbData", "fileName", "type", "elasticity", "friction", "useDefaultProperties" });
 
       endian::little_int32_t flags;
       float alpha;
@@ -293,7 +289,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v2::material_list::type_name;
       constexpr static auto version = 4;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header", "materials" });
+      constexpr static auto keys = platform::make_keys({ "header", "materials" });
 
       v2::header header;
       std::vector<material> materials;
@@ -309,7 +305,7 @@ namespace siege::content::dts::darkstar
   {
     export struct header
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numNodes",
+      constexpr static auto keys = platform::make_keys({ "numNodes",
         "numSequences",
         "numSubSequences",
         "numKeyFrames",
@@ -334,7 +330,7 @@ namespace siege::content::dts::darkstar
 
     export struct data
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "radius", "centre" });
+      constexpr static auto keys = platform::make_keys({ "radius", "centre" });
       float radius;
       vector3f centre;
     };
@@ -343,7 +339,7 @@ namespace siege::content::dts::darkstar
 
     export struct node
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
+      constexpr static auto keys = platform::make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
       endian::little_int32_t name_index;
       endian::little_int32_t parent_node_index;
       endian::little_int32_t num_sub_sequences;
@@ -353,7 +349,7 @@ namespace siege::content::dts::darkstar
 
     export struct sequence
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "nameIndex",
+      constexpr static auto keys = platform::make_keys({ "nameIndex",
         "cyclic",
         "duration",
         "priority" });
@@ -365,7 +361,7 @@ namespace siege::content::dts::darkstar
 
     export struct sub_sequence
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
+      constexpr static auto keys = platform::make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
       endian::little_int32_t sequence_index;
       endian::little_int32_t num_key_frames;
       endian::little_int32_t first_key_frame_index;
@@ -373,14 +369,14 @@ namespace siege::content::dts::darkstar
 
     export struct keyframe
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "position", "transformIndex" });
+      constexpr static auto keys = platform::make_keys({ "position", "transformIndex" });
       float position;
       endian::little_uint32_t transform_index;
     };
 
     export struct transform
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "rotation", "translation", "scale" });
+      constexpr static auto keys = platform::make_keys({ "rotation", "translation", "scale" });
       quaternion4f rotation;
       vector3f translation;
       vector3f scale;
@@ -390,7 +386,7 @@ namespace siege::content::dts::darkstar
 
     export struct object
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "depFlags", "dep", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
+      constexpr static auto keys = platform::make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "depFlags", "dep", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t flags;
       endian::little_int32_t mesh_index;
@@ -404,14 +400,14 @@ namespace siege::content::dts::darkstar
 
     export struct detail
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "rootNodeIndex", "size" });
+      constexpr static auto keys = platform::make_keys({ "rootNodeIndex", "size" });
       endian::little_int32_t root_node_index;
       float size;
     };
 
     export struct transition
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "startSequenceIndex",
+      constexpr static auto keys = platform::make_keys({ "startSequenceIndex",
         "endSequenceIndex",
         "startPosition",
         "endPosition",
@@ -432,7 +428,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = std::string_view{ "TS::Shape" };
       constexpr static auto version = 2;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header",
+      constexpr static auto keys = platform::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -467,7 +463,7 @@ namespace siege::content::dts::darkstar
   {
     export struct keyframe
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "position", "transformIndex", "matIndex" });
+      constexpr static auto keys = platform::make_keys({ "position", "transformIndex", "matIndex" });
       float position;
       endian::little_uint32_t transform_index;
       endian::little_uint32_t mat_index;
@@ -477,7 +473,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 3;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header",
+      constexpr static auto keys = platform::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -512,7 +508,7 @@ namespace siege::content::dts::darkstar
   {
     export struct header
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numNodes",
+      constexpr static auto keys = platform::make_keys({ "numNodes",
         "numSequences",
         "numSubSequences",
         "numKeyFrames",
@@ -539,7 +535,7 @@ namespace siege::content::dts::darkstar
 
     export struct sequence
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "nameIndex",
+      constexpr static auto keys = platform::make_keys({ "nameIndex",
         "cyclic",
         "duration",
         "priority",
@@ -559,7 +555,7 @@ namespace siege::content::dts::darkstar
 
     export struct frame_trigger
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "position",
+      constexpr static auto keys = platform::make_keys({ "position",
         "value" });
       float position;
       float value;
@@ -567,7 +563,7 @@ namespace siege::content::dts::darkstar
 
     export struct footer
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numDefaultMaterials" });
+      constexpr static auto keys = platform::make_keys({ "numDefaultMaterials" });
       endian::little_int32_t num_default_materials;
     };
 
@@ -575,7 +571,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 5;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header",
+      constexpr static auto keys = platform::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -610,12 +606,11 @@ namespace siege::content::dts::darkstar
     };
   }// namespace shape::v5
 
-
   namespace shape::v6
   {
     export struct footer
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "numDefaultMaterials",
+      constexpr static auto keys = platform::make_keys({ "numDefaultMaterials",
         "alwaysNode" });
       endian::little_int32_t num_default_materials;
       endian::little_int32_t always_node;
@@ -625,7 +620,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 6;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header",
+      constexpr static auto keys = platform::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -664,7 +659,7 @@ namespace siege::content::dts::darkstar
   {
     export struct transform
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "rotation", "translation", "scale" });
+      constexpr static auto keys = platform::make_keys({ "rotation", "translation", "scale" });
       quaternion4s rotation;
       vector3f translation;
       vector3f scale;
@@ -674,7 +669,7 @@ namespace siege::content::dts::darkstar
 
     export struct transition
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "startSequenceIndex",
+      constexpr static auto keys = platform::make_keys({ "startSequenceIndex",
         "endSequenceIndex",
         "startPosition",
         "endPosition",
@@ -696,7 +691,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 7;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header",
+      constexpr static auto keys = platform::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -735,7 +730,7 @@ namespace siege::content::dts::darkstar
   {
     export struct data
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "radius", "centre", "bounds" });
+      constexpr static auto keys = platform::make_keys({ "radius", "centre", "bounds" });
       float radius;
       vector3f centre;
       vector3f_pair bounds;
@@ -745,7 +740,7 @@ namespace siege::content::dts::darkstar
 
     export struct node
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
+      constexpr static auto keys = platform::make_keys({ "nameIndex", "parentNodeIndex", "numSubSequences", "firstSubSequenceIndex", "defaultTransformIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t parent_node_index;
       endian::little_int16_t num_sub_sequences;
@@ -755,16 +750,15 @@ namespace siege::content::dts::darkstar
 
     export struct sub_sequence
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
+      constexpr static auto keys = platform::make_keys({ "sequenceIndex", "numKeyFrames", "firstKeyFrameIndex" });
       endian::little_int16_t sequence_index;
       endian::little_int16_t num_key_frames;
       endian::little_int16_t first_key_frame_index;
     };
 
-
     export struct keyframe
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "position", "transformIndex", "matIndex" });
+      constexpr static auto keys = platform::make_keys({ "position", "transformIndex", "matIndex" });
       float position;
       endian::little_uint16_t transform_index;
       endian::little_uint16_t mat_index;
@@ -772,14 +766,14 @@ namespace siege::content::dts::darkstar
 
     export struct transform
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "rotation", "translation" });
+      constexpr static auto keys = platform::make_keys({ "rotation", "translation" });
       quaternion4s rotation;
       vector3f translation;
     };
 
     export struct object
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
+      constexpr static auto keys = platform::make_keys({ "nameIndex", "flags", "meshIndex", "nodeIndex", "objectOffset", "numSubSequences", "firstSubSequenceIndex" });
       endian::little_int16_t name_index;
       endian::little_int16_t flags;
       endian::little_int32_t mesh_index;
@@ -791,7 +785,7 @@ namespace siege::content::dts::darkstar
 
     export struct transition
     {
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "startSequence",
+      constexpr static auto keys = platform::make_keys({ "startSequence",
         "endSequence",
         "startPosition",
         "endPosition",
@@ -809,7 +803,7 @@ namespace siege::content::dts::darkstar
     {
       constexpr static auto type_name = v2::shape::type_name;
       constexpr static auto version = 8;
-      KEYS_CONSTEXPR static auto keys = platform::make_keys({ "header",
+      constexpr static auto keys = platform::make_keys({ "header",
         "data",
         "nodes",
         "sequences",
@@ -883,7 +877,7 @@ namespace siege::content::dts::darkstar
     return dest;
   }
 
-  inline std::string read_string(std::istream& stream, std::size_t size, std::size_t max_size = 16)
+  std::string read_string(std::istream& stream, std::size_t size, std::size_t max_size = 16)
   {
     std::string dest(size, '\0');
 
@@ -1139,7 +1133,6 @@ namespace siege::content::dts::darkstar
     return shape;
   }
 
-
   export shape_variant read_shape(std::istream& stream, std::optional<tag_header> file_header)
   {
     using namespace shape;
@@ -1186,7 +1179,6 @@ namespace siege::content::dts::darkstar
       throw std::invalid_argument(error.str());
     }
   }
-
 
   export shape_or_material_list read_shape(std::istream& stream)
   {

@@ -1,9 +1,7 @@
-module;
-
-
 export module siege.configuration.id_tech;
 
 import std;
+
 import siege.configuration.shared;
 
 namespace siege::configuration::id_tech
@@ -75,7 +73,6 @@ namespace siege::configuration::id_tech
           continue;
         }
 
-
         if (line[i] == '\"')
         {
           first_quote.emplace(i);
@@ -92,7 +89,6 @@ namespace siege::configuration::id_tech
           append_not_empty(line.substr(start, i));
         }
       }
-
 
       return segments;
     }

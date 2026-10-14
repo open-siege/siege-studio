@@ -1,14 +1,11 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
-
+#include <siege/platform/windows.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 using hardware_context = siege::platform::hardware_context;
 using game_action = siege::platform::game_action;
@@ -166,7 +163,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  
+
   if (auto config = load_config_from_pak(L"base\\configs\\DEFAULT_KEYS.cfg", L"base/pak0.pak", L"base/pak0.pak/configs"))
   {
     upsert_mouse_bindings(*config, *binding);
@@ -223,7 +220,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
     return std::errc::invalid_argument;
   }
 
-
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
@@ -256,7 +252,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
 
   return std::errc{};
 }
-
 
 predefined_int*
   get_predefined_int_command_line_settings(const wchar_t* name) noexcept

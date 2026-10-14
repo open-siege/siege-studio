@@ -1,7 +1,12 @@
-#include <SDKDDKVer.h>
-#include <siege/platform/http.hpp>
-#include <siege/platform/win/file.hpp>
+module;
+#include <siege/platform/windows.hpp>
 #include <winhttp.h>
+
+module siege.platform.http;
+
+import std;
+
+import siege.platform.shared;
 
 namespace siege::platform
 {
@@ -57,7 +62,7 @@ namespace siege::platform
       DWORD buffer_size = sizeof(content_length);
       DWORD header_index = 0;
 
-      if (::WinHttpQueryHeaders(request, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &content_length, &buffer_size, &header_index) && 
+      if (::WinHttpQueryHeaders(request, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &content_length, &buffer_size, &header_index) &&
           callbacks.on_received_content_length)
       {
         callbacks.on_received_content_length(content_length);

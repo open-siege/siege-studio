@@ -1,14 +1,15 @@
 module;
 
-#include <cassert>
-#include <siege/extension/shared.hpp>
-
+#include <siege/platform/windows.hpp>
 export module siege.extension.vampire;
 
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 using siege::platform::input_mapping_ex;
 using siege::platform::controller_input_type;
@@ -28,10 +29,8 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     return nullptr;
   }
 
-
   static std::vector<std::wstring> string_args;
   string_args.clear();
-
 
   auto map_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name && setting.name == std::wstring_view{ L"map" } && setting.value && setting.value[0]; });
   auto listen_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting && setting == std::wstring_view{ L"listen" }; });

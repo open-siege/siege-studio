@@ -1,7 +1,8 @@
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-
 import std;
+
+import siege.platform.shared;
+import siege.platform.stream;
+
 import cfg.shared;
 
 using namespace siege::views;

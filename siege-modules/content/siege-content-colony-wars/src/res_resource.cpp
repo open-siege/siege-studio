@@ -1,13 +1,11 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/resource.hpp>
-
 export module siege.resource.res;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::resource::res
 {
@@ -87,7 +85,6 @@ namespace siege::resource::res
   {
     platform::istream_pos_resetter resetter(stream);
     std::vector<content_info> results;
-
 
     res_header header{};
     stream.read((char*)&header, sizeof(res_header));

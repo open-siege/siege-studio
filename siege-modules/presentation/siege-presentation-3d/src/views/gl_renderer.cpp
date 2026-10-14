@@ -1,15 +1,15 @@
 module;
 
 #if WIN32
-#include <siege/platform/win/file.hpp>
 #endif
-
 // TODO is this actually cros-platform?
+#include <siege/platform/windows.hpp>
 #include <GL/GL.h>
 
 export module gl.renderer;
 
 import std;
+
 import siege.content.renderable;
 
 namespace siege::views
@@ -105,7 +105,7 @@ namespace siege::views
     constexpr GLdouble pi = 3.1415926535897932384626433832795;
     GLdouble fW, fH;
 
-    fH = tan(fovY / 360 * pi) * zNear;// equiv: tan((fovY/2)/180*pi)*zNear
+    fH = std::tan(fovY / 360 * pi) * zNear;// equiv: tan((fovY/2)/180*pi)*zNear
     fW = fH * aspect;
 
     ::glFrustum(-fW, fW, -fH, fH, zNear, zFar);

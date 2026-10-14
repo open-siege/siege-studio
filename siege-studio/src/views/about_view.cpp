@@ -1,15 +1,13 @@
-#ifndef SIEGE_ABOUT_VIEW_HPP
-#define SIEGE_ABOUT_VIEW_HPP
-
-#include <utility>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/wic.hpp>
-#include <siege/platform/win/capabilities.hpp>
+#include <siege/platform/windows.hpp>
 #include <imagehlp.h>
+#include <CommCtrl.h>
+import std;
+import win32.window;
+import win32.wic;
+import win32.dialog;
+import win32.capabilities;
+import win32.common_controls;
+import win32.theming;
 
 namespace fs = std::filesystem;
 
@@ -52,7 +50,7 @@ namespace siege::views
 
     win32::window text_stack;
 
-    about_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    about_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       logo_icon.reset((HICON)::LoadImageW(params.hInstance, L"AppIcon", IMAGE_ICON, 0, 0, 0));
       win32::apply_window_theme(*this);
@@ -61,7 +59,6 @@ namespace siege::views
     auto wm_create()
     {
       ::SetWindowTextW(*this, L"About Siege Studio");
-
 
       text_stack = win32::window(CreateWindowExW(0, L"StackLayout", nullptr, WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, *this, nullptr, nullptr, nullptr));
 
@@ -176,7 +173,7 @@ namespace siege::views
       case WM_CREATE:
         return wm_create();
       case WM_SIZE:
-        return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_CLOSE:
         return wm_close();
       default:
@@ -193,4 +190,3 @@ namespace siege::views
   }
 }// namespace siege::views
 
-#endif

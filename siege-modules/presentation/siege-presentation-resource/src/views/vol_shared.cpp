@@ -1,18 +1,13 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/wave.hpp>
-
-#if WIN32
-#include <siege/platform/win/file.hpp>
-#endif
-
 export module vol.shared;
 
 import std;
+import win32.file;
 import siege.platform.bitmap;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.wave;
+
 import vol.maker;
 
 namespace siege::views
@@ -23,38 +18,38 @@ namespace siege::views
   export std::span<const siege::fs_string_view> get_volume_formats() noexcept
   {
     constexpr static auto formats = std::array<siege::fs_string_view, 32>{ {
-      FSL ".vol",
-      FSL ".rmf",
-      FSL ".mis",
-      FSL ".map",
-      FSL ".rbx",
-      FSL ".tbv",
-      FSL ".zip",
-      FSL ".vl2",
-      FSL ".pk3",
-      FSL ".iso",
-      FSL ".mds",
-      FSL ".cue",
-      FSL ".nrg",
-      FSL ".7z",
-      FSL ".tgz",
-      FSL ".rar",
-      FSL ".cab",
-      FSL ".z",
-      FSL ".cln",
-      FSL ".pak",
-      FSL ".sin",
-      FSL ".vpk",
-      FSL ".pod",
-      FSL ".clm",
-      FSL ".cd",
-      FSL ".blo",
-      FSL ".dat",
-      FSL ".prj",
-      FSL ".mw4",
-      FSL ".rsc",
-      FSL ".res",
-      FSL ".atd",
+      FSL".vol",
+      FSL".rmf",
+      FSL".mis",
+      FSL".map",
+      FSL".rbx",
+      FSL".tbv",
+      FSL".zip",
+      FSL".vl2",
+      FSL".pk3",
+      FSL".iso",
+      FSL".mds",
+      FSL".cue",
+      FSL".nrg",
+      FSL".7z",
+      FSL".tgz",
+      FSL".rar",
+      FSL".cab",
+      FSL".z",
+      FSL".cln",
+      FSL".pak",
+      FSL".sin",
+      FSL".vpk",
+      FSL".pod",
+      FSL".clm",
+      FSL".cd",
+      FSL".blo",
+      FSL".dat",
+      FSL".prj",
+      FSL".mw4",
+      FSL".rsc",
+      FSL".res",
+      FSL".atd",
     } };
 
     return formats;
@@ -107,7 +102,6 @@ namespace siege::views
 
     return std::nullopt;
   };
-
 
   export std::size_t load_volume(std::any& self, std::istream& vol_stream, std::optional<std::filesystem::path> path, std::function<void(resource_reader::content_info&)> on_new_item)
   {

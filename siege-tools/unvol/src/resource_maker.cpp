@@ -1,21 +1,21 @@
-#include <siege/platform/resource.hpp>
-
 import std;
-import siege.resource.iso;
-import siege.resource.cab;
-import siege.resource.zip;
-import siege.resource.prj;
-import siege.resource.mw4;
+
+import siege.platform.resource;
 import siege.resource.atd;
+import siege.resource.cab;
+import siege.resource.clm;
+import siege.resource.cln;
+import siege.resource.iso;
+import siege.resource.mw4;
+import siege.resource.pak;
+import siege.resource.prj;
 import siege.resource.res;
 import siege.resource.rsc;
-import siege.resource.cln;
-import siege.resource.pak;
-import siege.resource.wad;
-import siege.resource.vol;
 import siege.resource.three_space;
 import siege.resource.trophy_bass;
-import siege.resource.clm;
+import siege.resource.vol;
+import siege.resource.wad;
+import siege.resource.zip;
 
 namespace siege::resource
 {

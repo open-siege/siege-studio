@@ -1,13 +1,11 @@
-#define _CRT_SECURE_NO_WARNINGS
+import std;
+import win32.window;
+import win32.capabilities;
+import win32.common_controls;
+import win32.shell;
+import siege.platform.shared;
 
-#include <SDKDDKVer.h>
-#undef NDEBUG
-#include <cassert>
-
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/capabilities.hpp>
+using namespace win32;
 
 namespace siege::views
 {
@@ -35,7 +33,7 @@ BOOL deregister_windows(HMODULE module)
   auto temp = atoms_to_unregister;
   for (auto atom : temp)
   {
-    if (::UnregisterClassW((wchar_t*)atom, module))
+    if (win32::unregister_class(atom, module))
     {
       atoms_to_unregister.erase(atom);
     }

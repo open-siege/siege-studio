@@ -1,7 +1,6 @@
-#include <array>
-#include <siege/platform/shared.hpp>
-
+import std;
 import siege.platform.installation;
+import siege.platform.shared;
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
@@ -12,8 +11,8 @@ using installation_option = platform::installation_option;
 extern "C" {
 extern game_storage_properties storage_properties = {
   .number_of_discs = 1,
-  .disc_names = { FSL "EARTHSIEGE2" },
-  .default_install_path = FSL "<systemDrive>/Dynamix/Dynamix/EarthSiege 2"
+  .disc_names = { FSL"EARTHSIEGE2" },
+  .default_install_path = FSL"<systemDrive>/Dynamix/Dynamix/EarthSiege 2"
 };
 
 extern std::array<path_rule, 32> directory_mappings = {{ 
@@ -60,16 +59,15 @@ installation_option* get_options_for_variable(const fs_char* variable_name) noex
 
   auto name_str = std::basic_string_view<fs_char>(variable_name);
 
-
   if (name_str == L"languageFolder")
   {
     static auto modes = std::array<installation_option, 8>{
-      installation_option{ .name = FSL "ENGLISH", .label = FSL"English" },
+      installation_option{ .name = FSL"ENGLISH", .label = FSL"English" },
       installation_option{ .name = FSL"GERMAN", .label = FSL"German" },
-      installation_option{ .name = FSL "FRENCH", .label = FSL "French" },
-      installation_option{ .name = FSL "SPANISH", .label = FSL "Spanish" },
-      installation_option{ .name = FSL "PORTUG", .label = FSL "Portuguese" },
-      installation_option{ .name = FSL "ITALIAN", .label = FSL "Italian" }, 
+      installation_option{ .name = FSL"FRENCH", .label = FSL"French" },
+      installation_option{ .name = FSL"SPANISH", .label = FSL"Spanish" },
+      installation_option{ .name = FSL"PORTUG", .label = FSL"Portuguese" },
+      installation_option{ .name = FSL"ITALIAN", .label = FSL"Italian" }, 
       installation_option{},
     };
 
@@ -85,7 +83,6 @@ std::errc apply_post_install_steps() noexcept
     { "DATA/DRIVE.CFG", literal_template{ ".\r\n.\r\n" } },
     { "DATA/LANGUAGE.CFG", literal_template{ "E\r\n" } }
   };*/
-
 
   /* For Indeo playback
      * [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Drivers32]

@@ -1,14 +1,8 @@
-module;
-
-#include <limits>
-#include <memory>
-#include <any>
-
 export module siege.configuration.ini;
 
 import std;
-import siege.configuration.shared;
 
+import siege.configuration.shared;
 
 namespace siege::configuration::common::ini
 {

@@ -3,11 +3,10 @@ module;
 #include <WinSock2.h>
 #include <ws2tcpip.h>
 
-#include <siege/platform/win/module.hpp>
-
 export module wsock32.shared;
 
 import std;
+import win32.module;
 
 namespace fs = std::filesystem;
 
@@ -443,7 +442,6 @@ export safe_log log_sampled_check()
 
   return log_sampled(counter, 10007);
 }
-
 
 export std::string level_to_string(int level)
 {

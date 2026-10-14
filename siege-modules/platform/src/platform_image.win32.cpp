@@ -1,16 +1,17 @@
 module;
-
-#include <siege/platform/stream.hpp>
-#include <siege/platform/win/com.hpp>
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/wic.hpp>
-#include <VersionHelpers.h>
+#include <siege/platform/windows.hpp>
 #include <spanstream>
 
 export module siege.platform.image;
 
 import std;
+import win32.wic;
+
+import win32.file;
+import win32.com;
+
 export import siege.platform.bitmap;
+import siege.platform.stream;
 
 namespace siege::platform::bitmap
 {
@@ -25,7 +26,7 @@ namespace siege::platform::bitmap
     std::size_t frame_count() const noexcept;
     size get_size(std::size_t frame) const noexcept;
 
-    inline win32::wic::bitmap_source& at(std::size_t frame)
+    win32::wic::bitmap_source& at(std::size_t frame)
     {
       return frames.at(frame);
     }

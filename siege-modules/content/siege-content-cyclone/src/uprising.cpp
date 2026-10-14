@@ -1,10 +1,11 @@
 module;
-
-#include <siege/platform/endian_arithmetic.hpp>
+#include <cstddef>
 
 export module siege.configuration.uprising;
 
 import std;
+
+import siege.platform.endian;
 
 namespace siege::configuration::cyclone
 {

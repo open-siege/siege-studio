@@ -1,25 +1,26 @@
-#ifndef SIEGE_MAIN_WINDOW_HPP
-#define SIEGE_MAIN_WINDOW_HPP
+#include <siege/platform/windows.hpp>
+#include <ShlObj.h>
+#include <shobjidl.h>
+#include <CommCtrl.h>
+#include <cassert>
+import std;
+import win32.file;
+import win32.com;
+import win32.window;
+import win32.drawing;
 
-#include <dwmapi.h>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/win/layout.hpp>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <map>
-#include <unordered_set>
-#include <filesystem>
-#include <spanstream>
+import win32.shell_dialogs;
+import win32.threading;
+
+import win32.common_controls;
+import win32.dialog;
+import win32.layout;
+import win32.shell;
+import win32.theming;
 
 import siege.platform.presentation;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::views
 {
@@ -46,8 +47,8 @@ namespace siege::views
     std::list<fs::path>::iterator selected_file;
     std::unordered_set<HTREEITEM> expanded_folders;
     int folder_image_index = -1;
-    std::map<win32::lparam_t, fs::path> tab_working_directory_mapping;
-    std::map<win32::lparam_t, fs::path>::iterator default_tab_mapping = tab_working_directory_mapping.end();
+    std::map<LPARAM, fs::path> tab_working_directory_mapping;
+    std::map<LPARAM, fs::path>::iterator default_tab_mapping = tab_working_directory_mapping.end();
 
     bool updated_in_progress = false;
     bool is_resizing = false;
@@ -72,7 +73,7 @@ namespace siege::views
       return result;
     }();
 
-    siege_main_window(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params), tab_control(nullptr)
+    siege_main_window(HWND self, CREATESTRUCTW& params) : basic_window(self, params), tab_control(nullptr)
     {
       params.dwExStyle = params.dwExStyle | WS_EX_ACCEPTFILES;
 
@@ -321,7 +322,6 @@ namespace siege::views
           .style = WS_CHILD | WS_VISIBLE | TCS_FIXEDWIDTH | TCS_FORCELABELLEFT,
         });
 
-
       tab_control.bind_nm_rclick(std::bind_front(&siege_main_window::tab_control_nm_rclick, this));
       tab_control.bind_tcn_sel_change(std::bind_front(&siege_main_window::tab_control_tcn_sel_change, this));
       tab_control.bind_tcn_sel_changing(std::bind_front(&siege_main_window::tab_control_tcn_sel_changing, this));
@@ -365,7 +365,6 @@ namespace siege::views
           }
 
           std::vector<COMDLG_FILTERSPEC> filetypes(temp.begin(), temp.end());
-
 
           win32::com::com_ptr<IShellItem> folder_info;
 
@@ -418,7 +417,6 @@ namespace siege::views
           dialog.value()->SetFileTypes(filetypes.size(), filetypes.data());
           dialog.value()->SetFileTypeIndex(selected_index);
 
-
           auto result = dialog.value()->Show(nullptr);
 
           if (result == S_OK)
@@ -468,7 +466,6 @@ namespace siege::views
 
         return std::nullopt;
       });
-
 
       auto unpack_path = win32::find_binary_module(win32::search_context{
         .module_name = L"game-unpack.exe" });
@@ -753,7 +750,7 @@ namespace siege::views
 
         if (tab_item->lParam)
         {
-          auto positioned = win32::window_ref(win32::hwnd_t(tab_item->lParam)).SetWindowPos(tab_rect);
+          auto positioned = win32::window_ref(HWND(tab_item->lParam)).SetWindowPos(tab_rect);
           assert(positioned);
         }
       }
@@ -828,9 +825,9 @@ namespace siege::views
 
           auto filename = fs::path(*file_path).filename().wstring();
 
-          tab_working_directory_mapping[win32::lparam_t(child->get())] = get_working_directory_for_path(*file_path);
+          tab_working_directory_mapping[LPARAM(child->get())] = get_working_directory_for_path(*file_path);
 
-          tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename.data(), .lParam = win32::lparam_t(child->get()) });
+          tab_control.InsertItem(index, TCITEMW{ .mask = TCIF_TEXT | TCIF_PARAM, .pszText = filename.data(), .lParam = LPARAM(child->get()) });
 
           SetWindowLongPtrW(*child, GWLP_ID, index + 1);
 
@@ -852,7 +849,7 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
+    std::optional<LRESULT> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -991,7 +988,7 @@ namespace siege::views
 
       auto current_index = tab_control.GetCurrentSelection();
 
-      auto destroyed = ::DestroyWindow(win32::hwnd_t(item->lParam));
+      auto destroyed = ::DestroyWindow(HWND(item->lParam));
       assert(destroyed == TRUE);
       tab_control.DeleteItem(index);
 
@@ -1040,7 +1037,7 @@ namespace siege::views
       auto current_index = sender.GetCurrentSelection();
 
       auto tab_item = tab_control.GetItem(current_index);
-      ::ShowWindow(win32::hwnd_t(tab_item->lParam), SW_HIDE);
+      ::ShowWindow(HWND(tab_item->lParam), SW_HIDE);
       return 0;
     }
 
@@ -1058,7 +1055,6 @@ namespace siege::views
       {
         return fs::current_path();
       }
-
 
       // FFS! Comparing extensions is broken after a Visual Studio update.
       // if (file_path.has_extension() && (file_path.extension() == L".exe" || file_path.extension() == L".EXE"))
@@ -1133,7 +1129,6 @@ namespace siege::views
 
       auto tab_item = tab_control.GetItem(current_index);
 
-
       if (tab_item->lParam == 0)
       {
         return;
@@ -1147,13 +1142,13 @@ namespace siege::views
         repopulate_tree_view(fs::current_path());
       }
 
-      auto temp_window = win32::window_ref(win32::hwnd_t(tab_item->lParam));
+      auto temp_window = win32::window_ref(HWND(tab_item->lParam));
 
       temp_window.SetWindowPos(HWND_TOP);
 
       auto tab_rect = tab_control.GetClientRect().and_then([&](auto value) { return tab_control.MapWindowPoints(*this, value); }).value().second;
 
-      ShowWindow(win32::hwnd_t(tab_item->lParam), SW_SHOW);
+      ShowWindow(HWND(tab_item->lParam), SW_SHOW);
     }
 
     void AddDefaultTab()
@@ -1181,12 +1176,12 @@ namespace siege::views
 
       std::wstring title = L"Supported Games";
 
-      default_tab_mapping = tab_working_directory_mapping.emplace(win32::lparam_t(child->get()), fs::current_path()).first;
+      default_tab_mapping = tab_working_directory_mapping.emplace(LPARAM(child->get()), fs::current_path()).first;
 
       tab_control.InsertItem(index, TCITEMW{
                                       .mask = TCIF_TEXT | TCIF_PARAM,
                                       .pszText = title.data(),
-                                      .lParam = win32::lparam_t(child->get()),
+                                      .lParam = LPARAM(child->get()),
                                     });
 
       if (index == 0)
@@ -1248,7 +1243,6 @@ namespace siege::views
             .lpszClass = class_name.c_str(),
           });
 
-
           assert(child);
 
           auto ref = child->ref();
@@ -1289,12 +1283,12 @@ namespace siege::views
           {
             auto index = tab_control.GetItemCount();
 
-            tab_working_directory_mapping[win32::lparam_t(child->get())] = get_working_directory_for_path(file_path);
+            tab_working_directory_mapping[LPARAM(child->get())] = get_working_directory_for_path(file_path);
 
             tab_control.InsertItem(index, TCITEMW{
                                             .mask = TCIF_TEXT | TCIF_PARAM,
                                             .pszText = (wchar_t*)file_path.filename().c_str(),
-                                            .lParam = win32::lparam_t(child->get()),
+                                            .lParam = LPARAM(child->get()),
                                           });
 
             if (index == 0)
@@ -1385,10 +1379,8 @@ namespace siege::views
             result = fs::path(text.data()) / result;
           }
 
-
         } while (item != nullptr);
       }
-
 
       return result;
     }
@@ -1563,7 +1555,7 @@ namespace siege::views
       case WM_DPICHANGED:
         return wm_dpi_changed(lparam);
       case WM_SIZE:
-        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<std::byte>(wparam, lparam));
       case WM_DROPFILES:
@@ -1591,4 +1583,3 @@ namespace siege::views
   }
 }// namespace siege::views
 
-#endif

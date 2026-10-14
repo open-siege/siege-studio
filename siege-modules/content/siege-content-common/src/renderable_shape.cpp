@@ -1,8 +1,7 @@
-module;
-
 export module siege.content.renderable;
 
 import std;
+
 export import siege.content.structures;
 
 namespace siege::content
@@ -59,7 +58,7 @@ namespace siege::content
     std::vector<sub_sequence_info> sub_sequences;
   };
 
-  export inline std::string to_string(const rgb_data& data)
+  export std::string to_string(const rgb_data& data)
   {
     return "rgba(" + std::to_string(data.red) + ", " + std::to_string(data.green) + ", " + std::to_string(data.blue) + ", " + std::to_string(data.rgb_flags) + ")";
   }
@@ -91,22 +90,22 @@ namespace siege::content
       };
     }
 
-    inline auto get_sequences(const std::vector<std::size_t>& detail_level_indexes)
+    auto get_sequences(const std::vector<std::size_t>& detail_level_indexes)
     {
       return get_base(raw)->get_sequences(detail_level_indexes);
     }
 
-    inline auto get_detail_levels()
+    auto get_detail_levels()
     {
       return get_base(raw)->get_detail_levels();
     }
 
-    inline auto get_materials()
+    auto get_materials()
     {
       return get_base(raw)->get_materials();
     }
 
-    inline void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
+    void render_shape(shape_renderer& renderer, const std::vector<std::size_t>& detail_level_indexes, const std::vector<sequence_info>& sequences) const
     {
       return get_base(const_cast<std::any&>(raw))->render_shape(renderer, detail_level_indexes, sequences);
     }

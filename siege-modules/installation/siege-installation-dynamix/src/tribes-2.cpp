@@ -1,7 +1,6 @@
-#include <array>
-#include <siege/platform/shared.hpp>
-
+import std;
 import siege.platform.installation;
+import siege.platform.shared;
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
@@ -20,10 +19,10 @@ extern game_storage_properties storage_properties = {
 };
 
 extern std::array<const fs_char*, 2> associated_extensions = {
-  FSL "siege-extension-tribes-2"
+  FSL"siege-extension-tribes-2"
 };
 
 extern std::array<path_rule, 32> directory_mappings = {{ 
-  { FSL "Tribes2/GameData", FSL "." },
+  { FSL"Tribes2/GameData", FSL"." },
  }};
 }

@@ -1,13 +1,11 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/stream.hpp>
-
 export module siege.content.pal;
 
 import std;
+
+import siege.platform.endian;
 import siege.platform.palette;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::content::pal
 {
@@ -29,7 +27,7 @@ namespace siege::content::pal
     std::vector<colour> colours;
   };
 
-  export inline double colour_distance(const colour& e1, const colour& e2)
+  export double colour_distance(const colour& e1, const colour& e2)
   {
     long rmean = ((long)e1.red + (long)e2.red) / 2;
     long r = (long)e1.red - (long)e2.red;

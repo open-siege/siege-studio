@@ -1,0 +1,342 @@
+module;
+#include <siege/platform/windows.hpp>
+#include <uxtheme.h>
+export module win32.theming;
+
+import std;
+import win32.module;
+import win32.drawing;
+
+import win32.common_controls;
+
+namespace win32
+{
+  export gdi::font_ref load_font(::LOGFONTW font_info, std::wstring_view font_name = L"");
+  export gdi::brush_ref get_solid_brush(COLORREF color);
+
+  export bool is_dark_theme();
+  export void set_is_dark_theme(bool);
+  export COLORREF get_color_for_window(win32::window_ref, std::wstring_view);
+  export COLORREF get_color_for_class(std::wstring_view class_name, std::wstring_view prop);
+  export std::optional<COLORREF> set_color_for_class(std::wstring_view, std::wstring_view, std::optional<COLORREF> color);
+  export std::optional<SIZE> get_font_size_for_string(gdi::font_ref, std::wstring_view);
+
+  export enum struct segoe_fluent_icons : wchar_t
+  {
+    global_navigation_button = 0xe700,
+    chevron_up = 0xE70D,
+    chevron_down = 0xE70E,
+    edit = 0xE70F,
+    add = 0xE710,
+    cancel = 0xE711,
+    more = 0xE712,
+    setting = 0xE713,
+    filter = 0xE71C,
+    zoom = 0xE71E,
+    zoom_out = 0xE71F,
+    zoom_in = 0xE8A3,
+    open_in_new_window = 0xE8A7,
+    new_window = 0xE78B,
+    open_file = 0xE8E5,
+    folder_open = 0xE838,
+    rotate = 0xE7AD,
+    stop = 0xE71A,
+    play = 0xE768,
+    pause = 0xE769,
+    repeat_all = 0xE8EE,
+    grid_view = 0xF0E2,
+    group_list = 0xF168,
+    toggle_filled = 0xEC11,
+    toggle_border = 0xEC12,
+    slider_thumb = 0xEC13,
+    toggle_thumb = 0xEC14,
+    file_explorer = 0xEC50,
+    scroll_up_down = 0xEC8F,
+    radio_btn_off = 0xecca,
+    radio_btn_on = 0xeccb,
+    radio_bullet_2 = 0xECCC,
+    radio_bullet = 0xE915,
+    pan_mode = 0xece9,
+    image_export = 0xee71,
+    picture = 0xe8b9,
+    save = 0xE74E,
+    save_as = 0xE792,
+    game = 0xE7FC,
+    dpad = 0xF10E,
+    caret_solid_left = 0xf08d,
+    caret_solid_down = 0xf08e,
+    caret_solid_right = 0xf08f,
+    caret_solid_up = 0xf090,
+    left_stick = 0xF108,
+    right_stick = 0xF109,
+    arrow_up = 0xF0AD,
+    arrow_down = 0xF0AE,
+    arrow_right = 0xF0AF,
+    arrow_left = 0xF0B0,
+    button_a = 0xF093,
+    button_b = 0xF094,
+    button_x = 0xF096,
+    button_y = 0xF095,
+    trigger_left = 0xF10A,
+    trigger_right = 0xF10B,
+    bumper_left = 0xF10C,
+    bumper_right = 0xF10D,
+    shield = 0xEA18,
+    check_mark = 0xe73e,
+    button_menu = 0xede3,
+    button_view = 0xeeca,
+    unknown = 0xE9CE
+  };
+
+  export win32::image_list create_icon_list(std::span<segoe_fluent_icons> icons, SIZE icon_size, std::optional<::RGBQUAD> optional_color = std::nullopt);
+
+  export struct theme_module : private win32::module
+  {
+    theme_module() : win32::module("uxtheme.dll", true)
+    {
+      set_window_theme = this->GetProcAddress<decltype(set_window_theme)>("SetWindowTheme");
+
+      if (set_window_theme == nullptr)
+      {
+        throw std::exception("Could not load theme window functions");
+      }
+    }
+
+    HRESULT SetWindowTheme(HWND window, const wchar_t* app_name, const wchar_t* id)
+    {
+      return set_window_theme(window, app_name, id);
+    }
+
+  private:
+    std::add_pointer_t<decltype(::SetWindowTheme)> set_window_theme;
+  };
+
+  export struct properties
+  {
+    struct window
+    {
+      constexpr static auto bk_color = std::wstring_view(L"BkColor");
+
+      inline static auto props = std::array<std::wstring_view, 1>{
+        bk_color
+      };
+    };
+
+    struct menu
+    {
+      constexpr static auto bk_color = std::wstring_view(L"BkColor");
+      constexpr static auto text_color = std::wstring_view(L"TextColor");
+      constexpr static auto text_highlight_color = std::wstring_view(L"TextHighlightColor");
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        text_highlight_color
+      };
+    };
+
+    struct button
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto hot_bk_color = L"HotBkColor";
+      inline static auto focus_bk_color = L"FocusBkColor";
+      inline static auto pushed_bk_color = L"PushedBkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct edit
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct track_bar
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        text_bk_color
+      };
+    };
+
+    struct combo_box
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct combo_box_ex
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct header
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
+
+      inline static auto props = std::array<std::wstring_view, 4>{
+        bk_color,
+        text_color,
+        text_bk_color,
+        text_highlight_color
+      };
+    };
+
+    struct tree_view
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto line_color = L"LineColor";
+
+      inline static auto props = std::array<std::wstring_view, 3>{
+        bk_color,
+        text_color,
+        line_color
+      };
+    };
+
+    struct list_view
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto outline_color = L"OutlineColor";
+
+      inline static auto props = std::array<std::wstring_view, 4>{
+        bk_color,
+        text_color,
+        text_bk_color,
+        outline_color
+      };
+    };
+
+    struct tool_bar
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto btn_highlight_color = L"BtnHighlightColor";
+      inline static auto btn_shadow_color = L"BtnShadowColor";
+      inline static auto btn_face_color = L"BtnFaceColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
+      inline static auto mark_color = L"MarkColor";
+
+      inline static auto props = std::array<std::wstring_view, 7>{
+        bk_color,
+        btn_highlight_color,
+        btn_shadow_color,
+        btn_face_color,
+        text_color,
+        text_highlight_color,
+        mark_color
+      };
+    };
+
+    struct list_box
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
+
+      inline static auto props = std::array<std::wstring_view, 4>{
+        bk_color,
+        text_color,
+        text_bk_color,
+        text_highlight_color
+      };
+    };
+
+    struct tab_control
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+      inline static auto text_bk_color = L"TextBkColor";
+      inline static auto text_highlight_color = L"TextHighlightColor";
+
+      inline static auto props = std::array<std::wstring_view, 4>{
+        bk_color,
+        text_color,
+        text_bk_color,
+        text_highlight_color
+      };
+    };
+
+    struct static_control
+    {
+      inline static auto bk_color = L"BkColor";
+      inline static auto text_color = L"TextColor";
+
+      inline static auto props = std::array<std::wstring_view, 2>{
+        bk_color,
+        text_color
+      };
+    };
+  };
+
+  // user controls
+  export void apply_window_theme(win32::window_ref& control);
+  export void apply_button_theme(bool remove = false);
+  export void apply_static_control_theme(bool remove = false);
+  export void apply_list_box_theme(bool remove = false);
+
+  // common controls
+  export void apply_tooltip_theme(bool remove = false);
+  export void apply_tree_view_theme(bool remove = false);
+  export void apply_list_view_theme(bool remove = false);
+  export void apply_tab_control_theme(bool remove = false);
+  export void apply_header_theme(bool remove = false);
+  export void apply_tool_bar_theme(bool remove = false);
+  export void apply_track_bar_theme(bool remove = false);
+
+  // Shared by theming implementation units (not exported).
+  struct superclass_handle
+  {
+    HWND dummy = nullptr;
+    std::add_pointer_t<decltype(DefWindowProcW)> control_proc = DefWindowProcW;
+
+    void init(const wchar_t* class_name, LONG_PTR sub_class);
+    void dispose(std::unordered_set<HWND>& controls, LONG_PTR sub_class);
+    ~superclass_handle();
+  };
+
+  struct root_window_handler
+  {
+    static LRESULT __stdcall handle_root_message(HWND root, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+  };
+}// namespace win32

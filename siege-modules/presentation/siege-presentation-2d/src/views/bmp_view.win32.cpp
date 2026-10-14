@@ -1,21 +1,28 @@
 module;
-
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/wic.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/stream.hpp>
+#include <siege/platform/windows.hpp>
+#include <wincodec.h>
+#include <CommCtrl.h>
 
 export module bmp.views;
 
 import std;
-import bmp.shared;
+import win32.file;
+import win32.com;
+import win32.window;
+import win32.drawing;
+import win32.shell_dialogs;
+import win32.wic;
+import win32.threading;
+
+import win32.window;
+import win32.common_controls;
+import win32.shell;
+import win32.theming;
+
 import siege.platform.storage;
+import siege.platform.stream;
+
+import bmp.shared;
 
 namespace siege::views
 {
@@ -77,7 +84,7 @@ namespace siege::views
 
     std::map<ATOM, std::function<std::unique_ptr<bitmap_encoder>(std::filesystem::path)>> encoder_creators;
 
-    bmp_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    bmp_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       auto bmp_creator = [](auto path) {
         return std::unique_ptr<bitmap_encoder>(new bmp_bitmap_encoder(path));
@@ -213,7 +220,6 @@ namespace siege::views
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_png_id, L"Export As Multiple PNGs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_jpg_id, L"Export As Multiple JPGs");
       export_multiple_menu.AppendMenuW(MF_OWNERDRAW, multiple_dds_id, L"Export As Multiple DDSs");
-
 
       remap_menu.AppendMenuW(MF_OWNERDRAW | MF_POPUP, (UINT_PTR)remap_dither_type_menu.get(), L"Color Remapping");
       remap_menu.AppendMenuW(MF_OWNERDRAW, 1, L"No Color Remapping");
@@ -409,7 +415,6 @@ namespace siege::views
                       std::ofstream stream(filename, std::ios::trunc);
                       auto encoder = creator->second(filename);
 
-
                       auto frame = encoder->create_new_frame();
 
                       auto ref = get_frame(state, i);
@@ -555,7 +560,6 @@ namespace siege::views
           resize_preview(true, wic_palette);
         }
 
-
         for (auto i = 0; i < sender.GetItemCount(); ++i)
         {
           if (i == info.iItem)
@@ -613,7 +617,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_size(std::size_t type, SIZE client_size)
+    std::optional<LRESULT> wm_size(std::size_t type, SIZE client_size)
     {
       if (type == SIZE_MINIMIZED || type == SIZE_MAXHIDE || type == SIZE_MAXSHOW)
       {
@@ -798,7 +802,7 @@ namespace siege::views
       }
     }
 
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
+    std::optional<LRESULT> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -1007,7 +1011,7 @@ namespace siege::views
       case WM_SETTINGCHANGE:
         return wm_setting_change(win32::setting_change_message(wparam, lparam));
       case WM_SIZE:
-        return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
       case WM_MOUSEMOVE:

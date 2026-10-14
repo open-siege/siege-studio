@@ -1,10 +1,11 @@
+#include <siege/platform/windows.hpp>
 
-#include <siege/platform/win/hresult.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/stream.hpp>
-
+import std;
+import win32.window;
+import win32.utils;
 import vol.shared;
 import vol.views;
+import siege.platform.stream;
 
 using namespace siege::views;
 using storage_info = siege::platform::storage_info;

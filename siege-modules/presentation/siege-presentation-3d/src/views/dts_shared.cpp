@@ -1,21 +1,20 @@
-module;
-
-#include <siege/platform/shared.hpp>
-
 export module dts.shared;
 
 import std;
-import siege.content.wtb;
+
+export import siege.content.bnd;
 import siege.content.bwd;
-import siege.content.wtb.renderable;
-import siege.content.mdl;
 import siege.content.dts;
 import siege.content.dts.renderable;
 import siege.content.dts.three_space;
 import siege.content.dts.three_space.renderable;
-export import siege.content.tmd;
-export import siege.content.bnd;
+import siege.content.mdl;
 export import siege.content.renderable;
+export import siege.content.tmd;
+import siege.content.wtb;
+import siege.content.wtb.renderable;
+import siege.platform.shared;
+
 export import dml.shared;
 
 namespace siege::views
@@ -38,7 +37,7 @@ namespace siege::views
 
   export std::span<const siege::fs_string_view> get_shape_formats() noexcept
   {
-    constexpr static auto formats = std::array<siege::fs_string_view, 12>{ { FSL ".dts", FSL ".tmd", FSL ".bnd", FSL ".cwg", FSL ".trk", FSL ".bwd", FSL ".wtb", FSL ".erf", FSL ".mdl", FSL ".md2", FSL ".mdx", FSL ".dkm" } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 12>{ { FSL".dts", FSL".tmd", FSL".bnd", FSL".cwg", FSL".trk", FSL".bwd", FSL".wtb", FSL".erf", FSL".mdl", FSL".md2", FSL".mdx", FSL".dkm" } };
     return formats;
   }
 

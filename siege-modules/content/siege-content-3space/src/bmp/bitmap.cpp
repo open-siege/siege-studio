@@ -1,14 +1,13 @@
-module;
-
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/tagged_data.hpp>
-#include <siege/platform/stream.hpp>
-
 export module siege.content.bmp;
 
 import std;
-import siege.platform.palette;
+
 import siege.content.pal;
+import siege.platform.endian;
+import siege.platform.palette;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.tagged_data;
 
 namespace siege::content::bmp
 {
@@ -327,7 +326,6 @@ namespace siege::content::bmp
     endian::little_int32_t num_details = 1;
     platform::write(raw_data, reinterpret_cast<const char*>(&num_details), sizeof(num_details));
 
-
     if (palette_id.has_value())
     {
       platform::write(raw_data, palette_tag.data(), sizeof(palette_tag));
@@ -471,7 +469,6 @@ namespace siege::content::bmp
   {
     return remap_bitmap<std::byte>(pixels, original_colours, other_colours, only_unique);
   }
-
 
   export std::vector<std::int32_t> remap_bitmap(const std::vector<std::int32_t>& pixels,
     const std::vector<pal::colour>& original_colours,

@@ -1,10 +1,15 @@
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/wic.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/win/capabilities.hpp>
-#include <siege/platform/win/shell.hpp>
+#include <siege/platform/windows.hpp>
+
+import std;
+import win32.window;
+import win32.drawing;
+import win32.wic;
+import win32.file;
+import win32.capabilities;
+import win32.shell;
+import win32.theming;
+
+import siege.platform.stream;
 
 namespace win32
 {
@@ -115,7 +120,6 @@ namespace win32
     return RGB(quad.rgbRed, quad.rgbGreen, quad.rgbBlue);
   }
 
-
   COLORREF get_color_for_class(std::wstring_view class_name, std::wstring_view prop)
   {
     auto cache = get_theme_cache();
@@ -183,37 +187,4 @@ namespace win32
     return from_storage(existing);
   }
 
-  std::expected<std::filesystem::path, HRESULT> get_path_via_file_dialog(OPENFILENAMEW info)
-  {
-    auto dialog = win32::com::CreateFileOpenDialog();
-
-    if (!dialog)
-    {
-      return std::unexpected(dialog.error());
-    }
-
-    auto open_dialog = *dialog;
-    open_dialog->SetOptions(info.Flags);
-
-    if (info.lpstrInitialDir)
-    {
-      open_dialog.SetFolder(info.lpstrInitialDir);
-    }
-
-    auto result = open_dialog->Show(nullptr);
-
-    if (result != S_OK)
-    {
-      return std::unexpected(result);
-    }
-
-    auto selection = open_dialog.GetResult();
-
-    if (!selection)
-    {
-      return std::unexpected(result);
-    }
-
-    return selection.value().GetFileSysPath();
-  }
 }// namespace win32

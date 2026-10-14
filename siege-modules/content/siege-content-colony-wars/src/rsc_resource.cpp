@@ -1,13 +1,11 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/resource.hpp>
-
 export module siege.resource.rsc;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::resource::rsc
 {
@@ -85,7 +83,6 @@ namespace siege::resource::rsc
     endian::little_uint32_t file_count;
     std::memcpy(&file_count, tag.data(), sizeof(file_count));
 
-
     auto current_pos = stream.tellg();
     rsc_v1_file_entry first{};
     stream.read((char*)&first, sizeof(first));
@@ -117,7 +114,6 @@ namespace siege::resource::rsc
       stream.seekg((std::size_t)current_pos, std::ios::beg);
       version = 3;
     }
-
 
     if (version == 1)
     {
@@ -236,7 +232,6 @@ namespace siege::resource::rsc
             std::uint32_t current_offset = size_entries.at(name.size_entry_index).file_data_offset;
             entry.offset = current_offset + start_offset;
 
-
             auto next_iter = sorted_sizes.find(current_offset);
 
             if (next_iter != sorted_sizes.end())
@@ -304,7 +299,6 @@ namespace siege::resource::rsc
 // 		files.append((fileName, fileOffset))
 
 // 	return files
-
 
 // importFilenames = sys.argv[1:]
 

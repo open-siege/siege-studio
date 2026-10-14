@@ -1,20 +1,18 @@
 module;
-
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
+#include <siege/platform/windows.hpp>
 export module siege.extension.id_tech.v2_5;
 
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
-import siege.resource.pak;
-import siege.resource.zip;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 import siege.resource.cab;
 import siege.resource.iso;
+import siege.resource.pak;
+import siege.resource.zip;
 
 extern "C" {
 
@@ -95,7 +93,6 @@ std::errc is_id_tech_2_5_input_mapping_valid(const siege::platform::hardware_con
       "+moveup",
       "+movedown",
     } };
-
 
     if (!std::ranges::any_of(axis_only, [&](auto& item) { return item == mapping->action_name; }) && mapping->hardware_input_type == controller_input_type::axis)
     {
@@ -183,7 +180,6 @@ std::errc is_sof_input_mapping_valid(const siege::platform::hardware_context_cap
       "+moveup",
       "+movedown",
     } };
-
 
     if (!std::ranges::any_of(axis_only, [&](auto& item) { return item == mapping->action_name; }) && mapping->hardware_input_type == controller_input_type::axis)
     {

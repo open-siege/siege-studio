@@ -1,18 +1,14 @@
 module;
-
-#include <siege/platform/win/wic.hpp>
-#include <siege/platform/win/shell.hpp>
+#include <siege/platform/windows.hpp>
+#include <wincodec.h>
+#include <shlwapi.h>
 #include <xmllite.h>
-#include <string>
-#include <string_view>
-#include <map>
-#include <vector>
-#include <stack>
-#include <memory>
 
 export module siege.configuration.xml;
 
 import std;
+import win32.wic;
+
 import siege.configuration.shared;
 
 struct xml_element
@@ -88,7 +84,6 @@ namespace siege::configuration::common::xml
       }
     }
 
-
     return std::make_optional<text_game_config>(std::any{}, std::move(buffer), std::move(config_data), save_config);
   }
 
@@ -97,7 +92,6 @@ namespace siege::configuration::common::xml
   }
 
 }// namespace siege::configuration::common::xml
-
 
 std::vector<size_t> get_line_offsets(std::string_view data)
 {
@@ -156,7 +150,6 @@ std::list<xml_element> parse_xml_elements(std::string_view raw_xml)
     return ::SHCreateMemStream((BYTE*)raw_xml.data(), raw_xml.size());
   }();
 
-
   if (!stream)
   {
     return out_list;
@@ -176,12 +169,10 @@ std::list<xml_element> parse_xml_elements(std::string_view raw_xml)
     }
   });
 
-
   if (::CreateXmlReader(__uuidof(IXmlReader), (void**)&xml_reader, nullptr) != S_OK)
   {
     return out_list;
   }
-
 
   if (xml_reader->SetInput(stream) != S_OK)
   {
@@ -214,7 +205,6 @@ std::list<xml_element> parse_xml_elements(std::string_view raw_xml)
 
       temp_conversion.resize(::WideCharToMultiByte(CP_UTF8, 0, name_view.data(), name_view.size(), nullptr, 0, nullptr, nullptr));
       ::WideCharToMultiByte(CP_UTF8, 0, name_view.data(), (int)name_view.size(), temp_conversion.data(), (int)temp_conversion.size(), nullptr, nullptr);
-
 
       size_t start_search = line_offsets[line - 1] + (pos - 1);
       size_t name_pos = raw_xml.find(temp_conversion, start_search);

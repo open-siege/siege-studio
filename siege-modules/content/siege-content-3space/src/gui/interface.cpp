@@ -7,10 +7,10 @@
 #include <fstream>
 #include <functional>
 #include <string>
-#include <siege/platform/tagged_data.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/stream.hpp>
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.tagged_data;
 
 namespace siege::gui::darkstar
 {
@@ -52,7 +52,6 @@ namespace siege::gui::darkstar
   using gui_item = std::variant<sim_control, sim_bitmap_control, es_palette_control, es_text_wrap_control, sim_text_control, es_button_control, es_smacker_movie_control, es_hidden_button_control, sim_timer_control, sim_active_control, es_text_list_control, es_encyclopedia_control, es_scannex_control, es_map_control, gftf_control, es_irc_channel_list_control, es_irc_people_list_control, es_irc_sgit_control, gsas_control, gcmb_control, ghan_control, sim_text_wrap_control, sim_alt_text_wrap_control, gcvc_control, gsdi_control, es_scroll_control, es_matrix_control, es_text_edit_control, gial_control, es_picture_pack_control, es_bitmap_animation_control, eshm_control, raw_item>;
 
   using gui_items = std::vector<gui_item>;
-
 
   struct sim_control
   {

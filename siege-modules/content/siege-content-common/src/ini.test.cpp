@@ -1,6 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include <sstream>
-
+import std;
 import siege.configuration.ini;
 
 namespace ini = siege::configuration::common::ini;

@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
-#include <sstream>
-#include <siege/platform/win/com.hpp>
 
+import std;
+import win32.com;
 import siege.configuration.xml;
 
 namespace xml = siege::configuration::common::xml;
@@ -48,12 +48,10 @@ TEST_CASE("entries_for returns bind attributes from KeyMapping xml")
 
   REQUIRE(entries.at(1).value == "run");
 
-
   entries = value.value().entries_for({ "KeyMapping"sv, "ActionKeys"sv, "bind"sv, "@"sv, "key1"sv });
   REQUIRE(entries.at(0).value == "key_mouse1");
   REQUIRE(entries.at(0).raw_line == "<bind action = \"use_item\" key1 = \"key_mouse1\" key2 = \"\" />");
   REQUIRE(entries.at(1).value == "key_mouse2");
-
 
   entries = value.value().entries_for({ "KeyMapping"sv, "ActionKeys"sv, "bind"sv, "@"sv, "key2"sv });
   REQUIRE(entries.at(0).value == "");

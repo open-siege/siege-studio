@@ -1,13 +1,12 @@
-module;
-
-#include <siege/platform/resource.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/wave.hpp>
-
 export module siege.resource.clm;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.wave;
 
 namespace fs = std::filesystem;
 
@@ -26,7 +25,6 @@ namespace siege::resource::clm
     endian::little_uint32_t offset;
     endian::little_uint32_t size;
   };
-
 
   export bool is_stream_supported(std::istream& stream)
   {

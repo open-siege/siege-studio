@@ -1,12 +1,11 @@
 // TRK - Star Trek Invasion model files
-module;
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.content.trk;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::content::trk
 {

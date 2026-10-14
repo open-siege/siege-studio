@@ -1,7 +1,6 @@
 #include <array>
-#include <siege/platform/shared.hpp>
-
 import siege.platform.installation;
+import siege.platform.shared;
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
@@ -54,15 +53,14 @@ installation_option* get_options_for_variable(const fs_char* variable_name) noex
 
   auto name_str = std::basic_string_view<fs_char>(variable_name);
 
-
   if (name_str == L"languageFolder")
   {
     static auto modes = std::array<installation_option, 8>{
-      installation_option{ .name = FSL "enu", .label = FSL "English" },
-      installation_option{ .name = FSL "deu", .label = FSL "German" },
-      installation_option{ .name = FSL "fra", .label = FSL "French" },
-      installation_option{ .name = FSL "esp", .label = FSL "Spanish" },
-      installation_option{ .name = FSL "ita", .label = FSL "Italian" },
+      installation_option{ .name = FSL"enu", .label = FSL"English" },
+      installation_option{ .name = FSL"deu", .label = FSL"German" },
+      installation_option{ .name = FSL"fra", .label = FSL"French" },
+      installation_option{ .name = FSL"esp", .label = FSL"Spanish" },
+      installation_option{ .name = FSL"ita", .label = FSL"Italian" },
       installation_option{},
     };
 

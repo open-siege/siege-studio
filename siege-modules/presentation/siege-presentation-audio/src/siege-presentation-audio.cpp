@@ -1,12 +1,8 @@
-#include <bit>
-#include <filesystem>
-#include <memory>
-#include <system_error>
-#include <algorithm>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-
 import std;
+
+import siege.platform.shared;
+import siege.platform.stream;
+
 import sfx.shared;
 
 using namespace std::literals;

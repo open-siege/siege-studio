@@ -1,4 +1,5 @@
-#include <siege/platform/win/window_module.hpp>
+import std;
+import win32.window;
 namespace fs = std::filesystem;
 
 extern "C" std::errc executable_is_supported(const wchar_t* filename) noexcept

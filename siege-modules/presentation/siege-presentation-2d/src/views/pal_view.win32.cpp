@@ -1,16 +1,16 @@
 module;
-
-#include <string_view>
-#include <istream>
+#include <siege/platform/windows.hpp>
 #include <spanstream>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/drawing.hpp>
 
 export module pal.views;
 
 import std;
+import win32.window;
+import win32.drawing;
+
+import win32.window;
+import win32.common_controls;
+
 import pal.shared;
 
 namespace siege::views
@@ -25,7 +25,7 @@ namespace siege::views
 
     std::wstring buffer;
 
-    pal_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    pal_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       buffer.reserve(64);
     }
@@ -71,7 +71,6 @@ namespace siege::views
       }
     }
 
-
     auto wm_copy_data(win32::copy_data_message<char> message)
     {
       std::spanstream stream(message.data);
@@ -99,7 +98,7 @@ namespace siege::views
       return FALSE;
     }
 
-    win32::lresult_t render_view_wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item)
+    LRESULT render_view_wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item)
     {
       if (item.itemAction == ODA_DRAWENTIRE)
       {
@@ -155,7 +154,7 @@ namespace siege::views
       case WM_CREATE:
         return wm_create();
       case WM_SIZE:
-        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
       default:

@@ -1,25 +1,16 @@
 module;
 
-#include <array>
-#include <string>
-#include <string_view>
-#include <filesystem>
-#include <sstream>
-#include <fstream>
-#include <iostream>
-#include <functional>
-#include <variant>
-#include <list>
-#include <map>
-#include <unordered_set>
-#include <siege/platform/resource.hpp>
-#ifdef WIN32
-#include <siege/platform/win/module.hpp>
-#endif
+#include <cstdlib>
 
 export module siege.resource.ext;
 
 import std;
+
+#if WIN32
+import win32.module;
+#endif
+
+import siege.platform.resource;
 
 namespace fs = std::filesystem;
 namespace platform = siege::platform;
@@ -123,7 +114,7 @@ namespace siege::resource
     std::error_code last_error;
     for (auto var : { "PROGRAMFILES", "PROGRAMFILES(x86)" })
     {
-      auto env = ::getenv(var);
+      auto env = std::getenv(var);
 
       if (!env)
       {
@@ -146,7 +137,7 @@ namespace siege::resource
     std::error_code last_error;
     for (auto var : { "PROGRAMFILES", "PROGRAMFILES(x86)" })
     {
-      auto env = ::getenv(var);
+      auto env = std::getenv(var);
 
       if (!env)
       {
@@ -170,7 +161,7 @@ namespace siege::resource
 
     for (auto var : { "PROGRAMFILES", "PROGRAMFILES(x86)" })
     {
-      auto env = ::getenv(var);
+      auto env = std::getenv(var);
 
       if (!env)
       {
@@ -206,7 +197,6 @@ namespace siege::resource
     results.reserve(std::count_if(cache_entry->second.begin(), cache_entry->second.end(), [&](const auto& info) {
       return std::visit(is_valid, info);
     }));
-
 
     for (const auto& item : cache_entry->second)
     {
@@ -679,7 +669,6 @@ namespace siege::resource
     });
   }
 
-
   std::vector<content_info> cab5_get_content_listing(std::any& cache, const std::string_view exe_path, const platform::listing_query& query)
   {
     return cached_get_content_listing(cache, query, [&](const auto& listing_filename) -> std::vector<content_info> {
@@ -842,7 +831,6 @@ namespace siege::resource
       return results;
     });
   }
-
 
   export std::vector<content_info> cab_get_content_listing(std::any& cache, const platform::listing_query& query)
   {
@@ -1146,7 +1134,6 @@ namespace siege::resource
         command << '\"' << cab2_executable() << " x " <<  info.archive_path << '\"';
         return command.str(); });
     };
-
 
     auto extract_cab_5 = [&] {
       return extract_file_contents_using_external_app(

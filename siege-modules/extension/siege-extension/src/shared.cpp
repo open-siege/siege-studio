@@ -1,0 +1,228 @@
+module;
+#include <siege/platform/windows.hpp>
+
+export module siege.extension.shared;
+
+import std;
+import win32.file;
+
+import siege.platform.shared;
+
+namespace siege
+{
+  export template<std::size_t PairCount>
+  std::errc get_name_ranges(
+    const std::array<std::pair<std::string_view, std::string_view>, PairCount>& ranges,
+    std::size_t length,
+    std::array<const char*, 2>* data,
+    std::size_t* saved) noexcept
+  {
+    if ((length == 0 || data == nullptr) && saved)
+    {
+      *saved = ranges.size();
+      return std::errc{};
+    }
+
+    if (!data)
+    {
+      return std::errc::bad_address;
+    }
+
+    auto i = 0u;
+
+    length = std::clamp<std::size_t>(length, 0, ranges.size());
+
+    for (; i < length; ++i)
+    {
+
+      data[i][0] = ranges[i].first.data();
+      data[i][1] = ranges[i].second.data();
+    }
+
+    if (saved)
+    {
+      *saved = i;
+    }
+
+    return i == length ? std::errc{} : std::errc::not_supported;
+  }
+
+  export std::errc executable_is_supported(const wchar_t* filename, const auto& verification_strings) noexcept
+  {
+    if (filename == nullptr)
+    {
+      return std::errc::bad_address;
+    }
+
+    std::error_code last_error;
+
+    if (!std::filesystem::exists(filename, last_error))
+    {
+      return std::errc::invalid_argument;
+    }
+
+    try
+    {
+      win32::file file(std::filesystem::path(filename), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+      auto file_size = file.GetFileSizeEx();
+
+      constexpr static std::size_t max_file_size = 10 * 1024 * 1024;
+
+      std::size_t clamped_file_size = 0;
+
+      if (file_size)
+      {
+        clamped_file_size = std::clamp<std::size_t>((std::size_t)file_size->QuadPart, 0, max_file_size);
+      }
+
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{ .QuadPart = clamped_file_size }, L"");
+
+      if (mapping && file_size)
+      {
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, clamped_file_size);
+        std::string_view data((char*)view.get(), clamped_file_size);
+
+        if (data.empty())
+        {
+          return std::errc::not_supported;
+        }
+
+        auto is_executable = data.find("MZ") == 0 && data.find("PE") != std::string_view::npos;
+
+        bool has_all_verification_strings = is_executable && std::all_of(verification_strings.begin(), verification_strings.end(), [&](auto& item) {
+          return data.find(item) != std::string_view::npos;
+        });
+
+        return has_all_verification_strings ? std::errc{} : std::errc::not_supported;
+      }
+
+      return std::errc::not_supported;
+    }
+    catch (...)
+    {
+      return std::errc::not_supported;
+    }
+  }
+
+  export std::errc executable_is_supported(const wchar_t* filename,
+    const auto& verification_strings,
+    const auto& function_name_ranges,
+    const auto& variable_name_ranges) noexcept
+  {
+    if (filename == nullptr)
+    {
+      return std::errc::bad_address;
+    }
+
+    std::error_code last_error;
+
+    if (!std::filesystem::exists(filename, last_error))
+    {
+      return std::errc::invalid_argument;
+    }
+
+    try
+    {
+      win32::file file(std::filesystem::path(filename), GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
+
+      auto file_size = file.GetFileSizeEx();
+
+      constexpr static std::size_t max_file_size = 10 * 1024 * 1024;
+
+      std::size_t clamped_file_size = 0;
+
+      if (file_size)
+      {
+        clamped_file_size = std::clamp<std::size_t>((std::size_t)file_size->QuadPart, 0, max_file_size);
+      }
+
+      auto mapping = file.CreateFileMapping(std::nullopt, PAGE_READONLY, LARGE_INTEGER{ .QuadPart = clamped_file_size }, L"");
+
+      if (mapping && file_size)
+      {
+        auto view = mapping->MapViewOfFile(FILE_MAP_READ, clamped_file_size);
+        std::string_view data((char*)view.get(), clamped_file_size);
+
+        if (data.empty())
+        {
+          return std::errc::not_supported;
+        }
+
+        auto is_executable = data.find("MZ") == 0 && data.find("PE") != std::string_view::npos;
+
+        bool has_all_verification_strings = is_executable && std::all_of(verification_strings.begin(), verification_strings.end(), [&](auto& item) {
+          return data.find(item.first) != std::string_view::npos;
+        });
+
+        bool has_all_functions = has_all_verification_strings && !function_name_ranges.empty() && std::all_of(function_name_ranges.begin(), function_name_ranges.end(), [&](auto& item) {
+          auto first_index = data.find(item.first);
+
+          if (first_index != std::string_view::npos)
+          {
+            return data.find(item.second, first_index) != std::string_view::npos;
+          }
+          return false;
+        });
+
+        bool has_all_variables = has_all_functions && !variable_name_ranges.empty() && std::all_of(variable_name_ranges.begin(), variable_name_ranges.end(), [&](auto& item) {
+          auto first_index = data.find(item.first);
+
+          if (first_index != std::string_view::npos)
+          {
+            return data.find(item.second, first_index) != std::string_view::npos;
+          }
+          return false;
+        });
+
+        return has_all_variables ? std::errc{} : std::errc::not_supported;
+      }
+
+      return std::errc::not_supported;
+    }
+    catch (...)
+    {
+      return std::errc::not_supported;
+    }
+  }
+
+  export std::unordered_set<std::string_view> GetGameFunctionNames(std::string_view string_section, const auto& function_name_ranges)
+  {
+    std::unordered_set<std::string_view> functions;
+
+    for (auto& pair : function_name_ranges)
+    {
+      auto first_index = string_section.find(pair.first.data(), 0, pair.first.size() + 1);
+      if (first_index != std::string_view::npos)
+      {
+        auto second_index = string_section.find(pair.second.data(), first_index, pair.second.size() + 1);
+
+        if (second_index != std::string_view::npos)
+        {
+          auto second_ptr = string_section.data() + second_index;
+          auto end = second_ptr + std::strlen(second_ptr) + 1;
+
+          for (auto start = string_section.data() + first_index; start != end; start += std::strlen(start) + 1)
+          {
+            std::string_view temp(start);
+
+            if (temp.empty() || temp.size() == 1)
+            {
+              continue;
+            }
+
+            if (!std::all_of(temp.begin(), temp.end(), [](auto c) { return c == '+' || c == '-' || std::isalnum(c) != 0; }))
+            {
+              continue;
+            }
+
+            functions.emplace(temp);
+          }
+        }
+      }
+    }
+
+    return functions;
+  }
+
+}// namespace siege

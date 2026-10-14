@@ -1,9 +1,8 @@
-#include <siege/platform/shared.hpp>
-
 import std;
 import siege.content.dts;
 import siege.content.dts.renderable;
 import siege.content.obj;
+import siege.platform.shared;
 
 namespace fs = std::filesystem;
 namespace dts = siege::content::dts::darkstar;
@@ -15,8 +14,6 @@ struct overloaded : Ts...
   using Ts::operator()...;
 };
 // explicit deduction guide (not needed as of C++20)
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
 
 int main(int argc, const char** argv)
 {

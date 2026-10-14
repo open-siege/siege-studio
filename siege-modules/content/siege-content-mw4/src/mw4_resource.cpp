@@ -1,15 +1,13 @@
-module;
 // constexpr auto header_tag = platform::to_tag<4>({ '#', 'V', 'B', 'D' });
 // constexpr auto item_tag = platform::to_tag<4>({ 0x80, 0x10, 0x54, 0xc0 });
 
 // uses lzw compression
-
-#include <memory>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.resource.mw4;
+import std;
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::resource::mw4
 {
@@ -98,7 +96,6 @@ namespace siege::resource::mw4
 
       offset += entry.compressed_size;
     } while ((std::size_t)stream.tellg() < current_pos + header.first_file_data_offset);
-
 
     return results;
   }

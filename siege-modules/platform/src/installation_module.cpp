@@ -1,11 +1,9 @@
-module;
-
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/shared.hpp>
-
 export module siege.platform.installation;
 
 import std;
+import win32.module;
+
+import siege.platform.shared;
 
 namespace siege::platform
 {

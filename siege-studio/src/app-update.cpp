@@ -1,17 +1,16 @@
-#include <SDKDDKVer.h>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/win/capabilities.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/http.hpp>
-#include <fstream>
-#include <filesystem>
-#include <regex>
-#include <future>
-#include <imagehlp.h>
-#include <winhttp.h>
+#include <siege/platform/windows.hpp>
+#include <ShlObj.h>
+#include <KnownFolders.h>
+import std;
+import win32.shell_dialogs;
+import win32.threading;
+import win32.com;
+import win32.window;
+import win32.capabilities;
+import win32.common_controls;
+import win32.shell;
+import siege.platform.http;
+import siege.platform.shared;
 
 namespace fs = std::filesystem;
 
@@ -171,7 +170,6 @@ __declspec(dllexport) BOOL can_update()
     auto channel_type = fs::path(SIEGE_CHANNEL_TYPE);
     auto path_info = discover_installation_info(SIEGE_MAJOR_VERSION, SIEGE_MINOR_VERSION, channel_type.wstring());
 
-
     auto possible_path = path_info.matching_installed_exe_path
                            .or_else([&]() { return path_info.latest_installed_exe_path; })
                            .or_else([&]() { return path_info.extraction_target_path; })
@@ -324,3 +322,4 @@ __declspec(dllexport) void apply_update(std::uint32_t update_type, HWND window)
   });
 }
 }
+

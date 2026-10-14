@@ -1,8 +1,8 @@
 // TBL - 3Space model data
 
 #include <array>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/shared.hpp>
+import siege.platform.endian;
+import siege.platform.shared;
 
 namespace siege::content::tbl::three_space
 {

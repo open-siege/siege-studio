@@ -1,11 +1,11 @@
-module;
-#include <siege/platform/resource.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.resource.prj;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::resource::prj
 {
@@ -204,7 +204,6 @@ namespace siege::resource::prj
 
       temp.seekg(sizeof(index_size), std::ios::cur);
 
-
       dir_index_entry index_entry;
       temp.read((char*)&index_entry, sizeof(index_entry));
 
@@ -289,7 +288,6 @@ namespace siege::resource::prj
           file_info.size = index_size;
           file_info.size -= (sizeof(final_entry) + sizeof(index_size));
           file_info.filename = final_entry.filename.data();
-
 
           if (file_info.filename.extension() == ".BWD" || file_info.filename.extension() == ".bwd")
           {

@@ -1,19 +1,23 @@
 module;
-
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/extension/input_filter.hpp>
-#include <detours.h>
-#include <imagehlp.h>
-#include <xinput.h>
+#include <siege/platform/windows.hpp>
+#include <cassert>
+#include <CommCtrl.h>
 
 module exe.views;
 
-import exe.shared;
+import std;
+import win32.com;
+import win32.window;
+import win32.drawing;
+import win32.dialog;
+
+import win32.common_controls;
+import win32.theming;
+
+import siege.extension.input_filter;
+
 import exe.input_injector;
+import exe.shared;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 namespace stl = std::ranges;
@@ -218,11 +222,9 @@ namespace siege::views
           this->launch.launch_table_edit.SetWindowPos(HWND_TOP);
           this->launch.launch_table_edit.SetWindowStyle(this->launch.launch_table_edit.GetWindowStyle() | WS_VISIBLE | WS_BORDER);
 
-
           launch_table.GetItemText(info.iItem, info.iSubItem, text);
 
           ::SetWindowTextW(this->launch.launch_table_edit, text.data());
-
 
           this->launch.launch_table_edit_unbind = this->launch.launch_table_edit.bind_en_kill_focus([this, info, setting](auto, const auto&) {
             this->launch.launch_table_edit.SetWindowStyle(this->launch.launch_table_edit.GetWindowStyle() & ~WS_VISIBLE);
@@ -278,7 +280,6 @@ namespace siege::views
             auto virtual_key = bound_actions[item->lParam].vkey;
             auto context = bound_actions[item->lParam].context;
             auto action_index = bound_actions[item->lParam].action_index;
-
 
             auto [caps, binding] = get_full_info_for_binding(state, context, virtual_key, action_index);
 

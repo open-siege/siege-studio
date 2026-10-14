@@ -1,15 +1,14 @@
-module;
-
-#include <siege/platform/resource.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/wave.hpp>
-
 export module siege.resource.wad;
 
 import std;
-import siege.platform.palette;
+
 import siege.platform.bitmap;
+import siege.platform.endian;
+import siege.platform.palette;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.wave;
 
 namespace siege::resource::wad
 {
@@ -182,7 +181,6 @@ namespace siege::resource::wad
             stream.read(header.data(), header.size());
             stream.read((char*)&wav_size, sizeof(wav_size));
 
-            
             if (header != riff_header)
             {
               break;
@@ -254,7 +252,6 @@ namespace siege::resource::wad
     endian::little_uint32_t offset;
     endian::little_uint32_t file_buffer_size;
 
-
     stream.seekg(4, std::ios::cur);
     stream.read(reinterpret_cast<char*>(&file_count), sizeof(file_count));
     stream.read(reinterpret_cast<char*>(&offset), sizeof(offset));
@@ -267,7 +264,6 @@ namespace siege::resource::wad
 
     std::vector<pod_file_entry> entries;
     entries.assign(file_count, {});
-
 
     auto entries_size = file_count * sizeof(pod_file_entry);
     stream.seekg(current_offset + offset, std::ios::beg);

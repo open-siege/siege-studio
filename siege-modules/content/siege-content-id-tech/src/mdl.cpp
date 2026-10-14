@@ -4,15 +4,13 @@
 // MDX - Kingpin model data
 // DKM - Daikatana model data
 
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.content.mdl;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::content::mdl
 {
@@ -88,7 +86,6 @@ namespace siege::content::mdl
     std::vector<mdl_face> faces;
     std::vector<mdl_frame> frames;
   };
-
 
   export bool is_mdl(std::istream& stream)
   {
@@ -167,7 +164,7 @@ namespace siege::content::mdl
       }
       else
       {
-        DebugBreak();
+        std::abort();
       }
     }
 
@@ -224,7 +221,6 @@ namespace siege::content::mdl
     std::vector<md2_uv_coordinate> uv_coordinates;
     std::vector<md2_frame> frames;
   };
-
 
   export bool is_md2(std::istream& stream)
   {
@@ -431,7 +427,6 @@ namespace siege::content::mdl
     return shape;
   }
 
-
   struct dkm_face
   {
     endian::little_uint32_t padding;
@@ -463,6 +458,5 @@ namespace siege::content::mdl
     endian::little_uint32_t unknown_count3;
     endian::little_uint32_t unknown_offset3;
   };
-
 
 }// namespace siege::content::mdl

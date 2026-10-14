@@ -1,9 +1,10 @@
-#include <siege/extension/shared.hpp>
+#include <siege/platform/windows.hpp>
 #include <cassert>
-#include <utility>
-
-import siege.platform.extension;
+import std;
 import siege.configuration.uprising;
+import siege.extension.shared;
+import siege.platform.extension;
+import siege.platform.shared;
 
 namespace fs = std::filesystem;
 
@@ -29,7 +30,6 @@ using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
-
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"joystick_layout" } },
@@ -251,7 +251,7 @@ std::errc apply_prelaunch_settings_ex(const siege::fs_char* exe_path_str, siege:
     std::ofstream key_map_file("FONTS/keymap.cfg", std::ios::binary | std::ios::trunc);
     write_key_map(key_map_file, *key_map);
   }
-  
+
   return std::errc{};
 }
 
@@ -266,7 +266,6 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     { std::make_pair<WORD, action_str>(VK_LBUTTON, str(action::fire_weapon_1)),
       std::make_pair<WORD, action_str>(VK_RBUTTON, str(action::fire_weapon_2)) }
   };
-
 
   std::array<std::pair<WORD, action_str>, 4> axes{
     {
@@ -364,7 +363,6 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
 
   return std::errc{};
 }
-
 
 std::errc default_controller_inputs(controller_binding* binding, std::uint32_t layout_index)
 {

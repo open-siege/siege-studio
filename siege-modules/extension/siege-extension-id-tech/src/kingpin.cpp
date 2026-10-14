@@ -1,15 +1,11 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
-
-
+#include <siege/platform/windows.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -64,7 +60,6 @@ extern auto game_actions = std::array<game_action, 32>{ {
 constexpr static auto kingpin_aliases = std::array<std::array<std::string_view, 2>, 2>{ { { "+melee-attack", "use pipe;+attack" },
   { "-melee-attack", "weaplast;-attack" } } };
 
-
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
 extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
@@ -86,7 +81,6 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
-
 
 std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
@@ -140,7 +134,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  
+
   if (auto config = load_config_from_pak(L"main\\default.cfg", L"main/Pak0.pak", L"base/Pak0.pak"))
   {
     upsert_mouse_bindings(*config, *binding);
@@ -246,7 +240,6 @@ predefined_int*
   }
 
   auto name_str = std::wstring_view(name);
-
 
   if (name_str == L"gl_mode")
   {

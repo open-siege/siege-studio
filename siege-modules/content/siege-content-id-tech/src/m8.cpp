@@ -1,12 +1,10 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/tagged_data.hpp>
-
 export module siege.content.m8;
 
 import std;
+
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.tagged_data;
 
 namespace siege::content::m8
 {

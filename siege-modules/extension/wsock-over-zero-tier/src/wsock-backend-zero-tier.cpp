@@ -10,11 +10,12 @@
 #include <WinSock.h>
 #endif
 #include <wsnwlink.h>
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/shared.hpp>
-#include <cassert>
-
+#include <siege/platform/windows.hpp>
 import std;
+import win32.module;
+
+import siege.platform.shared;
+
 import wsock32.shared;
 
 namespace fs = std::filesystem;
@@ -264,7 +265,6 @@ SOCKET __stdcall backend_socket(int af, int type, int protocol)
     get_log() << "Created zero tier socket successfully (" << socket << ")";
     get_socket_handles().insert(socket);
 
-
     int value = 1;
     zts_socklen_t size = sizeof(value);
 
@@ -363,7 +363,6 @@ int __stdcall backend_getsockopt(SOCKET ws, int level, int optname, char* optval
     std::memcpy(optval, &value, sizeof(value));
     return 0;
   }
-
 
   get_log() << "zts_bsd_getsockopt, level: " << level << " optname: " << optname;
 
@@ -1184,7 +1183,6 @@ hostent* __stdcall backend_gethostbyname(const char* name)
     return internal_names;
   };
 
-
   thread_local std::array<char, sizeof(in_addr)> raw_ip{};
   thread_local std::map<std::string, packed_hostent> host_cache;
 
@@ -1281,7 +1279,6 @@ std::shared_ptr<char> get_shared_current_ip_address_storage()
       }
       get_log() << "HANDLE is " << (std::size_t)global;
 
-
       auto result = ::MapViewOfFile(global, FILE_MAP_ALL_ACCESS, 0, 0, ZTS_IP_MAX_STR_LEN);
 
       if (!result)
@@ -1307,7 +1304,6 @@ std::optional<in_addr> get_fallback_broadcast_ip_v4()
 {
   static std::optional<in_addr> result = []() -> std::optional<in_addr> {
     get_log() << "get_fallback_broadcast_ip_v4\n";
-
 
     if (auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", nullptr, 0); env_size >= 1)
     {
@@ -1527,7 +1523,6 @@ std::optional<std::uint64_t> get_network_id()
     {
       get_log() << "get_network_id\n";
 
-
       if (auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_NETWORK_ID", nullptr, 0); env_size >= 1)
       {
         std::string network_id(env_size - 1, '\0');
@@ -1559,7 +1554,6 @@ std::optional<std::string> get_peer_id_and_public_key()
       std::string peer_id(env_size - 1, '\0');
 
       ::GetEnvironmentVariableA("SIEGE_WSOCK_NODE_AUTH_KEY", peer_id.data(), peer_id.size() + 1);
-
 
       peer_id.resize(ZTS_ID_STR_BUF_LEN);
 
@@ -1862,7 +1856,6 @@ std::pair<zts_sockaddr_in, zts_socklen_t> copy_address(const sockaddr* name, int
   std::memcpy(&temp, name, size);
   return std::make_pair(to_zts(temp), sizeof(zts_sockaddr_in));
 }
-
 
 hostent from_zts(zts_hostent zt_host)
 {

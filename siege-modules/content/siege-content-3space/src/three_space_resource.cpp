@@ -1,13 +1,12 @@
-module;
-
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/wave.hpp>
-
 export module siege.resource.three_space;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.wave;
 
 namespace siege::resource::vol::three_space
 {
@@ -228,7 +227,7 @@ namespace siege::resource::vol::three_space
         folders.back().pop_back();
       }
 
-      i += strlen(raw_folders.data() + i) + 1;
+      i += std::strlen(raw_folders.data() + i) + 1;
     }
 
     return folders;

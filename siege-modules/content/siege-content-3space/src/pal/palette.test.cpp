@@ -1,5 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include <sstream>
+import std;
 import siege.content.pal;
 
 TEST_CASE("Phoenix PAL is detected correctly", "[pal.darkstar]")

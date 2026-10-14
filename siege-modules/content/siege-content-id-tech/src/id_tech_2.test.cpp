@@ -1,5 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include <sstream>
+import std;
 import siege.configuration.id_tech;
 
 namespace id_tech = siege::configuration::id_tech;

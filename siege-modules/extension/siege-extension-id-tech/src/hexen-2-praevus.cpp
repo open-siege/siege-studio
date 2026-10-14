@@ -1,15 +1,13 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
-
-
+#include <siege/extension/detours.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+import win32.file;
+import win32.window;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -190,7 +188,6 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     upsert_keyboard_bindings(*config, *binding);
   }
 
-
   return std::errc{};
 }
 
@@ -235,7 +232,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
   };
 
   append_controller_defaults(game_actions, actions, *binding);
-
 
   return std::errc{};
 }
@@ -316,7 +312,6 @@ DWORD WINAPI WrappedGetLogicalDrives()
       break;
     }
   }
-
 
   return bits.to_ulong();
 }
@@ -438,7 +433,7 @@ BOOL WINAPI DllMain(
     return TRUE;
   }
 
-  if (DetourIsHelperProcess())
+  if (::DetourIsHelperProcess())
   {
     return TRUE;
   }
@@ -461,13 +456,13 @@ BOOL WINAPI DllMain(
     {
       try
       {
-        DetourRestoreAfterWith();
-        DetourTransactionBegin();
-        DetourUpdateThread(GetCurrentThread());
+        ::DetourRestoreAfterWith();
+        ::DetourTransactionBegin();
+        ::DetourUpdateThread(::GetCurrentThread());
 
-        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { ::DetourAttach(func.first, func.second); });
 
-        DetourTransactionCommit();
+        ::DetourTransactionCommit();
       }
       catch (...)
       {

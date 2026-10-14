@@ -3,15 +3,16 @@ module;
 #include <WinSock2.h>
 #include <ws2tcpip.h>
 #include <MSWSock.h>
-
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/win/threading.hpp>
+#include <siege/platform/windows.hpp>
 #include <cassert>
 
 export module wsock32.shared.client;
 
-import wsock32.shared;
 import std;
+import win32.module;
+import win32.threading;
+
+import wsock32.shared;
 
 extern "C++" bool use_custom_backend();
 
@@ -102,7 +103,6 @@ export struct socket_handle_info
     item->second.is_virtual_blocking = should_block;
   }
 
-
   std::shared_ptr<void> temp_disable_virtual_blocking(SOCKET socket)
   {
     auto current_state = is_virtual_blocking(socket);
@@ -119,7 +119,6 @@ export struct socket_handle_info
       }
     };
   }
-
 
   void set_client_socket_state(SOCKET socket, client_socket_state state)
   {
@@ -283,7 +282,6 @@ export struct socket_handle_info
     WSAEVENT event;
   };
 
-
   bool set_window_target(SOCKET socket, HWND window, u_int message, int flags)
   {
     std::unique_lock<std::shared_mutex> lock(mutex);
@@ -347,7 +345,6 @@ export struct socket_handle_info
     item->second.event_errors = decltype(item->second.event_errors){};
     return true;
   }
-
 
   // TODO rename this
   struct socket_work
@@ -591,7 +588,6 @@ export struct socket_handle_info
       return std::holds_alternative<std::monostate>(work.socket_result);
     });
 
-
     if (pending == data->second.overlapped_write_queue.end())
     {
       return std::nullopt;
@@ -628,7 +624,6 @@ export struct socket_handle_info
     auto pending = stl::find_if(data->second.overlapped_read_queue, [](auto& work) {
       return std::holds_alternative<std::monostate>(work.socket_result);
     });
-
 
     if (pending == data->second.overlapped_read_queue.end())
     {
@@ -921,7 +916,6 @@ export socket_handle_info& get_socket_handles()
   return info;
 }
 
-
 extern "C" {
 hostent* __stdcall siege_gethostbyaddr(const char* addr, int len, int type)
 {
@@ -1059,7 +1053,6 @@ HANDLE __stdcall siege_WSAAsyncGetHostByName(HWND window, u_int message, const c
       post_message(window, message, (WPARAM)cancel, MAKELPARAM(0, imports->WSAGetLastError()));
     }
   });
-
 
   if (!started)
   {
@@ -1461,7 +1454,6 @@ int __stdcall siege_recv(SOCKET ws, char* buf, int len, int flags) noexcept
 
   return imports->recv(ws, buf, len, flags);
 }
-
 
 int __stdcall siege_send(SOCKET ws, const char* buf, int len, int flags) noexcept
 {
@@ -2055,7 +2047,6 @@ int __stdcall siege_GetNameInfoW(const sockaddr* address, socklen_t address_leng
   return 0;
 }
 
-
 auto __stdcall siege_WSAGetOverlappedResult(SOCKET socket, WSAOVERLAPPED* overlapped, DWORD* transferred, BOOL wait, DWORD* flags)
 {
   if (!use_custom_backend())
@@ -2183,7 +2174,6 @@ auto __stdcall siege_WSARecvFrom(SOCKET socket, WSABUF* buffers, DWORD buffer_co
 
     size += len;
   }
-
 
   if (should_queue_overlapped)
   {
@@ -2674,7 +2664,6 @@ auto __stdcall siege_WSAWaitForMultipleEvents(DWORD event_count, const HANDLE* e
 }
 #endif
 
-
 namespace {
 struct service_entry
 {
@@ -2951,7 +2940,6 @@ std::jthread& get_select_worker(worker_action action)
       fd_set read_set{};
       fd_set write_set{};
       fd_set except_set{};
-
 
       if (socket_work.empty())
       {

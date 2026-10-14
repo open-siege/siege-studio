@@ -1,20 +1,18 @@
 module;
-
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
+#include <siege/platform/windows.hpp>
 export module siege.extension.id_tech.v3_0;
 
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
-import siege.resource.pak;
-import siege.resource.zip;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 import siege.resource.cab;
 import siege.resource.iso;
+import siege.resource.pak;
+import siege.resource.zip;
 
 extern "C" {
 

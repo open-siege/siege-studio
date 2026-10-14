@@ -1,12 +1,13 @@
 module;
 
-#include <cstring>
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/shared.hpp>
+#include <siege/platform/windows.hpp>
 
 export module siege.platform.extension;
 
 import std;
+import win32.module;
+
+import siege.platform.shared;
 
 namespace siege::platform
 {
@@ -35,7 +36,6 @@ namespace siege::platform
     const char16_t* controller_backend = nullptr;
     std::array<action_binding, InputSize> inputs{};
   };
-
 
   export enum struct keyboard_context : std::uint16_t
   {
@@ -141,16 +141,16 @@ namespace siege::platform
     std::array<const fs_char*, 32> int_settings;
     std::array<const fs_char*, 32> float_settings;
     std::array<const fs_char*, 32> string_settings;
-    const fs_char* ip_connect_setting = FSL "";
-    const fs_char* port_connect_setting = FSL "";
-    const fs_char* player_name_setting = FSL "";
-    const fs_char* listen_setting = FSL "";
-    const fs_char* dedicated_setting = FSL "";
-    const fs_char* render_backend_setting = FSL "";
-    const fs_char* selected_game_setting = FSL "";
-    const fs_char* preferred_exe_setting = FSL "";
-    const fs_char* controller_enabled_setting = FSL "";
-    const fs_char* mouse_enabled_setting = FSL "";
+    const fs_char* ip_connect_setting = FSL"";
+    const fs_char* port_connect_setting = FSL"";
+    const fs_char* player_name_setting = FSL"";
+    const fs_char* listen_setting = FSL"";
+    const fs_char* dedicated_setting = FSL"";
+    const fs_char* render_backend_setting = FSL"";
+    const fs_char* selected_game_setting = FSL"";
+    const fs_char* preferred_exe_setting = FSL"";
+    const fs_char* controller_enabled_setting = FSL"";
+    const fs_char* mouse_enabled_setting = FSL"";
   };
 
   export template<typename TValue>
@@ -242,7 +242,7 @@ namespace siege::platform
     std::vector<game_command_line_args::controller_to_send_input_mapping> controller_to_send_input_mappings;
     std::vector<input_mapping_ex> action_bindings;
 
-    inline operator packaged_args()
+    operator packaged_args()
     {
       return packaged_args{
         .flags = flags,
@@ -281,7 +281,7 @@ namespace siege::platform
     std::size_t controller_to_send_input_mappings_size = 0;
     game_command_line_args::controller_to_send_input_mapping* controller_to_send_input_mappings = nullptr;
 
-    inline operator packaged_args() const
+    operator packaged_args() const
     {
       std::vector<input_mapping_ex> action_bindings;
       action_bindings.reserve(action_bindings_size);
@@ -302,7 +302,6 @@ namespace siege::platform
       };
     }
   };
-
 
   export using executable_is_supported = std::errc(const siege::fs_char* filename) noexcept;
   export using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
@@ -440,7 +439,7 @@ namespace siege::platform
       }
     }
 
-    inline bool is_input_mapping_valid(const siege::platform::hardware_context_caps& caps, const siege::platform::input_mapping_ex& mapping) const
+    bool is_input_mapping_valid(const siege::platform::hardware_context_caps& caps, const siege::platform::input_mapping_ex& mapping) const
     {
       if (!is_input_mapping_valid_proc)
       {
@@ -450,7 +449,7 @@ namespace siege::platform
       return is_input_mapping_valid_proc(&caps, &mapping) == std::errc{};
     }
 
-    inline bool change_working_directory(const std::filesystem::path& path)
+    bool change_working_directory(const std::filesystem::path& path)
     {
       if (!change_working_directory_proc)
       {
@@ -460,7 +459,7 @@ namespace siege::platform
       return change_working_directory_proc(path.c_str()) == std::errc{};
     }
 
-    inline std::optional<std::unique_ptr<siege::platform::controller_binding>> init_controller_inputs() const
+    std::optional<std::unique_ptr<siege::platform::controller_binding>> init_controller_inputs() const
     {
       if (init_controller_inputs_proc)
       {
@@ -487,7 +486,7 @@ namespace siege::platform
       return std::nullopt;
     }
 
-    inline std::optional<std::unique_ptr<siege::platform::keyboard_binding>>
+    std::optional<std::unique_ptr<siege::platform::keyboard_binding>>
       init_keyboard_inputs() const
     {
       if (!init_keyboard_inputs_proc)
@@ -505,7 +504,7 @@ namespace siege::platform
       return binding;
     }
 
-    inline std::optional<std::unique_ptr<siege::platform::mouse_binding>> init_mouse_inputs() const
+    std::optional<std::unique_ptr<siege::platform::mouse_binding>> init_mouse_inputs() const
     {
       if (!init_mouse_inputs_proc)
       {
@@ -522,7 +521,7 @@ namespace siege::platform
       return binding;
     }
 
-    inline std::optional<bool> executable_is_supported(std::filesystem::path exe_path) const noexcept
+    std::optional<bool> executable_is_supported(std::filesystem::path exe_path) const noexcept
     {
       if (executable_is_supported_proc)
       {
@@ -532,7 +531,7 @@ namespace siege::platform
       return std::nullopt;
     }
 
-    inline std::optional<bool> supports_format_command_line_ex() const noexcept
+    std::optional<bool> supports_format_command_line_ex() const noexcept
     {
       if (format_command_line_proc.index() == 0)
       {
@@ -542,7 +541,7 @@ namespace siege::platform
       return format_command_line_proc.index() == 2;
     }
 
-    inline std::span<const siege::fs_char*> format_command_line(const siege::platform::game_command_line_args_ex& args) const noexcept
+    std::span<const siege::fs_char*> format_command_line(const siege::platform::game_command_line_args_ex& args) const noexcept
     {
       if (supports_format_command_line_ex() != true)
       {
@@ -562,7 +561,7 @@ namespace siege::platform
       return std::span<const siege::fs_char*>(result, size);
     }
 
-    inline std::span<const siege::fs_char*> format_command_line(const siege::platform::game_command_line_args& args) const noexcept
+    std::span<const siege::fs_char*> format_command_line(const siege::platform::game_command_line_args& args) const noexcept
     {
       if (supports_format_command_line_ex() != false)
       {
@@ -582,7 +581,7 @@ namespace siege::platform
       return std::span<const siege::fs_char*>(result, size);
     }
 
-    inline std::optional<bool> supports_apply_prelaunch_settings_ex() const noexcept
+    std::optional<bool> supports_apply_prelaunch_settings_ex() const noexcept
     {
       if (apply_prelaunch_settings_proc.index() == 0)
       {
@@ -592,7 +591,7 @@ namespace siege::platform
       return apply_prelaunch_settings_proc.index() == 2;
     }
 
-    inline std::errc apply_prelaunch_settings(std::filesystem::path exe_path, siege::platform::game_command_line_args_ex args) const noexcept
+    std::errc apply_prelaunch_settings(std::filesystem::path exe_path, siege::platform::game_command_line_args_ex args) const noexcept
     {
       if (supports_apply_prelaunch_settings_ex() != true)
       {
@@ -603,7 +602,7 @@ namespace siege::platform
       return proc(exe_path.c_str(), &args);
     }
 
-    inline std::errc apply_prelaunch_settings(std::filesystem::path exe_path, siege::platform::game_command_line_args& args) const noexcept
+    std::errc apply_prelaunch_settings(std::filesystem::path exe_path, siege::platform::game_command_line_args& args) const noexcept
     {
       if (supports_apply_prelaunch_settings_ex() != false)
       {
@@ -653,7 +652,7 @@ namespace siege::platform
       return loaded_modules;
     }
 
-    inline bool is_named_export(void* export_ptr) const
+    bool is_named_export(void* export_ptr) const
     {
       if (!export_ptr)
       {
@@ -677,7 +676,7 @@ namespace siege::platform
       return std::any_of(ptrs.begin(), ptrs.end(), [=](auto* ptr) { return ptr == export_ptr; });
     }
   private:
-    inline std::span<const wchar_t*> create_span(const char* key) const
+    std::span<const wchar_t*> create_span(const char* key) const
     {
       auto* storage = this->GetProcAddress<const wchar_t**>(key);
 

@@ -1,14 +1,15 @@
 #include <WinSock2.h>
 #include <ws2tcpip.h>
-
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/win/process.hpp>
-#include <siege/platform/shared.hpp>
-
+#include <siege/platform/windows.hpp>
 import std;
-import wsock32.shared.client;
-import wsock32.shared;
+import win32.module;
+import win32.process;
+
+import siege.platform.shared;
+
 import wsock32.rpc;
+import wsock32.shared;
+import wsock32.shared.client;
 
 namespace fs = std::filesystem;
 
@@ -148,7 +149,6 @@ TReturn send_message_to_server(SOCKET socket, std::function<TParam*(void*)> init
   return static_cast<TReturn>(return_value);
 }
 
-
 extern "C" {
 int __stdcall siege_WSACleanup() noexcept;
 int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
@@ -255,7 +255,6 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
     ::Sleep(50);
   }
 
-
   if (!server_window)
   {
     get_log() << "Could not find server window";
@@ -347,7 +346,6 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
 {
   get_log() << "siege_getsockopt ";
 
-
   if (!use_custom_backend())
   {
     auto result = imports->getsockopt(ws, level, optname, optval, optlen);
@@ -425,7 +423,6 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
     return 0;
   }
 
-
   return send_message_to_server<sockopt_params, sockopt_params::get_message_id>(ws, [=](void* raw) {
       auto* params = new (raw) sockopt_params{ .level = level, .optname = optname };
 
@@ -443,7 +440,6 @@ int __stdcall siege_getsockopt(SOCKET ws, int level, int optname, char* optval, 
             std::memcpy(optval, params->option_data.data(), len);
           } });
 }
-
 
 int __stdcall siege_bind(SOCKET ws, const sockaddr* addr, int namelen)
 {

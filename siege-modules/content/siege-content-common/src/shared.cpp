@@ -1,11 +1,9 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.configuration.shared;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.shared;
 
 namespace siege::configuration
 {
@@ -13,11 +11,11 @@ namespace siege::configuration
 
   export struct key_type
   {
-    inline key_type(std::string_view key) : data(std::array<std::string_view, 1>{ key }) {}
+    key_type(std::string_view key) : data(std::array<std::string_view, 1>{ key }) {}
 
-    inline key_type(std::vector<std::string_view> key) : data(std::move(key)) {}
+    key_type(std::vector<std::string_view> key) : data(std::move(key)) {}
 
-    inline key_type(std::initializer_list<std::string_view> key)
+    key_type(std::initializer_list<std::string_view> key)
     {
       if (key.size() == 1)
       {
@@ -33,7 +31,7 @@ namespace siege::configuration
       }
     }
 
-    inline bool operator==(std::string_view rhs) const
+    bool operator==(std::string_view rhs) const
     {
       return std::visit([&](auto& a) {
         if (a.size() > 0)
@@ -46,7 +44,7 @@ namespace siege::configuration
         data);
     }
 
-    inline bool empty() const
+    bool empty() const
     {
       return std::visit([&](auto& a) -> bool {
         return a.empty();
@@ -54,7 +52,7 @@ namespace siege::configuration
         data);
     }
 
-    inline std::string_view at(std::size_t index) const
+    std::string_view at(std::size_t index) const
     {
       return std::visit([&](auto& a) -> std::string_view {
         if (a.empty())
@@ -72,7 +70,7 @@ namespace siege::configuration
         data);
     }
 
-    inline bool operator==(const key_type& rhs) const
+    bool operator==(const key_type& rhs) const
     {
       if (data.index() == rhs.data.index())
       {
@@ -93,13 +91,13 @@ namespace siege::configuration
         data);
     }
 
-    inline bool operator!=(const key_type& rhs) const
+    bool operator!=(const key_type& rhs) const
     {
       return !(*this == rhs);
     }
 
     template<std::size_t ArraySize>
-    inline std::array<std::string_view, ArraySize> to_array() const
+    std::array<std::string_view, ArraySize> to_array() const
     {
       if (std::holds_alternative<std::array<std::string_view, ArraySize>>(data))
       {

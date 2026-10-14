@@ -1,12 +1,11 @@
-module;
-
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-
 export module siege.platform.presentation;
 
 import std;
+import win32.window;
+import win32.com;
+
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::platform
 {
@@ -16,7 +15,7 @@ namespace siege::platform
   using is_stream_supported = std::errc(storage_info* data);
 
 #if WIN32
-  using get_window_class_for_stream = HRESULT(storage_info* data, wchar_t**);
+  using get_window_class_for_stream = win32::HRESULT(storage_info* data, wchar_t**);
 #endif
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
@@ -28,7 +27,7 @@ namespace siege::platform
     get_supported_extensions_for_category* get_supported_extensions_for_categoryProc = nullptr;
     is_stream_supported* is_stream_supportedProc = nullptr;
     get_window_class_for_stream* get_window_class_for_streamProc = nullptr;
-    uint32_t DefaultIcon = 0;
+    std::uint32_t DefaultIcon = 0;
 
   public:
     presentation_module(std::filesystem::path module_path) : base(module_path)
@@ -138,7 +137,7 @@ namespace siege::platform
     {
       wchar_t* result;
 
-      if (get_window_class_for_streamProc(&data, &result) == S_OK)
+      if (get_window_class_for_streamProc(&data, &result) == win32::S_OK)
       {
         return result;
       }

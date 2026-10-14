@@ -1,17 +1,16 @@
-module;
-
-#include <siege/platform/wave.hpp>
-
 export module sfx.shared;
 
 import std;
+
 import siege.content.sfx;
+import siege.platform.shared;
+import siege.platform.wave;
 
 namespace siege::views
 {
   export std::span<const siege::fs_string_view> get_sfx_formats() noexcept
   {
-    constexpr static auto formats = std::array<siege::fs_string_view, 5>{ { FSL ".sfx", FSL ".wav", FSL ".mp3", FSL ".ogg", FSL ".wma" } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 5>{ { FSL".sfx", FSL".wav", FSL".mp3", FSL".ogg", FSL".wma" } };
     return formats;
   }
 

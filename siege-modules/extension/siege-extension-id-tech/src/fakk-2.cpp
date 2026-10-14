@@ -1,14 +1,13 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
-
+#include <siege/extension/detours.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+import win32.file;
+import win32.window;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -114,7 +113,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  
+
   if (auto config = load_config_from_pk3(L"fakk\\default.cfg", L"fakk/pak0.pk3", L"fakk/pak0.pk3"))
   {
     upsert_mouse_bindings(*config, *binding);
@@ -161,7 +160,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
     return std::errc::invalid_argument;
   }
 
-
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
       std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attackright"),
@@ -202,7 +200,6 @@ predefined_int*
   }
 
   auto name_str = std::wstring_view(name);
-
 
   if (name_str == L"r_mode")
   {
@@ -305,7 +302,7 @@ BOOL WINAPI DllMain(
     return TRUE;
   }
 
-  if (DetourIsHelperProcess())
+  if (::DetourIsHelperProcess())
   {
     return TRUE;
   }
@@ -328,13 +325,13 @@ BOOL WINAPI DllMain(
     {
       try
       {
-        DetourRestoreAfterWith();
-        DetourTransactionBegin();
-        DetourUpdateThread(GetCurrentThread());
+        ::DetourRestoreAfterWith();
+        ::DetourTransactionBegin();
+        ::DetourUpdateThread(::GetCurrentThread());
 
-        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { ::DetourAttach(func.first, func.second); });
 
-        DetourTransactionCommit();
+        ::DetourTransactionCommit();
       }
       catch (...)
       {

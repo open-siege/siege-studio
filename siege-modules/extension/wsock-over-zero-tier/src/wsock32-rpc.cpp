@@ -1,8 +1,7 @@
 module;
 
 #include <WinSock2.h>
-#include <Windows.h>
-
+#include <siege/platform/windows.hpp>
 export module wsock32.rpc;
 
 import std;
@@ -92,7 +91,6 @@ export struct bind_params : general_params
 };
 static_assert(std::is_trivially_copyable_v<bind_params>);
 
-
 export struct listen_params : general_params
 {
   constexpr static auto message_id = bind_params::connect_message_id + 1;
@@ -109,7 +107,6 @@ export struct accept_params : general_params
   sockaddr_storage from_address;
 };
 static_assert(std::is_trivially_copyable_v<accept_params>);
-
 
 export struct sendto_params : general_params
 {

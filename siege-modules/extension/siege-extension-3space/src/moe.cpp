@@ -1,16 +1,9 @@
-#include <cstring>
-#include <cstdint>
-#include <algorithm>
-#include <array>
-#include <unordered_set>
-#include <utility>
-#include <thread>
-#include <string_view>
-#include <fstream>
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
+#include <siege/extension/detours.hpp>
+import std;
+import win32.file;
+import win32.window;
+import siege.extension.shared;
+import siege.platform.shared;
 
 extern "C" {
 using namespace std::literals;
@@ -40,7 +33,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 15> f
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> variable_name_ranges{ { { "NewWorld"sv, "KQPortal::ConLoc"sv },
   { "allowAltEnter"sv, "ConsoleWorld::FrameRate"sv },
   { "SetFirstPerson::WasThirdPerson"sv, "ConInv::Boots"sv } } };
-
 
 static std::int32_t(__fastcall* CopyDir)(const char*, const char*, BOOL) = nullptr;
 
@@ -72,7 +64,7 @@ BOOL WINAPI DllMain(
   DWORD fdwReason,
   LPVOID lpvReserved) noexcept
 {
-  if (DetourIsHelperProcess())
+  if (::DetourIsHelperProcess())
   {
     return TRUE;
   }
@@ -113,7 +105,6 @@ BOOL WINAPI DllMain(
             return std::memcmp(str.first.data(), (void*)str.second, str.first.size()) == 0;
           });
 
-
           if (module_is_valid)
           {
             export_functions[index]();
@@ -127,14 +118,14 @@ BOOL WINAPI DllMain(
           return FALSE;
         }
 
-        DetourRestoreAfterWith();
+        ::DetourRestoreAfterWith();
 
-        DetourTransactionBegin();
-        DetourUpdateThread(GetCurrentThread());
+        ::DetourTransactionBegin();
+        ::DetourUpdateThread(::GetCurrentThread());
 
-        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { ::DetourAttach(func.first, func.second); });
 
-        DetourTransactionCommit();
+        ::DetourTransactionCommit();
       }
       catch (...)
       {
@@ -143,11 +134,11 @@ BOOL WINAPI DllMain(
     }
     else if (fdwReason == DLL_PROCESS_DETACH)
     {
-      DetourTransactionBegin();
-      DetourUpdateThread(GetCurrentThread());
+      ::DetourTransactionBegin();
+      ::DetourUpdateThread(::GetCurrentThread());
 
-      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourDetach(func.first, func.second); });
-      DetourTransactionCommit();
+      std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { ::DetourDetach(func.first, func.second); });
+      ::DetourTransactionCommit();
     }
   }
 

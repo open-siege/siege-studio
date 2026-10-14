@@ -1,11 +1,9 @@
-module;
-
-#include <siege/platform/wave.hpp>
-
 export module siege.content.sfx;
 
 import std;
 
+import siege.platform.shared;
+import siege.platform.wave;
 
 namespace siege::content::sfx
 {

@@ -1,11 +1,11 @@
 #include <WinSock2.h>
 #include <Ws2ipdef.h>
-
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/file.hpp>
-
+#include <siege/platform/windows.hpp>
 import std;
+import win32.file;
+import win32.window;
+
+import win32.window;
 import wsock32.rpc;
 import wsock32.shared;
 
@@ -125,7 +125,6 @@ struct wsock_window : win32::basic_window<wsock_window>
       }
     }
 
-
     if (message == WM_TIMER && wparam == safety_timer_id)
     {
       ::DestroyWindow(*this);
@@ -140,7 +139,6 @@ struct wsock_window : win32::basic_window<wsock_window>
       }
       return 0;
     }
-
 
     if (message == general_params::cleanup_message_id)
     {
@@ -179,7 +177,6 @@ struct wsock_window : win32::basic_window<wsock_window>
       return 0;
     }
 
-
     if (message == socket_params::message_id)
     {
       auto value = get_value<socket_params>(*this, lparam);
@@ -197,7 +194,6 @@ struct wsock_window : win32::basic_window<wsock_window>
 
       return result;
     }
-
 
     if (message == ioctl_params::message_id)
     {
@@ -407,7 +403,6 @@ struct wsock_window : win32::basic_window<wsock_window>
       params.has_result = false;
       return 0;
     }
-
 
     if (message == select_params::message_id)
     {

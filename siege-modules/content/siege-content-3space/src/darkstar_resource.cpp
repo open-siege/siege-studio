@@ -1,12 +1,11 @@
-module;
-
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/stream.hpp>
-
 export module siege.resource.vol;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::resource::vol::darkstar
 {
@@ -146,7 +145,6 @@ namespace siege::resource::vol::darkstar
   };
 
   static_assert(sizeof(old_file_header) == sizeof(std::array<std::byte, 14>));
-
 
   export void create_vol_file(std::ostream& output, const std::vector<volume_file_info>& files)
   {

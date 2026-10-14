@@ -1,13 +1,16 @@
 module;
-
-#include <siege/platform/stream.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/windows.hpp>
 
 export module dml.views;
 
 import std;
+import win32.window;
+
+import win32.window;
+import win32.common_controls;
+
+import siege.platform.stream;
+
 import dml.shared;
 
 namespace siege::views
@@ -17,7 +20,7 @@ namespace siege::views
     material_context state;
     win32::list_box ref_names;
 
-    dml_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    dml_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
@@ -76,7 +79,7 @@ namespace siege::views
       case WM_CREATE:
         return wm_create();
       case WM_SIZE:
-        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
       default:

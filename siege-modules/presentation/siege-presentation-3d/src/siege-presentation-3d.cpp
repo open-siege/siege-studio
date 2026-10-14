@@ -1,13 +1,8 @@
-#include <bit>
-#include <filesystem>
-#include <memory>
-#include <system_error>
-#include <algorithm>
-#include <array>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-
 import std;
+
+import siege.platform.shared;
+import siege.platform.stream;
+
 import dts.shared;
 
 using namespace siege::views;

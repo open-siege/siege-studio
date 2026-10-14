@@ -26,7 +26,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23
         CXX_SCAN_FOR_MODULES ON
         POSITION_INDEPENDENT_CODE ON)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(${PROJECT_NAME} siege-platform libzip::zip ZLIB::ZLIB nlohmann_json::nlohmann_json glm::glm libzip::zip ZLIB::ZLIB)
+if (WIN32)
+    target_link_libraries(${PROJECT_NAME} PUBLIC siege-win-desktop libzip::zip ZLIB::ZLIB nlohmann_json::nlohmann_json glm::glm)
+else()
+    target_link_libraries(${PROJECT_NAME} PUBLIC siege-platform libzip::zip ZLIB::ZLIB nlohmann_json::nlohmann_json glm::glm)
+endif()
 install(DIRECTORY include
         DESTINATION .
         COMPONENT devel

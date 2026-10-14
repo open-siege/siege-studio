@@ -1,12 +1,10 @@
-module;
-
-#include <siege/platform/shared.hpp>
-
 export module siege.content.dts.three_space.renderable;
 
 import std;
-export import siege.content.renderable;
+
 export import siege.content.dts.three_space;
+export import siege.content.renderable;
+import siege.platform.shared;
 
 template<class... Ts>
 struct overloaded : Ts...
@@ -14,8 +12,6 @@ struct overloaded : Ts...
   using Ts::operator()...;
 };
 // explicit deduction guide (not needed as of C++20)
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace siege::content::dts::three_space
 {

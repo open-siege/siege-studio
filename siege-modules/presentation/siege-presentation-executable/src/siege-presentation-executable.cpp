@@ -1,14 +1,10 @@
-#include <bit>
-#include <filesystem>
-#include <memory>
-#include <system_error>
-#include <algorithm>
+#include <siege/platform/windows.hpp>
 
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/hresult.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-
+import std;
+import win32.window;
+import win32.utils;
+import siege.platform.shared;
+import siege.platform.stream;
 import exe.shared;
 import exe.views;
 
@@ -63,7 +59,6 @@ std::errc get_supported_format_categories(std::size_t count, const char16_t** st
     u"All Executables",
     u"All Libraries",
   } };
-
 
   count = std::clamp<std::size_t>(count, 0u, categories.size());
 

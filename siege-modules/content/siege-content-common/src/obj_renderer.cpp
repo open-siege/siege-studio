@@ -1,8 +1,7 @@
-module;
-
 export module siege.content.obj;
 
 import std;
+
 export import siege.content.renderable;
 
 namespace siege::content

@@ -1,15 +1,19 @@
 module;
-
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/extension/input_filter.hpp>
-#include <hidusage.h>
-#include <xinput.h>
+#include <siege/platform/windows.hpp>
+#include <CommCtrl.h>
 
 module exe.views;
+
+import std;
+import win32.com;
+import win32.window;
+import win32.drawing;
+import win32.dialog;
+
+import win32.common_controls;
+import win32.theming;
+
+import siege.extension.input_filter;
 
 import exe.shared;
 
@@ -86,7 +90,6 @@ namespace siege::views
       input.controller_table.SetTileInfo(item_info);
     }
 
-
     input.keyboard_table.bind_nm_click([this](win32::list_view keyboard_table, const NMITEMACTIVATE& message) {
       if (!has_extension_module(state))
       {
@@ -114,8 +117,8 @@ namespace siege::views
 
       auto& binding = get_action_bindings(state)[item->lParam];
 
-      auto vkey = LOWORD(result);
-      auto context = static_cast<decltype(binding.context)>(HIWORD(result));
+      auto vkey = win32::loword(result);
+      auto context = static_cast<decltype(binding.context)>(win32::hiword(result));
 
       if (auto real_vkey = get_expected_vkey_for_keyboard_mouse(state, context, vkey, binding.action_index); real_vkey)
       {
@@ -184,8 +187,8 @@ namespace siege::views
 
       auto& binding = this->input.bound_inputs.at(item->lParam);
 
-      auto context = static_cast<siege::platform::hardware_context>(HIWORD(result));
-      auto vkey = LOWORD(result);
+      auto context = static_cast<siege::platform::hardware_context>(win32::hiword(result));
+      auto vkey = win32::loword(result);
 
       std::wstring temp = category_for_vkey(vkey, context);
       controller_table.SetItemText(message.iItem, 1, temp);
@@ -195,7 +198,6 @@ namespace siege::views
       binding.to_context = context;
       binding.to_vkey = vkey;
     });
-
 
     exe_actions.bind_nm_click([this](win32::tool_bar exe_actions, const NMMOUSE& message) {
       if (message.dwItemSpec != this->input.controllers_selected_id)
@@ -255,7 +257,6 @@ namespace siege::views
                                                .iGroupId = id++,
                                                .state = LVGS_COLLAPSIBLE,
                                              });
-
 
       using namespace siege::platform;
       std::map<WORD, std::pair<WORD, hardware_context>> default_mappings = {

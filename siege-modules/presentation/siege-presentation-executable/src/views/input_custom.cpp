@@ -1,16 +1,11 @@
 module;
-
-#include <vector>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/capabilities.hpp>
-#include <hidusage.h>
-#include <xinput.h>
-#include <joystickapi.h>
-#include <hidsdi.h>
-#include <joystickapi.h>
+#include <siege/platform/windows.hpp>
 
 module exe.shared;
+
+import std;
+import win32.dialog;
+import win32.capabilities;
 
 namespace siege::views
 {
@@ -238,7 +233,6 @@ namespace siege::views
 
     return iter->first;
   }
-
 
   auto& input_type_names()
   {

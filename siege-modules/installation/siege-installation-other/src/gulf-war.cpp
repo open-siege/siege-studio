@@ -1,7 +1,6 @@
 #include <array>
-#include <siege/platform/shared.hpp>
-
 import siege.platform.installation;
+import siege.platform.shared;
 
 using namespace siege;
 using game_storage_properties = platform::game_storage_properties;
@@ -24,6 +23,6 @@ extern std::array<const fs_char*, 2> associated_extensions = {
 
 extern std::array<path_rule, 32> directory_mappings = { { 
   { FSL"_setup/data1.cab/*", FSL"." },
-  { FSL"_setup/DLLs/ramlockC.VXD", FSL "." },
-  { FSL"_setup/DLLs/SMACKW32.DLL", FSL "." } } };
+  { FSL"_setup/DLLs/ramlockC.VXD", FSL"." },
+  { FSL"_setup/DLLs/SMACKW32.DLL", FSL"." } } };
 }

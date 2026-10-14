@@ -1,0 +1,877 @@
+module;
+#include <siege/platform/windows.hpp>
+#include <dwmapi.h>
+#include <oleacc.h>
+#include <CommCtrl.h>
+
+module win32.theming;
+
+import std;
+import win32.window;
+import win32.drawing;
+
+import win32.capabilities;
+import win32.common_controls;
+
+import siege.platform.stream;
+
+namespace win32
+{
+  bool is_parent_from_system(HWND parent);
+
+  void apply_window_theme(win32::window_ref& control)
+  {
+    struct sub_class : win32::menu::notifications
+    {
+      std::optional<win32::gdi::memory_drawing_context> memory_dc;
+      SIZE main_menu_size{};
+
+      sub_class()
+      {
+      }
+
+      std::optional<LRESULT> wm_enter_menu_loop(bool) override
+      {
+        return std::nullopt;
+      }
+
+      std::optional<LRESULT> wm_exit_menu_loop(bool) override
+      {
+        return std::nullopt;
+      }
+
+      std::optional<LRESULT> wm_init_menu_popup(win32::popup_menu_ref sub_menu, int, bool) override
+      {
+        MENUINFO mi = { .cbSize = sizeof(MENUINFO), .fMask = MIM_BACKGROUND };
+        auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
+
+        mi.hbrBack = win32::get_solid_brush(bk_color);
+        SetMenuInfo(sub_menu, &mi);
+        return 0;
+      }
+
+      std::optional<LRESULT> wm_uninit_menu_popup(win32::popup_menu_ref sub_menu, int) override
+      {
+        return 0;
+      }
+
+      auto& get_memory_dc()
+      {
+        if (!memory_dc)
+        {
+          auto screen_dc = ::GetDC(nullptr);
+          memory_dc = win32::gdi::memory_drawing_context(win32::gdi::drawing_context_ref(screen_dc));
+
+          ::ReleaseDC(nullptr, screen_dc);
+        }
+        return *memory_dc;
+      }
+
+      SIZE wm_measure_item(win32::popup_menu_ref window_menu, const MEASUREITEMSTRUCT& item) override
+      {
+        auto best_font = get_best_system_font();
+
+        if (best_font)
+        {
+          auto font = win32::load_font(LOGFONTW{
+                                         .lfPitchAndFamily = VARIABLE_PITCH },
+            *best_font);
+
+          SelectFont(get_memory_dc(), font);
+        }
+
+        std::wstring text;
+
+        if (item.itemData && ((MSAAMENUINFO*)item.itemData)->dwMSAASignature == MSAA_MENU_SIG && ((MSAAMENUINFO*)item.itemData)->pszWText)
+        {
+          text = ((MSAAMENUINFO*)item.itemData)->pszWText;
+        }
+        else
+        {
+          text = L"__________";
+        }
+
+        SIZE char_size{};
+        auto result = GetTextExtentPoint32W(get_memory_dc(), text.data(), text.size(), &char_size);
+
+        char_size.cx += (::GetSystemMetrics(SM_CXMENUCHECK) * 2);
+
+        return char_size;
+      }
+
+      SIZE wm_measure_item(win32::menu_ref window_menu, const MEASUREITEMSTRUCT& item) override
+      {
+        auto best_font = get_best_system_font();
+
+        if (best_font)
+        {
+          auto font = win32::load_font(LOGFONTW{
+                                         .lfPitchAndFamily = VARIABLE_PITCH },
+            *best_font);
+
+          SelectFont(get_memory_dc(), font);
+        }
+
+        std::wstring text;
+
+        if (item.itemData && ((MSAAMENUINFO*)item.itemData)->dwMSAASignature == MSAA_MENU_SIG && ((MSAAMENUINFO*)item.itemData)->pszWText)
+        {
+          text = ((MSAAMENUINFO*)item.itemData)->pszWText;
+        }
+        else
+        {
+          text = L"__________";
+        }
+
+        SIZE char_size{};
+        auto result = GetTextExtentPoint32W(get_memory_dc(), text.data(), text.size(), &char_size);
+        char_size.cy = ::GetSystemMetrics(SM_CYMENU);
+
+        struct callback
+        {
+          static BOOL __stdcall do_callback(HWND window, LPARAM info)
+          {
+            if (GetMenuBarInfo(window, OBJID_MENU, 0, (MENUBARINFO*)info))
+            {
+              return FALSE;
+            }
+            return TRUE;
+          }
+        };
+
+        MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
+
+        if (::EnumThreadWindows(::GetCurrentThreadId(), callback::do_callback, (LPARAM)&menu_bar_info) == FALSE && menu_bar_info.hMenu)
+        {
+          MENUITEMINFOW item_info{ .cbSize = sizeof(MENUITEMINFO), .fMask = MIIM_FTYPE | MIIM_BITMAP };
+
+          for (auto i = 0; i < ::GetMenuItemCount(menu_bar_info.hMenu); ++i)
+          {
+            if (::GetMenuItemInfoW(menu_bar_info.hMenu, i, TRUE, &item_info))
+            {
+              if (item_info.fType & MFT_BITMAP && item_info.hbmpItem)
+              {
+                ::BITMAP bitmap_info{};
+                if (::GetObject(item_info.hbmpItem, sizeof(bitmap_info), &bitmap_info) > 0)
+                {
+                  char_size.cy = bitmap_info.bmHeight;
+                  break;
+                }
+              }
+
+              if (item_info.fType & MFT_MENUBARBREAK)
+              {
+                char_size.cy += ::GetSystemMetrics(SM_CYMENU);
+              }
+            }
+          }
+        }
+
+        main_menu_size = char_size;
+        return char_size;
+      }
+
+      std::optional<LRESULT> wm_draw_item(win32::popup_menu_ref menu, DRAWITEMSTRUCT& item) override
+      {
+        auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
+        auto text_highlight_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color);
+        auto black_brush = win32::get_solid_brush(bk_color);
+        auto grey_brush = win32::get_solid_brush(text_highlight_color);
+        auto text_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_color);
+
+        auto context = win32::gdi::drawing_context_ref(item.hDC);
+
+        ::SelectObject(context, ::GetStockObject(DC_PEN));
+        ::SelectObject(context, ::GetStockObject(DC_BRUSH));
+
+        ::SetBkMode(context, TRANSPARENT);
+
+        if (item.itemData && ((MSAAMENUINFO*)item.itemData)->dwMSAASignature == MSAA_MENU_SIG && ((MSAAMENUINFO*)item.itemData)->pszWText)
+        {
+          auto rect = item.rcItem;
+
+          if (item.itemState & ODS_HOTLIGHT)
+          {
+            context.FillRect(rect, grey_brush);
+          }
+          else if (item.itemState & ODS_SELECTED)
+          {
+            context.FillRect(rect, grey_brush);
+          }
+          else
+          {
+            context.FillRect(rect, black_brush);
+          }
+
+          ::SetTextColor(context, text_color);
+
+          auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
+
+          if (item.itemState & ODS_CHECKED)
+          {
+            auto icon_font = get_best_system_icon_font();
+
+            if (icon_font)
+            {
+              auto font = win32::load_font(LOGFONTW{
+                                             .lfPitchAndFamily = VARIABLE_PITCH },
+                *icon_font);
+
+              SelectFont(item.hDC, font);
+              std::wstring temp;
+              temp.append(1, (wchar_t)win32::segoe_fluent_icons::check_mark);
+              ::DrawTextW(context, temp.c_str(), -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+            }
+          }
+
+          rect.left += (rect.right - rect.left) / 10;
+
+          auto best_font = get_best_system_font();
+
+          if (best_font)
+          {
+            auto font = win32::load_font(LOGFONTW{
+                                           .lfPitchAndFamily = VARIABLE_PITCH },
+              *best_font);
+
+            SelectFont(item.hDC, font);
+          }
+          ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+        }
+
+        return TRUE;
+      }
+
+      std::optional<LRESULT> wm_draw_item(win32::menu_ref menu, DRAWITEMSTRUCT& item) override
+      {
+
+        auto font = win32::load_font(LOGFONTW{
+          .lfPitchAndFamily = VARIABLE_PITCH,
+          .lfFaceName = L"Segoe UI" });
+
+        SelectFont(item.hDC, font);
+
+        auto bk_color = win32::get_color_for_class(L"#32768", win32::properties::menu::bk_color);
+        auto text_highlight_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color);
+        auto black_brush = win32::get_solid_brush(bk_color);
+        auto grey_brush = win32::get_solid_brush(win32::get_color_for_class(L"#32768", win32::properties::menu::text_highlight_color));
+        auto text_color = win32::get_color_for_class(L"#32768", win32::properties::menu::text_color);
+
+        auto context = win32::gdi::drawing_context_ref(item.hDC);
+
+        ::SelectObject(context, ::GetStockObject(DC_PEN));
+        ::SelectObject(context, ::GetStockObject(DC_BRUSH));
+
+        ::SetBkMode(context, TRANSPARENT);
+
+        if (item.itemData && ((MSAAMENUINFO*)item.itemData)->dwMSAASignature == MSAA_MENU_SIG && ((MSAAMENUINFO*)item.itemData)->pszWText)
+        {
+          auto rect = item.rcItem;
+
+          rect.bottom = rect.top + main_menu_size.cy - ::GetSystemMetrics(SM_CYEDGE);
+          if (item.itemState & ODS_HOTLIGHT)
+          {
+            context.FillRect(rect, grey_brush);
+          }
+          else if (item.itemState & ODS_SELECTED)
+          {
+            context.FillRect(rect, grey_brush);
+          }
+          else
+          {
+            context.FillRect(rect, black_brush);
+          }
+
+          ::SetTextColor(context, text_color);
+
+          rect.left += (rect.right - rect.left) / 10;
+
+          auto& menu_item_info = *(MSAAMENUINFO*)item.itemData;
+          ::DrawTextW(context, menu_item_info.pszWText, -1, &rect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+        }
+
+        return TRUE;
+      }
+
+      static LRESULT __stdcall HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        auto result = win32::menu::notifications::dispatch_message((sub_class*)dwRefData, hWnd, message, wParam, lParam);
+
+        if (result)
+        {
+          return *result;
+        }
+
+        if (message == WM_NCPAINT || message == WM_NCACTIVATE)
+        {
+          auto result = def_subclass_proc(hWnd, message, wParam, lParam);
+          MENUBARINFO menu_bar_info{ .cbSize = sizeof(MENUBARINFO) };
+
+          if (GetMenuBarInfo(hWnd, OBJID_MENU, 0, &menu_bar_info))
+          {
+            RECT window_rect = { 0 };
+            ::GetWindowRect(hWnd, &window_rect);
+
+            RECT line_rect = menu_bar_info.rcBar;
+            line_rect.top = line_rect.bottom;
+            line_rect.bottom = line_rect.top + ::GetSystemMetrics(SM_CYBORDER) + 1;
+            ::OffsetRect(&line_rect, -window_rect.left, -window_rect.top);
+
+            auto bk_color = win32::get_color_for_class(L"", win32::properties::window::bk_color);
+            HDC hdc = GetWindowDC(hWnd);
+            ::FillRect(hdc, &line_rect, win32::get_solid_brush(bk_color));
+            ::ReleaseDC(hWnd, hdc);
+          }
+
+          return result;
+        }
+
+        if (message == WM_ERASEBKGND)
+        {
+          auto context = win32::gdi::drawing_context_ref((HDC)wParam);
+
+          auto self = win32::window_ref(hWnd);
+          auto bk_color = win32::get_color_for_class(L"", win32::properties::window::bk_color);
+
+          auto rect = self.GetClientRect();
+          context.FillRect(*rect, get_solid_brush(bk_color));
+          return TRUE;
+        }
+
+        if (message == WM_DESTROY)
+        {
+          ::RemovePropW(hWnd, L"SiegeForceThemed");
+          remove_window_subclass(hWnd, sub_class::HandleMessage, uIdSubclass);
+        }
+
+        return def_subclass_proc(hWnd, message, wParam, lParam);
+      }
+    };
+
+    auto font = win32::load_font(LOGFONTW{
+      .lfPitchAndFamily = VARIABLE_PITCH,
+      .lfFaceName = L"Segoe UI" });
+
+    ::SendMessageW(control, WM_SETFONT, (WPARAM)font.get(), FALSE);
+
+    DWORD_PTR existing_object{};
+
+    constexpr static auto* subclass_id = L"Window";
+
+    if (!get_window_subclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, &existing_object) && existing_object == 0)
+    {
+      set_window_subclass(control, sub_class::HandleMessage, (UINT_PTR)subclass_id, (DWORD_PTR) new sub_class());
+      ::SetPropW(control, L"SiegeForceThemed", reinterpret_cast<HANDLE>(1));
+    }
+
+    if (control.GetWindowStyle() & ~WS_CHILD)
+    {
+      BOOL value = win32::is_dark_theme() ? TRUE : FALSE;
+
+      static auto dwmapi = ::LoadLibraryW(L"dwmapi");
+
+      static auto dwm_set_attribute = (std::add_pointer_t<decltype(::DwmSetWindowAttribute)>)::GetProcAddress(dwmapi, "DwmSetWindowAttribute");
+
+      if (dwm_set_attribute && dwm_set_attribute(control, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value)) == S_OK)
+      {
+        ::RedrawWindow(control, nullptr, nullptr, RDW_INVALIDATE);
+      }
+
+      auto menu = ::GetMenu(control);
+
+      if (menu)
+      {
+        MENUINFO mi = {};
+        mi.cbSize = sizeof(mi);
+        mi.fMask = MIM_BACKGROUND;
+        auto bk_color = win32::get_color_for_window(control.ref(), win32::properties::menu::bk_color);
+        mi.hbrBack = win32::get_solid_brush(bk_color);
+
+        SetMenuInfo(menu, &mi);
+        ::DrawMenuBar(control);
+      }
+    }
+  }
+
+  void apply_button_theme(bool remove)
+  {
+    static superclass_handle superclass;
+    static std::unordered_set<HWND> controls;
+
+    struct handlers
+    {
+
+      static LRESULT __stdcall handle_control_message(HWND self, UINT message, WPARAM wParam, LPARAM lParam)
+      {
+        if (message == WM_NCCREATE)
+        {
+          CREATESTRUCTW* create_params = (CREATESTRUCTW*)lParam;
+
+          if (!create_params)
+          {
+            return FALSE;
+          }
+
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style & BS_OWNERDRAW)
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          auto root = ::GetAncestor(create_params->hwndParent, GA_ROOT);
+          auto parent = create_params->hwndParent;
+          DWORD_PTR existing_object{};
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          {
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+          }
+
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
+          {
+            set_window_subclass(parent, handle_parent_message, 0, 0);
+          }
+          controls.emplace(self);
+          return superclass.control_proc(self, message, wParam, lParam);
+        }
+
+        if (message == WM_CREATE && controls.contains(self))
+        {
+          auto result = superclass.control_proc(self, message, wParam, lParam);
+
+          auto font = win32::load_font(LOGFONTW{
+            .lfPitchAndFamily = VARIABLE_PITCH,
+            .lfFaceName = L"Segoe UI" });
+
+          ::SendMessageW(self, CCM_DPISCALE, TRUE, 0);
+          ::SendMessageW(self, WM_SETFONT, (WPARAM)font.release(), FALSE);
+          ::SendMessageW(self, WM_SETTINGCHANGE, 0, 0);
+          return result;
+        }
+
+        if (message == WM_NCDESTROY && controls.contains(self))
+        {
+          controls.erase(self);
+        }
+
+        return superclass.control_proc(self, message, wParam, lParam);
+      }
+
+      static LRESULT __stdcall handle_parent_message(HWND parent, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (message == WM_CTLCOLORBTN && controls.contains((HWND)lParam))
+        {
+          auto text_color = win32::get_color_for_window(win32::window_ref((HWND)lParam), properties::button::text_color);
+
+          if (text_color)
+          {
+            ::SetTextColor((HDC)wParam, text_color);
+          }
+
+          auto bk_color = win32::get_color_for_window(win32::window_ref((HWND)lParam), properties::button::bk_color);
+
+          if (bk_color)
+          {
+            ::SetBkColor((HDC)wParam, bk_color);
+            ::SetDCBrushColor((HDC)wParam, bk_color);
+            return (LRESULT)::GetStockObject(DC_BRUSH);
+          }
+
+          return (LRESULT)::GetStockObject(HOLLOW_BRUSH);
+        }
+
+        if (message == WM_NOTIFY)
+        {
+          NMHDR* header = (NMHDR*)lParam;
+
+          if (header->code == NM_CUSTOMDRAW && controls.contains(header->hwndFrom))
+          {
+            auto result = def_subclass_proc(parent, message, wParam, lParam);
+
+            if (result != CDRF_DODEFAULT)
+            {
+              return result;
+            }
+
+            auto& custom_draw = *(NMCUSTOMDRAW*)header;
+            if (custom_draw.dwDrawStage == CDDS_PREPAINT)
+            {
+              auto button = win32::window_ref(header->hwndFrom);
+              auto rect = custom_draw.rc;
+              auto new_size = SIZE(rect.right - rect.left, rect.bottom - rect.top);
+
+              auto text_color = win32::get_color_for_window(button.ref(), properties::button::text_color);
+              auto bk_color = win32::get_color_for_window(button.ref(), properties::button::bk_color);
+              auto hot_color = win32::get_color_for_window(button.ref(), properties::button::hot_bk_color);
+              auto focus_color = win32::get_color_for_window(button.ref(), properties::button::focus_bk_color);
+              auto pushed_color = win32::get_color_for_window(button.ref(), properties::button::pushed_bk_color);
+              auto state = win32::button(header->hwndFrom).GetState();
+
+              auto font = (HFONT)::SendMessageW(button, WM_GETFONT, 0, 0);
+              SelectFont(custom_draw.hdc, font);
+              if (state & BST_HOT)
+              {
+                ::SetTextColor(custom_draw.hdc, text_color);
+                ::SetBkColor(custom_draw.hdc, hot_color);
+                ::SetDCBrushColor(custom_draw.hdc, hot_color);
+              }
+              else if (state & BST_FOCUS)
+              {
+                ::SetTextColor(custom_draw.hdc, text_color);
+                ::SetBkColor(custom_draw.hdc, focus_color);
+                ::SetDCBrushColor(custom_draw.hdc, focus_color);
+              }
+              else if (state & BST_PUSHED)
+              {
+                ::SetTextColor(custom_draw.hdc, text_color);
+                ::SetBkColor(custom_draw.hdc, pushed_color);
+                ::SetDCBrushColor(custom_draw.hdc, pushed_color);
+              }
+              else
+              {
+                ::SetTextColor(custom_draw.hdc, text_color);
+                ::SetBkColor(custom_draw.hdc, bk_color);
+                ::SetDCBrushColor(custom_draw.hdc, bk_color);
+              }
+              ::FillRect(custom_draw.hdc, &custom_draw.rc, (HBRUSH)::GetStockObject(DC_BRUSH));
+
+              return CDRF_NEWFONT | CDRF_NOTIFYPOSTPAINT;
+            }
+
+            if (custom_draw.dwDrawStage == CDDS_POSTPAINT)
+            {
+              static std::wstring temp(255, L'\0');
+              win32::button(header->hwndFrom).GetText(temp);
+
+              ::DrawTextExW(custom_draw.hdc, temp.data(), -1, &custom_draw.rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOCLIP, nullptr);
+            }
+
+            return CDRF_DODEFAULT;
+          }
+        }
+
+        if (message == WM_NCDESTROY)
+        {
+          remove_window_subclass(parent, handle_parent_message, 0);
+        }
+
+        return def_subclass_proc(parent, message, wParam, lParam);
+      }
+    };
+
+    if (!superclass.dummy)
+    {
+      superclass.init(WC_BUTTONW, (LONG_PTR)handlers::handle_control_message);
+    }
+
+    if (superclass.dummy && remove)
+    {
+      superclass.dispose(controls, (LONG_PTR)handlers::handle_control_message);
+    }
+  }
+
+  void apply_static_control_theme(bool remove)
+  {
+    static superclass_handle superclass;
+    static std::unordered_set<HWND> controls;
+
+    struct handlers
+    {
+      static LRESULT __stdcall handle_control_message(HWND self, UINT message, WPARAM wParam, LPARAM lParam)
+      {
+        if (message == WM_NCCREATE)
+        {
+          CREATESTRUCTW* create_params = (CREATESTRUCTW*)lParam;
+
+          if (!create_params)
+          {
+            return FALSE;
+          }
+
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style == (WS_CHILD | WS_VISIBLE | SS_OWNERDRAW))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style == (WS_CHILD | WS_VISIBLE | SS_BITMAP | SS_OWNERDRAW))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style == (WS_CHILD | WS_VISIBLE | SS_ICON | SS_OWNERDRAW))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          auto root = ::GetAncestor(create_params->hwndParent, GA_ROOT);
+          auto parent = create_params->hwndParent;
+          DWORD_PTR existing_object{};
+
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          {
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+          }
+
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
+          {
+            set_window_subclass(parent, handle_parent_message, 0, 0);
+          }
+
+          controls.emplace(self);
+
+          return superclass.control_proc(self, message, wParam, lParam);
+        }
+
+        static std::map<HBITMAP, HBITMAP> bitmap_cache;
+
+        if (message == WM_CREATE && controls.contains(self))
+        {
+          auto result = superclass.control_proc(self, message, wParam, lParam);
+
+          auto child = ::FindWindowExW(self, nullptr, nullptr, nullptr);
+          HFONT font = win32::load_font(LOGFONTW{
+            .lfPitchAndFamily = VARIABLE_PITCH,
+            .lfFaceName = L"Segoe UI" });
+
+          ::SendMessageW(self, WM_SETFONT, (WPARAM)font, FALSE);
+          return result;
+        }
+
+        if (message == WM_NCDESTROY && controls.contains(self))
+        {
+          RemovePropW(self, L"PreviousWidth");
+          RemovePropW(self, L"PreviousHeight");
+          controls.erase(self);
+        }
+
+        return superclass.control_proc(self, message, wParam, lParam);
+      }
+
+      static LRESULT __stdcall handle_parent_message(HWND parent, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (message == WM_CTLCOLORSTATIC && controls.contains((HWND)lParam))
+        {
+          win32::static_control static_control((HWND)lParam);
+          SIZE previous_size{
+            .cx = (LONG)::GetPropW(static_control, L"PreviousWidth"),
+            .cy = (LONG)::GetPropW(static_control, L"PreviousHeight"),
+          };
+
+          win32::gdi::drawing_context_ref context((HDC)wParam);
+
+          auto current_size = static_control.GetClientSize().value_or(SIZE{});
+          HBRUSH result = nullptr;
+
+          if (std::memcmp(&current_size, &previous_size, sizeof(current_size)) == 0)
+          {
+            result = (HBRUSH)::GetStockObject(NULL_BRUSH);
+          }
+          else
+          {
+            auto text_color = win32::get_color_for_window(static_control.ref(), properties::static_control::text_color);
+
+            ::SetTextColor(context, text_color);
+
+            auto bk_color = win32::get_color_for_window(static_control.ref(), properties::static_control::bk_color);
+            ::SetBkColor(context, bk_color);
+            ::SetDCBrushColor(context, bk_color);
+            result = (HBRUSH)::GetStockObject(DC_BRUSH);
+          }
+          ::SetPropW(static_control, L"PreviousWidth", (HANDLE)current_size.cx);
+          ::SetPropW(static_control, L"PreviousHeight", (HANDLE)current_size.cy);
+
+          return (LRESULT)result;
+        }
+
+        if (message == WM_NCDESTROY)
+        {
+          remove_window_subclass(parent, handle_parent_message, 0);
+        }
+
+        return def_subclass_proc(parent, message, wParam, lParam);
+      }
+    };
+
+    if (!superclass.dummy)
+    {
+      superclass.init(WC_STATICW, (LONG_PTR)handlers::handle_control_message);
+    }
+
+    if (superclass.dummy && remove)
+    {
+      superclass.dispose(controls, (LONG_PTR)handlers::handle_control_message);
+    }
+  }
+
+  void apply_list_box_theme(bool remove)
+  {
+    static superclass_handle superclass;
+    static std::unordered_set<HWND> controls;
+    static std::unordered_map<HMENU, HWND> controls_by_id;
+
+    struct handlers
+    {
+      static LRESULT __stdcall handle_control_message(HWND self, UINT message, WPARAM wParam, LPARAM lParam)
+      {
+        if (message == WM_NCCREATE)
+        {
+          CREATESTRUCTW* create_params = (CREATESTRUCTW*)lParam;
+
+          if (!create_params)
+          {
+            return FALSE;
+          }
+
+          if (!create_params->hwndParent || is_parent_from_system(create_params->hwndParent))
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style & LBS_OWNERDRAWFIXED)
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          if (create_params->style & LBS_OWNERDRAWVARIABLE)
+          {
+            return superclass.control_proc(self, message, wParam, lParam);
+          }
+
+          create_params->style = create_params->style | LBS_OWNERDRAWFIXED;
+
+          auto root = ::GetAncestor(create_params->hwndParent, GA_ROOT);
+          auto parent = create_params->hwndParent;
+          DWORD_PTR existing_object{};
+
+          if (!get_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, &existing_object))
+          {
+            set_window_subclass(root, root_window_handler::handle_root_message, (UINT_PTR)&controls, (DWORD_PTR)&controls);
+          }
+
+          if (!get_window_subclass(parent, handle_parent_message, 0, &existing_object))
+          {
+            set_window_subclass(parent, handle_parent_message, 0, 0);
+          }
+          controls.emplace(self);
+
+          auto menu_id = create_params->hMenu;
+          auto result = superclass.control_proc(self, message, wParam, lParam);
+
+          if (!menu_id)
+          {
+            ::SetWindowLongPtrW(self, GWLP_ID, (LONG_PTR)self);
+            menu_id = (HMENU)self;
+          }
+
+          controls_by_id[menu_id] = self;
+          return result;
+        }
+
+        if (message == WM_CREATE && controls.contains(self))
+        {
+          CREATESTRUCTW* create_params = (CREATESTRUCTW*)lParam;
+          create_params->style = create_params->style | LBS_OWNERDRAWFIXED;
+          auto result = superclass.control_proc(self, message, wParam, lParam);
+
+          gdi::font_ref font = win32::load_font(LOGFONTW{
+            .lfPitchAndFamily = VARIABLE_PITCH,
+            .lfFaceName = L"Segoe UI" });
+
+          ::SendMessageW(self, WM_SETFONT, (WPARAM)font.release(), FALSE);
+
+          auto size = get_font_size_for_string(std::move(font), L"A");
+
+          if (size)
+          {
+            win32::list_box(self).SetItemHeight(0, size->cy * 2);
+          }
+
+          return result;
+        }
+
+        return superclass.control_proc(self, message, wParam, lParam);
+      }
+
+      static LRESULT __stdcall handle_parent_message(HWND parent, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+      {
+        if (message == WM_CTLCOLORLISTBOX && controls.contains((HWND)lParam))
+        {
+          auto bk_color = win32::get_color_for_window(win32::window_ref((HWND)lParam), properties::list_box::bk_color);
+
+          SetDCBrushColor((HDC)wParam, bk_color);
+          return (LRESULT)::GetStockObject(DC_BRUSH);
+        }
+
+        if (message == WM_MEASUREITEM)
+        {
+          auto& context = *(MEASUREITEMSTRUCT*)lParam;
+
+          if (context.CtlType == ODT_LISTBOX && controls_by_id.contains((HMENU)context.CtlID))
+          {
+            context.itemHeight = win32::list_box(controls_by_id[(HMENU)context.itemID]).GetItemHeight(context.itemID);
+          }
+        }
+
+        if (message == WM_DRAWITEM && controls.contains(((DRAWITEMSTRUCT*)lParam)->hwndItem))
+        {
+          auto& context = *(DRAWITEMSTRUCT*)lParam;
+
+          thread_local std::wstring buffer;
+
+          auto list = win32::list_box(context.hwndItem);
+          auto bk_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::bk_color);
+          auto text_highlight_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::text_highlight_color);
+          auto text_bk_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::text_bk_color);
+          auto text_color = win32::get_color_for_window(list.ref(), win32::properties::list_box::text_color);
+
+          if (context.itemState & ODS_SELECTED)
+          {
+            ::SetDCBrushColor(context.hDC, text_highlight_color);
+          }
+          else
+          {
+            ::SetDCBrushColor(context.hDC, text_bk_color);
+          }
+
+          ::FillRect(context.hDC, &context.rcItem, GetStockBrush(DC_BRUSH));
+
+          buffer.resize(list.GetTextLength(context.itemID), '\0');
+
+          list.GetText(context.itemID, buffer.data());
+
+          ::SetTextColor(context.hDC, text_color);
+          ::SetBkColor(context.hDC, text_bk_color);
+
+          ::DrawTextW(context.hDC, buffer.c_str(), -1, &context.rcItem, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
+
+          return TRUE;
+        }
+
+        if (message == WM_NCDESTROY)
+        {
+          remove_window_subclass(parent, handle_parent_message, 0);
+        }
+
+        return def_subclass_proc(parent, message, wParam, lParam);
+      }
+    };
+
+    if (!superclass.dummy)
+    {
+      superclass.init(WC_LISTBOX, (LONG_PTR)handlers::handle_control_message);
+    }
+
+    if (superclass.dummy && remove)
+    {
+      superclass.dispose(controls, (LONG_PTR)handlers::handle_control_message);
+    }
+  }
+}// namespace win32

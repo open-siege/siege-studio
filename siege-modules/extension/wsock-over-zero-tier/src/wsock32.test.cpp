@@ -1,21 +1,13 @@
+#include <siege/platform/windows.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
 #include <catch2/reporters/catch_reporter_registrars.hpp>
 #include <WinSock2.h>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/module.hpp>
 
-#include <array>
-#include <atomic>
-#include <chrono>
-#include <filesystem>
-#include <future>
-#include <list>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <thread>
-#include <unordered_map>
+import std;
+import win32.module;
+
+import win32.dialog;
 
 namespace fs = std::filesystem;
 

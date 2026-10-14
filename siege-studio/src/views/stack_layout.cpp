@@ -1,5 +1,7 @@
-#include <siege/platform/win/basic_window.hpp>
+#include <siege/platform/windows.hpp>
+import std;
 
+import win32.window;
 namespace siege::views
 {
   struct stack_layout final : win32::basic_window<stack_layout>
@@ -21,13 +23,13 @@ namespace siege::views
       switch (message)
       {
       case WM_PARENTNOTIFY: {
-        if (LOWORD(wparam) == WM_CREATE)
+        if (win32::loword(wparam) == WM_CREATE)
         {
           children.push_back((HWND)lparam);
           return 0;
         }
 
-        if (LOWORD(wparam) == WM_DESTROY)
+        if (win32::loword(wparam) == WM_DESTROY)
         {
           auto iter = std::find(children.begin(), children.end(), (HWND)lparam);
 

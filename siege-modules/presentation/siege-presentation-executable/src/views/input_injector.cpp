@@ -1,19 +1,19 @@
 module;
-#include <siege/platform/win/window.hpp>
-#include <siege/platform/win/capabilities.hpp>
-#include <optional>
-#include <array>
-#include <set>
-#include <map>
-#include <bitset>
+#include <siege/platform/windows.hpp>
+#include <cassert>
 #include <hidusage.h>
 #include <xinput.h>
-#include <mmsystem.h>
-#include <siege/extension/input_filter.hpp>
-#include <siege/platform/win/common_controls.hpp>
 
 export module exe.input_injector;
+
 import std;
+
+import win32.capabilities;
+import win32.common_controls;
+import win32.window;
+
+import siege.extension.input_filter;
+
 import exe.shared;
 
 namespace siege::views
@@ -49,7 +49,7 @@ namespace siege::views
 
   struct input_injector
   {
-    win32::hwnd_t target_window;
+    HWND target_window;
     input_injector_args injector_args;
     HANDLE process_handle{};
     HANDLE thread_handle{};
@@ -64,7 +64,7 @@ namespace siege::views
     std::function<bool()> mouse_timer;
     POINT mouse_intensity{};
 
-    input_injector(win32::hwnd_t target_window, input_injector_args args) : target_window(target_window), injector_args(std::move(args))
+    input_injector(HWND target_window, input_injector_args args) : target_window(target_window), injector_args(std::move(args))
     {
       simulated_inputs.reserve(64);
       siege::init_active_input_state();
@@ -406,7 +406,6 @@ namespace siege::views
             mouse_intensity.y = 0;
           }
 
-
           if (!mouse_timer)
           {
             mouse_timer = win32::SetTimer(window.ref(), 10, [this](auto, auto, auto, auto) {
@@ -425,7 +424,6 @@ namespace siege::views
           }
         }
       }
-
 
       if (!simulated_inputs.empty())
       {

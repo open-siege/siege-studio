@@ -7,8 +7,7 @@
 #include <iostream>
 #include <span>
 #include <future>
-#include <siege/platform/resource.hpp>
-
+import siege.platform.resource;
 namespace siege::resource
 {
   bool is_resource_readable(std::istream&);
@@ -96,7 +95,6 @@ int main(int argc, const char** argv)
 
       return temp;
     }();
-
 
     std::function<void(decltype(files)&)> extract_files = [&](const auto& files) {
       for (const auto& some_file : files)

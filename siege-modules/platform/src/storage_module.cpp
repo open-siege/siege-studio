@@ -1,13 +1,11 @@
-module;
-
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/shared.hpp>
-
 export module siege.platform.storage;
 
 import std;
+import win32.module;
+
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::platform
 {
@@ -74,7 +72,7 @@ namespace siege::platform
     using context_ptr = std::unique_ptr<resource_reader_context,
       std::move_only_function<void(resource_reader_context*)>>;
 
-    inline std::expected<context_ptr, std::error_code> create_reader_context(storage_info data) const noexcept
+    std::expected<context_ptr, std::error_code> create_reader_context(storage_info data) const noexcept
     {
       resource_reader_context* result = nullptr;
 
@@ -90,7 +88,7 @@ namespace siege::platform
       });
     }
 
-    inline std::expected<std::vector<std::filesystem::path>, std::error_code> get_reader_folder_listing(resource_reader_context& context, const std::filesystem::path& parent_path)
+    std::expected<std::vector<std::filesystem::path>, std::error_code> get_reader_folder_listing(resource_reader_context& context, const std::filesystem::path& parent_path)
     {
       std::vector<const wchar_t*> temp;
 
@@ -126,7 +124,7 @@ namespace siege::platform
       return results;
     }
 
-    inline std::expected<std::vector<std::filesystem::path>, std::error_code> get_reader_file_listing(resource_reader_context& context, const std::filesystem::path& parent_path)
+    std::expected<std::vector<std::filesystem::path>, std::error_code> get_reader_file_listing(resource_reader_context& context, const std::filesystem::path& parent_path)
     {
       std::vector<const wchar_t*> temp;
 
@@ -162,7 +160,7 @@ namespace siege::platform
       return results;
     }
 
-    inline std::expected<std::vector<char>, std::error_code> extract_file_contents(resource_reader_context& context, const std::filesystem::path& file_path)
+    std::expected<std::vector<char>, std::error_code> extract_file_contents(resource_reader_context& context, const std::filesystem::path& file_path)
     {
       std::vector<char> buffer;
       std::size_t expected = 0;

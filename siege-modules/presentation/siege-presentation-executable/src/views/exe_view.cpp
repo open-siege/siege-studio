@@ -1,17 +1,26 @@
 module;
-
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/extension/input_filter.hpp>
+#include <siege/platform/windows.hpp>
 #include <Knownfolders.h>
+#include <ShlObj.h>
+#include <CommCtrl.h>
 
 export module exe.views;
+
 import std;
+import win32.file;
+import win32.com;
+import win32.window;
+import win32.drawing;
+import win32.shell_dialogs;
+import win32.threading;
+
+import win32.dialog;
+import win32.common_controls;
+import win32.shell;
+import win32.theming;
+
+import siege.extension.input_filter;
+
 import exe.shared;
 
 namespace siege::views
@@ -61,15 +70,15 @@ namespace siege::views
       constexpr static int controllers_selected_id = 11;
     } input;
 
-    exe_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    exe_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
-    win32::lresult_t wm_create();
+    LRESULT wm_create();
 
-    win32::lresult_t wm_size(std::size_t type, SIZE client_size);
+    LRESULT wm_size(std::size_t type, SIZE client_size);
 
-    win32::lresult_t wm_copy_data(win32::copy_data_message<char> message);
+    LRESULT wm_copy_data(win32::copy_data_message<char> message);
 
     void recreate_image_lists(std::optional<SIZE> possible_size);
 
@@ -81,7 +90,7 @@ namespace siege::views
 
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override;
 
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message);
+    std::optional<LRESULT> wm_setting_change(win32::setting_change_message message);
   };
 
   constexpr static int add_to_firewall_selected_id = 12;
@@ -89,7 +98,7 @@ namespace siege::views
 
   void extract_selected_files(std::any& state, exe_view::resource_controls& resource);
 
-  win32::lresult_t exe_view::wm_create()
+  LRESULT exe_view::wm_create()
   {
     options = *win32::CreateWindowExW<win32::list_box>(::CREATESTRUCTW{
       .hwndParent = *this,
@@ -116,7 +125,6 @@ namespace siege::views
       extract_selected_files(state, resource);
       return true;
     });
-
 
     exe_actions.bind_nm_click([this](win32::tool_bar, const NMMOUSE& message) {
       if (message.dwItemSpec != add_to_firewall_selected_id)
@@ -168,7 +176,6 @@ namespace siege::views
 
     resource.extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 1, L"Open in New Tab");
     resource.extract_menu.AppendMenuW(MF_STRING | MF_OWNERDRAW, 2, L"Extract");
-
 
     resource.resource_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
       .style = WS_VISIBLE | WS_CHILD | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER });
@@ -269,7 +276,7 @@ namespace siege::views
     return 0;
   }
 
-  win32::lresult_t exe_view::wm_size(std::size_t type, SIZE client_size)
+  LRESULT exe_view::wm_size(std::size_t type, SIZE client_size)
   {
     // Toolbar DPI / sizing contract: see theming-common.cpp::apply_tool_bar_theme.
     auto dpi = win32::get_dpi_awareness_for_window(*this);
@@ -423,7 +430,6 @@ namespace siege::views
       input.controller_table_icons.reset();
     }
 
-
     std::array exe_icons{
       win32::segoe_fluent_icons::shield,
       win32::segoe_fluent_icons::game,
@@ -460,7 +466,7 @@ namespace siege::views
     input.controller_table_icons = win32::create_icon_list(controller_icons, icon_size);
   }
 
-  win32::lresult_t exe_view::wm_copy_data(win32::copy_data_message<char> message)
+  LRESULT exe_view::wm_copy_data(win32::copy_data_message<char> message)
   {
     std::spanstream stream(message.data);
 
@@ -717,7 +723,7 @@ namespace siege::views
     return FALSE;
   }
 
-  std::optional<win32::lresult_t> exe_view::wm_setting_change(win32::setting_change_message message)
+  std::optional<LRESULT> exe_view::wm_setting_change(win32::setting_change_message message)
   {
     if (message.setting == L"ImmersiveColorSet")
     {
@@ -745,7 +751,7 @@ namespace siege::views
     case WM_SETTINGCHANGE:
       return wm_setting_change(win32::setting_change_message(wparam, lparam));
     case WM_SIZE:
-      return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+      return wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
     case WM_COPYDATA:
       return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
     default:

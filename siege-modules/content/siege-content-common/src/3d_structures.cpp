@@ -1,12 +1,13 @@
 module;
 
 #include <climits>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
 
 export module siege.content.structures;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.shared;
 
 namespace siege::content
 {
@@ -14,14 +15,14 @@ namespace siege::content
 
   export struct texture_vertex
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y" });
+    constexpr static auto keys = platform::make_keys({ "x", "y" });
     float x;
     float y;
   };
 
   export struct vector3f
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z" });
+    constexpr static auto keys = platform::make_keys({ "x", "y", "z" });
     float x;
     float y;
     float z;
@@ -29,35 +30,35 @@ namespace siege::content
 
   export struct vector4f
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "w" });
+    constexpr static auto keys = platform::make_keys({ "x", "y", "z", "w" });
     float x;
     float y;
     float z;
     float w;
   };
 
-  export inline vector3f operator+(const vector3f& left, const vector3f& right)
+  export vector3f operator+(const vector3f& left, const vector3f& right)
   {
     return { left.x + right.x, left.y + right.y, left.z + right.z };
   }
 
-  export inline vector3f operator-(const vector3f& left, const vector3f& right)
+  export vector3f operator-(const vector3f& left, const vector3f& right)
   {
     return { left.x - right.x, left.y - right.y, left.z - right.z };
   }
 
-  export inline vector3f operator+=(vector3f& left, const vector3f& right)
+  export vector3f operator+=(vector3f& left, const vector3f& right)
   {
     left = left + right;
     return left;
   }
 
-  export inline vector3f operator*(const vector3f& left, const vector3f& right)
+  export vector3f operator*(const vector3f& left, const vector3f& right)
   {
     return { left.x * right.x, left.y * right.y, left.z * right.z };
   }
 
-  export inline vector3f operator*=(vector3f& left, const vector3f& right)
+  export vector3f operator*=(vector3f& left, const vector3f& right)
   {
     left = left * right;
     return left;
@@ -65,7 +66,7 @@ namespace siege::content
 
   export struct vector3f_pair
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "min", "max" });
+    constexpr static auto keys = platform::make_keys({ "min", "max" });
     vector3f min;
     vector3f max;
   };
@@ -74,7 +75,7 @@ namespace siege::content
 
   export struct vector3s
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z" });
+    constexpr static auto keys = platform::make_keys({ "x", "y", "z" });
     endian::little_int16_t x;
     endian::little_int16_t y;
     endian::little_int16_t z;
@@ -82,7 +83,7 @@ namespace siege::content
 
   export struct quaternion4s
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "w" });
+    constexpr static auto keys = platform::make_keys({ "x", "y", "z", "w" });
     endian::little_int16_t x;
     endian::little_int16_t y;
     endian::little_int16_t z;
@@ -91,19 +92,19 @@ namespace siege::content
 
   export struct quaternion4f
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "x", "y", "z", "w" });
+    constexpr static auto keys = platform::make_keys({ "x", "y", "z", "w" });
     float x;
     float y;
     float z;
     float w;
   };
 
-  export inline quaternion4f to_float(const quaternion4f& other)
+  export quaternion4f to_float(const quaternion4f& other)
   {
     return other;
   }
 
-  export inline quaternion4f to_float(const quaternion4s& other)
+  export quaternion4f to_float(const quaternion4s& other)
   {
     constexpr std::int16_t max = SHRT_MAX;
 
@@ -119,7 +120,7 @@ namespace siege::content
 
   export struct rgb_data
   {
-    KEYS_CONSTEXPR static auto keys = platform::make_keys({ "red", "green", "blue", "rgbFlags" });
+    constexpr static auto keys = platform::make_keys({ "red", "green", "blue", "rgbFlags" });
 
     std::uint8_t red;
     std::uint8_t green;

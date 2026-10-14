@@ -1,11 +1,15 @@
-#include <siege/platform/win/window.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <set>
-#include <type_traits>
+#include <siege/platform/windows.hpp>
+#include <commdlg.h>
+#include <CommCtrl.h>
 #include <winsqlite/winsqlite3.h>
+#include <cassert>
+import std;
+import win32.window;
+import win32.drawing;
+
+import win32.window;
+import win32.common_controls;
+import win32.theming;
 
 int SQLITE_CALLBACK test_vtab_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* api);
 
@@ -69,7 +73,7 @@ namespace siege::views
     // allows theme settings to be saved
     // theme settings changed per control type
 
-    preferences_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    preferences_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
@@ -95,7 +99,6 @@ namespace siege::views
 
       auto owner = ::GetAncestor(*this, GA_ROOTOWNER);
       auto preference = (int)::GetPropW(owner, L"UserThemePreference");
-
 
       auto invalidate = [this]() {
         ::InvalidateRect(dark_mode_selection, nullptr, TRUE);
@@ -124,7 +127,6 @@ namespace siege::views
         .hwndParent = *this,
         .style = WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
         .lpszName = L"Follow System" });
-
 
       by_system.bind_bn_clicked([this, invalidate, update_registry](auto, auto&) {
         auto owner = ::GetAncestor(*this, GA_ROOTOWNER);
@@ -336,7 +338,6 @@ namespace siege::views
           .lpszName = L"Three State Checkbox",
           .lpszClass = L"Button" });
 
-
         temp = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
           .hwndParent = buttons,
           .style = WS_CHILD | WS_VISIBLE,
@@ -355,7 +356,6 @@ namespace siege::views
           .lpszName = L"Flat Push-like",
           .lpszClass = L"Button" });
       }
-
 
       {
         text_inputs = *win32::CreateWindowExW<win32::window>(::CREATESTRUCTW{
@@ -409,7 +409,6 @@ namespace siege::views
         if (auto_extension && open && exec && malloc && free)
         {
           auto* temp = (void(__stdcall*)())test_vtab_init;
-
 
           if (auto_extension(temp) != SQLITE_OK)
           {
@@ -499,7 +498,6 @@ namespace siege::views
                   info->column_count = count;
                 }
 
-
                 for (auto i = 0; i < info->column_count; ++i)
                 {
                   info->temp.resize(std::strlen(columns[i]));
@@ -556,7 +554,6 @@ namespace siege::views
         sql_results = *win32::CreateWindowExW<win32::list_view>(::CREATESTRUCTW{
           .hwndParent = *this,
           .style = WS_CHILD | LVS_REPORT });
-
 
         ::SetPropW(*this, L"module", module);
         ::SetPropW(*this, L"database", db);
@@ -620,7 +617,7 @@ namespace siege::views
 
     std::map<std::wstring, COLORREF> hover_colors;
 
-    win32::lresult_t control_settings_nm_custom_draw(win32::list_view, NMLVCUSTOMDRAW& custom_draw)
+    LRESULT control_settings_nm_custom_draw(win32::list_view, NMLVCUSTOMDRAW& custom_draw)
     {
       if (custom_draw.nmcd.dwDrawStage == CDDS_PREPAINT)
       {
@@ -770,8 +767,8 @@ namespace siege::views
       if (message == WM_INITDIALOG)
       {
         auto* item = (CHOOSECOLORW*)lParam;
-        auto x = LOWORD(item->lCustData);
-        auto y = HIWORD(item->lCustData);
+        auto x = win32::loword(item->lCustData);
+        auto y = win32::hiword(item->lCustData);
         win32::window_ref(dialog).SetWindowPos(POINT{ x, y });
       }
 
@@ -820,7 +817,6 @@ namespace siege::views
       forced_light.SetWindowPos(POINT{ .x = left_size.cx + width + width + 15, .y = 15 });
       forced_light.SetWindowPos(SIZE{ .cx = width, .cy = height });
 
-
       auto top_height = client_size.cy / 12;
 
       sql_query.SetWindowPos(POINT{ .x = left_size.cx });
@@ -843,7 +839,7 @@ namespace siege::views
       case WM_DESTROY:
         return wm_destroy();
       case WM_SIZE:
-        return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       default:
         return std::nullopt;
       }

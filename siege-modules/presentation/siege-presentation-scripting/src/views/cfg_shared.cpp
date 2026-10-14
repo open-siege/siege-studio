@@ -1,18 +1,15 @@
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-
 export module cfg.shared;
 import std;
-import siege.configuration.shared;
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::views
 {
   export std::span<const siege::fs_string_view> get_cfg_formats() noexcept
   {
-    constexpr static auto formats = std::array<siege::fs_string_view, 5>{ { FSL ".cfg", FSL ".ini", FSL ".inf", FSL "txt", FSL ".cs" } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 5>{ { FSL".cfg", FSL".ini", FSL".inf", FSL"txt", FSL".cs" } };
 
     return formats;
   }

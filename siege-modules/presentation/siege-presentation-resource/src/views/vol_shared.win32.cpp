@@ -1,11 +1,10 @@
 module;
-
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/stream.hpp>
-
+#include <siege/platform/windows.hpp>
 module vol.shared;
 
 import std;
+
+import siege.platform.stream;
 
 namespace fs = std::filesystem;
 
@@ -77,7 +76,6 @@ namespace siege::views
     {
       exe_stream.write(buffer_out.data(), stream->gcount());
     }
-
 
     if (!exe_stream.bad())
     {

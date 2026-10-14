@@ -1,6 +1,7 @@
 .idea/
 .vs
 .vscode
+.cursor/
 venv/
 build/
 release/build

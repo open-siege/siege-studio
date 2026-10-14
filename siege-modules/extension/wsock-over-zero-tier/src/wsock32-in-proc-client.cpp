@@ -14,9 +14,10 @@
 #include <WinSock.h>
 #endif
 #include <wsnwlink.h>
-#include <siege/platform/win/module.hpp>
-
+#include <siege/platform/windows.hpp>
 import std;
+import win32.module;
+
 import wsock32.shared;
 import wsock32.shared.client;
 
@@ -31,7 +32,6 @@ int __stdcall siege_WSAStartup(WORD version, LPWSADATA data)
 {
   ensure_imports();
   get_log("in-proc-client") << "siege_WSAStartup " << (int)LOBYTE(version) << " " << (int)HIBYTE(version);
-
 
   auto env_size = ::GetEnvironmentVariableA("SIEGE_WSOCK_BACKEND", nullptr, 0);
 
@@ -174,7 +174,6 @@ int __stdcall siege_recvfrom(SOCKET ws, char* buf, int len, int flags, sockaddr*
     log_sampled_check() << "siege_recvfrom MSG_PEEK\n";
   }
 
-
 try_again:
   // TODO add SEH here for bad buffers
   auto result = backend->recvfrom(ws, buf, len, flags, from, fromLen);
@@ -212,7 +211,6 @@ try_again:
 
   return result;
 }
-
 
 int __stdcall siege_sendto(SOCKET ws, const char* buf, int len, int flags, const sockaddr* to, int tolen) noexcept
 {

@@ -1,19 +1,18 @@
-﻿module;
-
-#include <string_view>
-#include <istream>
-#include <spanstream>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/theming.hpp>
+module;
+#include <siege/platform/windows.hpp>
+#include <CommCtrl.h>
 
 export module sfx.views;
 
 import std;
-import sfx.shared;
+import win32.window;
+import win32.drawing;
+import win32.window;
+import win32.common_controls;
+import win32.theming;
 import win32.winmm;
+
+import sfx.shared;
 
 #undef PlaySound
 
@@ -29,7 +28,7 @@ namespace siege::views
     win32::image_list image_list;
     media_module media;
 
-    sfx_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params), media{}
+    sfx_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params), media{}
     {
     }
 
@@ -145,7 +144,7 @@ namespace siege::views
       return FALSE;
     }
 
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
+    std::optional<LRESULT> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -281,7 +280,7 @@ namespace siege::views
       case WM_SETTINGCHANGE:
         return wm_setting_change(win32::setting_change_message(wparam, lparam));
       case WM_SIZE:
-        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
       default:
@@ -310,7 +309,6 @@ namespace siege::views
 
     ImGui::LabelText("", "Duration (in seconds): %f", buffer.getDuration().asSeconds());
     ImGui::LabelText("", "Sample Rate: %u", buffer.getSampleRate());
-
 
     ImGui::End();
 

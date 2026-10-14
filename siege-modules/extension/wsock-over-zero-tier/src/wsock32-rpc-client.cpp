@@ -5,9 +5,9 @@
 
 #include <WinSock2.h>
 
-#include <siege/platform/win/module.hpp>
-
 import std;
+import win32.module;
+
 import wsock32.shared;
 
 std::optional<wsock_imports> peer;

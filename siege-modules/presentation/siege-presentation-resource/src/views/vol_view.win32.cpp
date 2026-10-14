@@ -1,23 +1,31 @@
 module;
-
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/menu.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/stream.hpp>
+#include <siege/platform/windows.hpp>
 #include <versionhelpers.h>
-#include <siege/platform/win/theming.hpp>
+#include <CommCtrl.h>
+#include <ShlObj.h>
+#include <shobjidl.h>
 
 export module vol.views;
 
 import std;
-import vol.shared;
+import win32.file;
+import win32.com;
+import win32.window;
+import win32.drawing;
+import win32.shell_dialogs;
+import win32.threading;
+
+import win32.window;
+import win32.common_controls;
+import win32.shell;
+import win32.theming;
+
 import siege.platform.presentation;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
+
+import vol.shared;
 
 namespace siege::views
 {
@@ -34,9 +42,9 @@ namespace siege::views
 
     std::set<std::u16string> all_categories;
     std::map<std::u16string, std::set<std::wstring>> category_extensions;
-    std::map<std::u16string, win32::wparam_t> categories_to_groups;
+    std::map<std::u16string, WPARAM> categories_to_groups;
     std::unordered_map<std::wstring_view, std::u16string> extensions_to_categories;
-    std::unordered_map<siege::platform::file_info*, win32::wparam_t> file_indices;
+    std::unordered_map<siege::platform::file_info*, WPARAM> file_indices;
     std::u16string filter_value;
 
     win32::popup_menu table_menu;
@@ -58,7 +66,7 @@ namespace siege::views
 
     constexpr static std::u16string_view generic_category = u"All Generic Data Files";
 
-    vol_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    vol_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
@@ -292,7 +300,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_setting_change(win32::setting_change_message message)
+    std::optional<LRESULT> wm_setting_change(win32::setting_change_message message)
     {
       if (message.setting == L"ImmersiveColorSet")
       {
@@ -965,7 +973,7 @@ namespace siege::views
       case WM_DPICHANGED:
         return wm_dpi_changed();
       case WM_SIZE:
-        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
       default:

@@ -1,7 +1,10 @@
+#include <siege/platform/windows.hpp>
+import std;
+import win32.window;
+import win32.window;
 
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/hresult.hpp>
-#include <siege/platform/stream.hpp>
+import siege.platform.stream;
+import win32.utils;
 
 import sfx.shared;
 import sfx.views;
@@ -14,7 +17,6 @@ static ATOM sfx_view_atom;
 
 extern "C" {
 extern const std::uint32_t default_file_icon = SIID_AUDIOFILES;
-
 
 HRESULT get_window_class_for_stream(storage_info* data, wchar_t** class_name) noexcept
 {

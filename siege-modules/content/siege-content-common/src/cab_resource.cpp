@@ -1,23 +1,13 @@
 module;
-
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <list>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <cstdlib>
-#include <sstream>
-#include <algorithm>
-#include <iostream>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
 
 export module siege.resource.cab;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
 import siege.resource.ext;
 
 namespace fs = std::filesystem;
@@ -27,8 +17,6 @@ struct overloaded : Ts...
 {
   using Ts::operator()...;
 };
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace siege::resource::cab
 {

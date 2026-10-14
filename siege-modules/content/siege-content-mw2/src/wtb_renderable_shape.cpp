@@ -4,9 +4,10 @@ module;
 export module siege.content.wtb.renderable;
 
 import std;
-import siege.content.wtb;
+
 import siege.content.bwd;
 export import siege.content.renderable;
+import siege.content.wtb;
 
 namespace siege::content::wtb
 {
@@ -22,7 +23,6 @@ namespace siege::content::wtb
       : shape(std::move(shape))
     {
     }
-
 
     std::vector<sequence_info> get_sequences(const std::vector<std::size_t>& detail_level_indexes) const override
     {

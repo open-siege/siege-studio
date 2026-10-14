@@ -1,15 +1,13 @@
 // BWD - MechWarrior 2 complete 3D model data (referencing individual WTB meshes)
 // Uses file IDs from the PRJ file instead of file names.
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.content.bwd;
 
 import std;
+
 import siege.content.wtb;
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::content::bwd
 {
@@ -38,7 +36,6 @@ namespace siege::content::bwd
   {
     std::optional<wtb::wtb_shape> shape;
   };
-
 
   export struct file_info
   {
@@ -96,7 +93,6 @@ namespace siege::content::bwd
     endian::little_uint16_t tsk_count;
     endian::little_uint16_t popo_count;
   };
-
 
   export bool is_bwd(std::istream& stream)
   {

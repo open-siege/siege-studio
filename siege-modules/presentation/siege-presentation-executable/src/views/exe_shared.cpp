@@ -1,21 +1,21 @@
 module;
-
-#include <siege/platform/stream.hpp>
-#include <siege/platform/win/module.hpp>
-#include <siege/platform/win/registry.hpp>
-#include <siege/platform/shared.hpp>
+#include <siege/extension/detours.hpp>
 #include <xinput.h>
 #define DIRECTINPUT_VERSION 0x800
 #include <dinput.h>// DIJOYSTATE only
-#include <winreg.h>
-#include <detours.h>
 #include <imagehlp.h>
 #include <nlohmann/json.hpp>
 
 export module exe.shared;
 
 import std;
+import win32.module;
+import win32.file;
+
 export import siege.platform.extension;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.win.registry;
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -47,7 +47,6 @@ namespace siege::views
     siege::platform::hardware_context context;
     std::uint16_t action_index;
   };
-
 
   export struct menu_item : ::MENUITEMINFOW
   {
@@ -319,7 +318,6 @@ namespace siege::views
     return L"";
   };
 
-
   auto enable_setting = [](game_setting& setting) {
     switch (setting.type)
     {
@@ -478,19 +476,19 @@ namespace siege::views
 
   export std::span<const siege::fs_string_view> get_executable_formats() noexcept
   {
-    constexpr static auto exe_formats = std::array<siege::fs_string_view, 2>{ { FSL ".exe", FSL ".com" } };
+    constexpr static auto exe_formats = std::array<siege::fs_string_view, 2>{ { FSL".exe", FSL".com" } };
     return exe_formats;
   }
 
   export std::span<const siege::fs_string_view> get_library_formats() noexcept
   {
     constexpr static auto lib_formats = std::array<siege::fs_string_view, 6>{ {
-      FSL ".dll",
-      FSL ".ocx",
-      FSL ".olb",
-      FSL ".lib",
-      FSL ".asi",
-      FSL ".ovl",
+      FSL".dll",
+      FSL".ocx",
+      FSL".olb",
+      FSL".lib",
+      FSL".asi",
+      FSL".ovl",
     } };
 
     return lib_formats;
@@ -595,7 +593,6 @@ namespace siege::views
       real_options = { pref_options_no_ext[1],
         pref_options_no_ext[2] };
     }
-
 
     auto persist_ip_address = [&self]() {
       if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
@@ -957,7 +954,6 @@ namespace siege::views
 
       auto proc = get_extension(state).get_predefined_string_command_line_settings_proc;
 
-
       self.launch_settings.emplace_back(game_setting{
         .setting_name = setting,
         .type = extension_setting_type::string_setting,
@@ -1000,7 +996,6 @@ namespace siege::views
         };
       }
     }
-
 
     auto is_visible = [&](auto& setting, extension_setting_type type) {
       if (!dedicated_setting.empty() && setting == dedicated_setting)
@@ -1172,7 +1167,6 @@ namespace siege::views
           .value = zt_node_id,
           .display_name = L"Zero Tier Node ID",
           .group_id = 1 });
-
 
         self.launch_settings.emplace_back(game_setting{
           .setting_name = L"ZERO_TIER_LAST_NETWORK_IP_ADDRESS",
@@ -1372,7 +1366,6 @@ namespace siege::views
     return result;
   }
 
-
   export std::optional<std::reference_wrapper<game_setting>> get_game_setting(std::any& state, std::size_t index)
   {
     try
@@ -1421,7 +1414,6 @@ namespace siege::views
 
       ::EnumResourceTypesW(module, handler::enum_types, (LONG_PTR)&has_resource_data);
 
-
       if (!has_resource_data)
       {
         deferred.reset();
@@ -1451,7 +1443,6 @@ namespace siege::views
 
         return (bool)get_supported_networking_libraries(view);
       }
-
 
       return has_resource_data;
     }
@@ -2079,7 +2070,6 @@ namespace siege::views
     }
   }
 
-
   export std::optional<WORD> get_expected_vkey_for_keyboard_mouse(const std::any& state, hardware_context context, WORD vkey, std::uint16_t action_index)
   {
     assert(has_extension_module(state));
@@ -2176,7 +2166,6 @@ namespace siege::views
       }
     }
 
-
     WORD action_index = 0;
     for (auto& action : actions)
     {
@@ -2189,7 +2178,6 @@ namespace siege::views
 
       action_index++;
     }
-
 
     return action_settings;
   }
@@ -2350,7 +2338,6 @@ namespace siege::views
       return item.setting_name == extension.caps->controller_enabled_setting;
     });
 
-
     if (setting != self.launch_settings.end())
     {
       enable_setting(*setting);
@@ -2374,7 +2361,6 @@ namespace siege::views
     auto setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](auto& item) {
       return item.setting_name == extension.caps->controller_enabled_setting;
     });
-
 
     if (setting != self.launch_settings.end())
     {
@@ -2409,7 +2395,6 @@ namespace siege::views
 
       size = game_settings.last_zero_tier_server_node_id_and_private_key.size();
       ::RegGetValueA(main_key, nullptr, "LastZeroTierServerNodeIdAndPrivateKey", RRF_RT_REG_SZ, &type, game_settings.last_zero_tier_server_node_id_and_private_key.data(), &size);
-
 
       size = game_settings.last_hosting_preference.size() * char_size;
       ::RegGetValueW(main_key, nullptr, L"LastHostingPreference", RRF_RT_REG_SZ, &type, game_settings.last_hosting_preference.data(), &size);
@@ -2643,7 +2628,6 @@ namespace siege::views
       return result;
     }
 
-
     win32::file file(self.loaded_path, GENERIC_READ, FILE_SHARE_READ, std::nullopt, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL);
 
     auto file_size = file.GetFileSizeEx();
@@ -2760,7 +2744,6 @@ namespace siege::views
 
     paths_to_check.emplace_back(fs::path(win32::module_ref::current_module().GetModuleFileName<char>()).parent_path());
 
-
     for (auto& parent_path : paths_to_check)
     {
       auto wsock_path = parent_path / "wsock32-in-proc-client.dll";
@@ -2779,7 +2762,6 @@ namespace siege::views
     return std::nullopt;
   }
   bool allow_input_filtering = false;// TODO There are still some issues with id Tech 3 games that should be fixed.
-
 
   bool uses_wsock32(const exe_state& state)
   {
@@ -2975,7 +2957,6 @@ namespace siege::views
         return temp;
       };
 
-
       std::wstring current_path = get_env(L"Path");
 
       std::array<fs::path, 3> search_paths{ {
@@ -3027,7 +3008,6 @@ namespace siege::views
         auto zt_path = *zt_ext_path / "wsock-backend-zero-tier.dll";
         fs::copy_file(zt_path, ext_path / "wsock-backend-zero-tier.dll", fs::copy_options::overwrite_existing, last_errorc);
 
-
         if (links_to_networking_libraries(self) && uses_ws2_32(state))
         {
           auto ws2_path = *zt_ext_path / "ws2_32-rpc-client.dll";
@@ -3078,7 +3058,6 @@ namespace siege::views
           ::SetEnvironmentVariableW(L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4", self.registry_data.last_ip_address.data());
         }
       }
-
 
       for (auto i = 0; i < game_args.environment_settings.size(); ++i)
       {
@@ -3195,7 +3174,6 @@ namespace siege::views
       std::wstring args;
       args.reserve(argv.size() + 3 * sizeof(std::wstring) + 3);
 
-
       auto exe_path = self.loaded_path;
 
       if (auto& caps = extension.caps; caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
@@ -3265,7 +3243,6 @@ namespace siege::views
     else
     {
       STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
-
 
       std::wstring args;
       args.append(1, L'"');

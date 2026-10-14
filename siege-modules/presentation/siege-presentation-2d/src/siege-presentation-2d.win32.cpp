@@ -1,8 +1,11 @@
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/hresult.hpp>
-#include <siege/platform/stream.hpp>
+#include <siege/platform/windows.hpp>
 
+import std;
+import win32.window;
+import win32.common_controls;
+import win32.utils;
+
+import siege.platform.stream;
 import bmp.shared;
 import bmp.views;
 import pal.views;

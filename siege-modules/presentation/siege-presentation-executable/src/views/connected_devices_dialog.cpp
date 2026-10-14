@@ -1,15 +1,18 @@
 // WIP - this file is still work in progress and messy
 module;
-
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/theming.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/common_controls.hpp>
+#include <siege/platform/windows.hpp>
 #include <hidusage.h>
 #include <xinput.h>
+#include <CommCtrl.h>
 
 module exe.views;
+
+import std;
+import win32.window;
+import win32.dialog;
+
+import win32.common_controls;
+import win32.theming;
 
 import exe.shared;
 
@@ -42,13 +45,13 @@ namespace siege::views
   {
     struct controller_item
     {
-      win32::wparam_t item;
+      WPARAM item;
       controller_state state;
     };
 
     struct ui_controller_mapping
     {
-      win32::wparam_t item;
+      WPARAM item;
       bool visible = false;
       hardware_index index;
       WORD vkey;
@@ -57,8 +60,8 @@ namespace siege::views
     win32::list_view device_selection;
     win32::tool_bar device_context;
     win32::list_view custom_mapping;
-    std::map<HANDLE, win32::wparam_t> registered_keyboards;
-    std::map<HANDLE, win32::wparam_t> registered_mice;
+    std::map<HANDLE, WPARAM> registered_keyboards;
+    std::map<HANDLE, WPARAM> registered_mice;
     std::map<HANDLE, controller_item> registered_controllers;
     std::vector<ui_controller_mapping> mappings;
     std::span<ui_controller_mapping> button_mappings;
@@ -137,7 +140,6 @@ namespace siege::views
           right_x_axis_right.ref() } };
       }
 
-
       void show_all()
       {
         for (auto& item : to_array())
@@ -164,7 +166,7 @@ namespace siege::views
 
     } controller_controls;
 
-    connected_devices_dialog(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    connected_devices_dialog(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
       mappings.reserve(32);
     }
@@ -198,7 +200,6 @@ namespace siege::views
       return true;
     }
 
-
     LRESULT wm_create()
     {
       ::SetWindowTextW(*this, L"Connected Inputs");
@@ -208,7 +209,6 @@ namespace siege::views
       {
         return -1;
       }
-
 
       device_selection = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
         .style = WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
@@ -240,10 +240,9 @@ namespace siege::views
                                          .state = LVGS_COLLAPSIBLE,
                                        });
 
-
       device_selection.bind_nm_click([&](auto, const NMITEMACTIVATE& event) {
         auto item = std::find_if(registered_controllers.begin(), registered_controllers.end(), [&](auto& controller) {
-          return controller.second.item == (win32::wparam_t)event.iItem;
+          return controller.second.item == (WPARAM)event.iItem;
         });
 
         if (item == registered_controllers.end())
@@ -307,7 +306,6 @@ namespace siege::views
 
         return true;
       });
-
 
       custom_mapping = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
         .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
@@ -383,7 +381,6 @@ namespace siege::views
 
         namespace stl = std::ranges;
 
-
         auto button_or_axis = stl::find_if(mappings, [&](auto& mapping) {
           return mapping.item == message.iItem;
         });
@@ -444,7 +441,6 @@ namespace siege::views
         {
           return;
         }
-
 
         auto selected_axis = get_raw_input_from_dialog(this->ref(), controller->first, controller->second.state, input_type::axis);
 
@@ -636,7 +632,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_size(std::size_t type, SIZE client_size)
+    std::optional<LRESULT> wm_size(std::size_t type, SIZE client_size)
     {
       if (type == SIZE_MINIMIZED || type == SIZE_MAXHIDE || type == SIZE_MAXSHOW)
       {
@@ -731,7 +727,7 @@ namespace siege::views
       return 0;
     }
 
-    std::optional<win32::lresult_t> wm_input(HRAWINPUT raw_input)
+    std::optional<LRESULT> wm_input(HRAWINPUT raw_input)
     {
       RAWINPUTHEADER header{};
 
@@ -861,8 +857,7 @@ namespace siege::views
       return std::nullopt;
     }
 
-
-    win32::lresult_t nm_custom_draw(NMCUSTOMDRAW& info)
+    LRESULT nm_custom_draw(NMCUSTOMDRAW& info)
     {
       if (auto bars = controller_controls.track_bars(); info.dwDrawStage == CDDS_PREPAINT && std::any_of(bars.begin(), bars.end(), [&](auto& bar) {
             return bar == info.hdr.hwndFrom;
@@ -877,7 +872,7 @@ namespace siege::views
           return CDRF_DODEFAULT;
         }
 
-        auto stock_brush = GetStockBrush(DC_BRUSH);
+        auto stock_brush = (HBRUSH)::GetStockObject(DC_BRUSH);
 
         ::SetDCBrushColor(info.hdc, RGB(0, 0, 0));
         ::FillRect(info.hdc, &*rect, stock_brush);
@@ -1021,8 +1016,7 @@ namespace siege::views
       registered_controllers.erase(handle);
     }
 
-
-    std::optional<win32::lresult_t> wm_input_device_change(WPARAM type, HANDLE device)
+    std::optional<LRESULT> wm_input_device_change(WPARAM type, HANDLE device)
     {
       if (type == GIDC_ARRIVAL)
       {
@@ -1199,7 +1193,7 @@ namespace siege::views
         return wm_destroy();
       }
       case WM_SIZE: {
-        return wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       }
       case WM_NOTIFY: {
         NMHDR* hdr = (NMHDR*)lparam;

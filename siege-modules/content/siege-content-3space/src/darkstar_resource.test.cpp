@@ -1,10 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
 #include <any>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/resource.hpp>
-
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 import siege.resource.vol;
 
 namespace darkstar = siege::resource::vol::darkstar;
@@ -169,7 +168,6 @@ TEST_CASE("With one text file, creates a Darkstar Volume file with the correct b
 
     (*memory_file_info2) << "Hey, hey, hey";
     files.emplace_back(darkstar::volume_file_info{ "test.txt", 13, std::nullopt, darkstar::compression_type::lzh, std::unique_ptr<std::istream>(memory_file_info2) });
-
 
     auto memory_file_info3 = new std::stringstream();
 

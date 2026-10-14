@@ -1,13 +1,11 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
+#include <siege/platform/windows.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 extern "C" {
 using hardware_context = siege::platform::hardware_context;
@@ -70,7 +68,6 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> fu
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "in_initmouse"sv, "in_joystick"sv } } };
 
-
 std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (exe_path_str == nullptr)
@@ -119,7 +116,6 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     upsert_mouse_bindings(*config, *binding);
   }
 
-
   return std::errc{};
 }
 
@@ -151,7 +147,6 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
   {
     return std::errc::invalid_argument;
   }
-
 
   std::array<std::pair<WORD, std::string_view>, 23> actions{
     {
@@ -195,7 +190,6 @@ predefined_int*
   }
 
   auto name_str = std::wstring_view(name);
-
 
   if (name_str == L"r_mode")
   {

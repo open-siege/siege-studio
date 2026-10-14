@@ -1,12 +1,9 @@
-module;
-
-#include <siege/platform/shared.hpp>
-
 export module pal.shared;
 
 import std;
-import siege.platform.palette;
 import siege.content.pal;
+import siege.platform.palette;
+import siege.platform.shared;
 
 namespace siege::views
 {
@@ -37,7 +34,7 @@ namespace siege::views
 
   export std::span<const siege::fs_string_view> get_pal_formats() noexcept
   {
-    constexpr static auto formats = std::array<siege::fs_string_view, 4>{ { FSL ".pal", FSL ".ipl", FSL ".ppl", FSL ".dpl" } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 4>{ { FSL".pal", FSL".ipl", FSL".ppl", FSL".dpl" } };
     return formats;
   }
 

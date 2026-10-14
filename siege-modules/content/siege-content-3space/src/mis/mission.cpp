@@ -1,17 +1,9 @@
-#include <vector>
-#include <map>
-#include <optional>
-#include <istream>
-#include <variant>
-#include <filesystem>
-#include <fstream>
-#include <functional>
-#include <string>
-#include <siege/platform/tagged_data.hpp>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/stream.hpp>
+import std;
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
+import siege.platform.tagged_data;
 
 namespace siege::mis::darkstar
 {
@@ -30,7 +22,6 @@ namespace siege::mis::darkstar
   using sim_item = std::variant<sim_set, sim_group, sim_volume, sim_terrain, sim_palette, interior_shape, sim_structure, sim_marker, nav_marker, vehicle, raw_item>;
 
   using sim_items = std::vector<sim_item>;
-
 
   struct sim_set
   {
@@ -86,7 +77,6 @@ namespace siege::mis::darkstar
     sim_network_object base;
     std::string palette_file;
   };
-
 
   struct interior_shape
   {

@@ -1,13 +1,13 @@
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <detours.h>
-#include <siege/extension/shared.hpp>
-
-
+#include <siege/extension/detours.hpp>
 import std;
-import siege.extension.id_tech;
-import siege.configuration.shared;
+import win32.file;
+import win32.window;
+
 import siege.configuration.id_tech;
+import siege.configuration.shared;
+import siege.extension.id_tech;
+import siege.extension.shared;
+import siege.platform.shared;
 
 namespace fs = std::filesystem;
 extern "C" {
@@ -134,7 +134,7 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  
+
   if (auto config = load_config_from_pak(L"base\\Default.cfg", L"base/Htic2-0.pak", L"base/Htic2-0.pak"))
   {
     upsert_mouse_bindings(*config, *binding);
@@ -302,7 +302,6 @@ DWORD WINAPI WrappedGetLogicalDrives()
     }
   }
 
-
   return bits.to_ulong();
 }
 
@@ -386,7 +385,7 @@ BOOL WINAPI DllMain(
     return TRUE;
   }
 
-  if (DetourIsHelperProcess())
+  if (::DetourIsHelperProcess())
   {
     return TRUE;
   }
@@ -417,13 +416,13 @@ BOOL WINAPI DllMain(
           return FALSE;
         }
 
-        DetourRestoreAfterWith();
-        DetourTransactionBegin();
-        DetourUpdateThread(GetCurrentThread());
+        ::DetourRestoreAfterWith();
+        ::DetourTransactionBegin();
+        ::DetourUpdateThread(::GetCurrentThread());
 
-        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { DetourAttach(func.first, func.second); });
+        std::for_each(detour_functions.begin(), detour_functions.end(), [](auto& func) { ::DetourAttach(func.first, func.second); });
 
-        DetourTransactionCommit();
+        ::DetourTransactionCommit();
       }
       catch (...)
       {

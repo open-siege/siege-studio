@@ -1,14 +1,12 @@
 module;
-
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/capabilities.hpp>
+#include <siege/platform/windows.hpp>
 #include <hidusage.h>
-#include <xinput.h>
-#include <joystickapi.h>
-#include <hidsdi.h>
 
 module exe.shared;
+
+import std;
+import win32.dialog;
+import win32.capabilities;
 
 namespace siege::views
 {

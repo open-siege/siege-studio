@@ -1,9 +1,7 @@
-module;
-
-
 export module siege.configuration.three_space;
 
 import std;
+
 import siege.configuration.shared;
 
 namespace siege::configuration::three_space
@@ -146,7 +144,6 @@ namespace siege::configuration::three_space
             return !(value == ' ' || value == '\t' || value == ')' || value == ';');
           });
 
-
           if (first_arg == trimmed.end())
           {
             continue;
@@ -223,7 +220,6 @@ namespace siege::configuration::three_space
           config_data.emplace_back(config_line{ line, keys, final_args });
         }
       }
-
 
       return std::make_optional<text_game_config>(std::any{}, std::move(buffer), std::move(config_data), save_config);
     }

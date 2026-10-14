@@ -1,13 +1,11 @@
-module;
-
-#include <siege/platform/endian_arithmetic.hpp>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-
 export module siege.platform.bitmap;
 
 import std;
+
+export import siege.platform.endian;
 export import siege.platform.palette;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::platform::bitmap
 {
@@ -46,13 +44,13 @@ namespace siege::platform::bitmap
   };
 
   export template<typename UnitType>
-  inline void invert(std::vector<UnitType>& pixels)
+  void invert(std::vector<UnitType>& pixels)
   {
     std::reverse(pixels.begin(), pixels.end());
   }
 
   export template<typename UnitType>
-  inline void horizontal_flip(std::vector<UnitType>& pixels, int width)
+  void horizontal_flip(std::vector<UnitType>& pixels, int width)
   {
     for (auto r = pixels.begin(); r != pixels.end(); r += width)
     {
@@ -61,7 +59,7 @@ namespace siege::platform::bitmap
   }
 
   export template<typename UnitType>
-  inline void vertical_flip(std::vector<UnitType>& pixels, int width)
+  void vertical_flip(std::vector<UnitType>& pixels, int width)
   {
     invert(pixels);
     horizontal_flip(pixels, width);
@@ -314,7 +312,6 @@ namespace siege::platform::bitmap
     const auto padding = platform::get_padding_size(x_stride, sizeof(AlignmentType));
 
     const auto num_pixels = info.width.value() * info.height * (info.bit_depth / 8);
-
 
     if (info.bit_depth <= 8 && pixels.size() != num_pixels)
     {

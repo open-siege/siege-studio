@@ -1,26 +1,18 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-#include <SDKDDKVer.h>
-#include <array>
-#include <optional>
-#include <algorithm>
-#include <vector>
-#include <set>
-#include <bit>
-#include <variant>
-#include <functional>
-#include <fstream>
-#undef NDEBUG
+#include <siege/platform/windows.hpp>
+#include <ShlObj.h>
+#include <KnownFolders.h>
+#include <CommCtrl.h>
 #include <cassert>
 
-#include <siege/platform/win/shell.hpp>
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/win/capabilities.hpp>
-#include <imagehlp.h>
+import std;
+import win32.shell_dialogs;
+import win32.threading;
+import win32.com;
+import win32.window;
+import win32.capabilities;
+import win32.common_controls;
+import win32.shell;
+import siege.platform.shared;
 
 namespace fs = std::filesystem;
 extern "C" __declspec(dllexport) std::uint32_t DisableSiegeExtensionModule = -1;
@@ -295,7 +287,6 @@ void unload_core_module(HWND window)
       ::DestroyWindow(window);
     }
 
-
     while (::IsWindow(window))
     {
       ::Sleep(10);
@@ -304,7 +295,6 @@ void unload_core_module(HWND window)
     deregister_windows_ptr(win32::module_ref::current_application());
     register_windows_ptr = &register_windows;
     deregister_windows_ptr = &deregister_windows;
-
 
     core_module->reset();
     core_module = std::nullopt;
@@ -452,7 +442,6 @@ discovery_info discover_installation_info(int major_version, int minor_version, 
       break;
     }
   }
-
 
   for (auto const& dir_entry : fs::recursive_directory_iterator{ root })
   {

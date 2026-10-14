@@ -5,6 +5,7 @@ module;
 export module siege.content.dts.renderable;
 
 import std;
+
 import siege.content.dts;
 export import siege.content.renderable;
 
@@ -13,10 +14,6 @@ struct overloaded : Ts...
 {
   using Ts::operator()...;
 };
-
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 
 namespace siege::content::dts::darkstar
 {
@@ -242,7 +239,6 @@ namespace siege::content::dts::darkstar
 
       return results;
     }
-
 
     std::vector<std::string> get_detail_levels() const override
     {

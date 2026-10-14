@@ -1,16 +1,19 @@
 module;
-
-#include <vector>
-#include <siege/platform/win/dialog.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/capabilities.hpp>
+#include <siege/platform/windows.hpp>
 #include <hidusage.h>
 #include <xinput.h>
 #include <joystickapi.h>
 #include <hidsdi.h>
-#include <joystickapi.h>
+#include <versionhelpers.h>
 
 module exe.shared;
+
+import std;
+import win32.window;
+
+import win32.dialog;
+
+import win32.capabilities;
 
 namespace siege::views
 {
@@ -251,13 +254,11 @@ std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDL
         }
       }
 
-
       return result;
     }
 
     return std::nullopt;
   }
-
 
   bool populate_caps(controller_state& state);
 
@@ -420,7 +421,6 @@ DIJOYSTATE get_raw_state_for_handle(controller_state& state, HRAWINPUT handle)
             continue;
           }
 
-
           usage = usage - value.LogicalMin;
           // For indicators that have only five positions, the value for a controller is - 1, 0, 9,000, 18,000, or 27,000.
           /*if (usage == 0 || usage == 1 || usage == 7)
@@ -554,7 +554,6 @@ XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT han
           continue;
         }
 
-
         for (auto i = 0; i < usages.size(); ++i)
         {
           auto usage = usages[i] - button->Range.UsageMin;
@@ -630,7 +629,6 @@ XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT han
 
         auto index = value.Range.UsageMin - HID_USAGE_GENERIC_X;
 
-
         if (auto ll_index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, controller_info::prefer_axis); ll_index && ll_index->index == index)
         {
           result.Gamepad.sThumbLX = to_s16(value.BitSize, usage);
@@ -697,7 +695,6 @@ XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT han
     return result;
   }
 
-
   bool populate_caps(controller_state& state)
   {
     if (state.caps.has_value())
@@ -717,7 +714,6 @@ XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT han
     {
       handle = ::CreateFileW(state.info.device_path.data(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
     }
-
 
     PHIDP_PREPARSED_DATA preparsed = nullptr;
     std::shared_ptr<void> deferred{
@@ -790,7 +786,6 @@ XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT han
 
     return true;
   }
-
 
   bool is_non_controller_context(hardware_context hint)
   {

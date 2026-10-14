@@ -1,13 +1,14 @@
 module;
 
 #include <zlib.h>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.resource.pak;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace fs = std::filesystem;
 
@@ -143,7 +144,6 @@ namespace siege::resource::pak
       entries.reserve(file_count);
 
       stream.seekg(current_offset + offset, std::ios::beg);
-
 
       if (entry_type == typeid(pak_file_entry).hash_code())
       {

@@ -1,18 +1,16 @@
 // BND - Colony Wars 3D shape data from Colony Wars and Colony Wars Vengeance
 // Contains embedded TMD shape data and TIM texture data.
 
-module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.content.bnd;
 
 import std;
-import siege.platform.bitmap;
+
 import siege.content.tim;
 import siege.content.tmd;
+import siege.platform.bitmap;
+import siege.platform.endian;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::content::bnd
 {

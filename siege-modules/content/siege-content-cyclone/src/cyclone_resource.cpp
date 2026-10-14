@@ -1,12 +1,11 @@
-module;
-
-#include <siege/platform/stream.hpp>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
-
 export module siege.resource.cln;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
+import siege.platform.stream;
 
 namespace siege::resource::cln
 {

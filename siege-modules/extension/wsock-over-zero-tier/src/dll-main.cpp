@@ -1,5 +1,6 @@
-#include <siege/platform/win/module.hpp>
-#include <detours.h>
+#include <siege/extension/detours.hpp>
+import std;
+import win32.module;
 
 extern "C" BOOL WINAPI DllMain(
   HINSTANCE hinstDLL,
@@ -11,7 +12,7 @@ extern "C" BOOL WINAPI DllMain(
     return TRUE;
   }
 
-  if (DetourIsHelperProcess())
+  if (::DetourIsHelperProcess())
   {
     return TRUE;
   }
@@ -34,7 +35,7 @@ extern "C" BOOL WINAPI DllMain(
     {
       try
       {
-        DetourRestoreAfterWith();
+        ::DetourRestoreAfterWith();
       }
       catch (...)
       {

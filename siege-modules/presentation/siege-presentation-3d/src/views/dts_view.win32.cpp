@@ -1,25 +1,30 @@
 module;
-
-#include <string_view>
-#include <istream>
-#include <set>
+#include <siege/platform/windows.hpp>
 #include <spanstream>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/win/basic_window.hpp>
-#include <siege/platform/win/window_module.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/drawing.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/theming.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <GL/GL.h>
+#include <CommCtrl.h>
+#include <shobjidl.h>
 
 export module dts.views;
 
 import std;
+import win32.file;
+import win32.com;
+import win32.window;
+import win32.drawing;
+import win32.shell_dialogs;
+
+import win32.window;
+import win32.common_controls;
+import win32.shell;
+import win32.theming;
+
+import siege.content.obj;
+import siege.platform.stream;
+
 import dts.shared;
 import gl.renderer;
-import siege.content.obj;
 
 namespace siege::views
 {
@@ -67,7 +72,7 @@ namespace siege::views
     inline static std::set<dts_view*> active_views;
     inline static HHOOK keyboard_hook = nullptr;
 
-    dts_view(win32::hwnd_t self, CREATESTRUCTW& params) : basic_window(self, params)
+    dts_view(HWND self, CREATESTRUCTW& params) : basic_window(self, params)
     {
     }
 
@@ -482,7 +487,6 @@ namespace siege::views
       shape_actions.SetWindowPos(top_size, SWP_DEFERERASE);
       shape_actions.SetButtonSize(SIZE{ .cx = top_size.cx / (LONG)shape_actions.ButtonCount(), .cy = top_size.cy });
 
-
       render_view.SetWindowPos(left_size);
       render_view.SetWindowPos(POINT{ .y = top_size.cy });
 
@@ -621,7 +625,6 @@ namespace siege::views
           }
         }
 
-
         return TRUE;
       }
       else if (message.dwItemSpec == 6)
@@ -669,7 +672,7 @@ namespace siege::views
       return GetStockBrush(DC_BRUSH);
     }
 
-    win32::lresult_t render_view_wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item)
+    LRESULT render_view_wm_draw_item(win32::static_control, DRAWITEMSTRUCT& item)
     {
       if (item.itemAction == ODA_DRAWENTIRE && renderer)
       {
@@ -698,16 +701,16 @@ namespace siege::views
       case WM_CREATE:
         return wm_create();
       case WM_SIZE:
-        return (LRESULT)wm_size((std::size_t)wparam, SIZE(LOWORD(lparam), HIWORD(lparam)));
+        return (LRESULT)wm_size((std::size_t)wparam, SIZE(win32::loword(lparam), win32::hiword(lparam)));
       case WM_COPYDATA:
         return (LRESULT)wm_copy_data(win32::copy_data_message<char>(wparam, lparam));
       case WM_LBUTTONDOWN:
       case WM_MBUTTONDOWN:
       case WM_RBUTTONDOWN:
       case WM_XBUTTONDOWN:
-        return (LRESULT)wm_mouse_button_down((std::size_t)wparam, POINTS{ .x = (SHORT)GET_X_LPARAM(lparam), .y = (SHORT)GET_Y_LPARAM(lparam) });
+        return (LRESULT)wm_mouse_button_down((std::size_t)wparam, POINTS{ .x = (SHORT)win32::get_x_lparam(lparam), .y = (SHORT)win32::get_y_lparam(lparam) });
       case WM_MOUSEMOVE:
-        return (LRESULT)wm_mouse_move((std::size_t)wparam, POINTS{ .x = (SHORT)GET_X_LPARAM(lparam), .y = (SHORT)GET_Y_LPARAM(lparam) });
+        return (LRESULT)wm_mouse_move((std::size_t)wparam, POINTS{ .x = (SHORT)win32::get_x_lparam(lparam), .y = (SHORT)win32::get_y_lparam(lparam) });
       default:
         return std::nullopt;
       }

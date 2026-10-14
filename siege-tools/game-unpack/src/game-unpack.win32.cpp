@@ -1,27 +1,22 @@
-#define _CRT_SECURE_NO_WARNINGS
+#include <siege/platform/windows.hpp>
+#include <cassert>
+#include <CommCtrl.h>
+#include <ShlObj.h>
+#include <shobjidl.h>
 
-#include <SDKDDKVer.h>
-#include <siege/platform/shared.hpp>
-#include <siege/platform/win/shell.hpp>
-#include <siege/platform/win/common_controls.hpp>
-#include <siege/platform/win/threading.hpp>
-#include <siege/platform/http.hpp>
-#include <siege/platform/resource.hpp>
-#include <span>
-#include <string_view>
-#include <array>
-#include <ranges>
-#include <map>
-#include <set>
-#include <fstream>
-#include <iostream>
-#include <regex>
-#include <future>
-#include <filesystem>
-#include <ranges>
+import std;
+import win32.com;
+import win32.drawing;
+import win32.threading;
+import win32.common_controls;
+import win32.shell;
 
+import win32.window;
+
+import siege.platform.http;
 import siege.platform.installation;
-
+import siege.platform.resource;
+import siege.platform.shared;
 namespace siege::resource
 {
   bool is_resource_readable(std::istream&);
@@ -975,7 +970,6 @@ unpacking_status do_unpacking(user_interaction ui, std::vector<fs::path> backup_
     }
   }
 
-
   for (auto& mapping : discovered_info->transformed_rules)
   {
     std::wstring source(mapping.resolved_source);
@@ -1122,7 +1116,6 @@ command_line_args parse_command_line(std::span<std::string_view> args)
       return arg.starts_with("--output") || arg.starts_with("-o");
     },
       output_path);
-
 
     parse_arg([](auto& arg) {
       return arg.starts_with("--broadcast-hwnd");

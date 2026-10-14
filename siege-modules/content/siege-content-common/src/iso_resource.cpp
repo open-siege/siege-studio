@@ -1,25 +1,14 @@
 module;
-
-#include <fstream>
-#include <filesystem>
-#include <vector>
-#include <list>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <cstdlib>
-#include <sstream>
-#include <algorithm>
-#include <iostream>
-#include <deque>
 #include <cstring>
-#include <siege/platform/resource.hpp>
-#include <siege/platform/endian_arithmetic.hpp>
 
 export module siege.resource.iso;
 
 import std;
+
+import siege.platform.endian;
+import siege.platform.resource;
+import siege.platform.shared;
 import siege.resource.ext;
 
 namespace fs = std::filesystem;
@@ -29,8 +18,6 @@ struct overloaded : Ts...
 {
   using Ts::operator()...;
 };
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
 
 // TODO extract audio from iso
 namespace siege::resource::iso
@@ -176,7 +163,6 @@ namespace siege::resource::iso
   // next query
   //  archive_path = c:\downloads\game.cue
   //  folder_path = c:\downloads\game.cue\game.bin\some_folder
-
 
   // test.cue
   //  test.bin

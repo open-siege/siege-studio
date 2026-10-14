@@ -1,16 +1,20 @@
 module;
-
-#include <siege/platform/shared.hpp>
-#include <siege/platform/stream.hpp>
+#if WIN32
+#include <siege/platform/windows.hpp>
+#endif
 
 export module bmp.shared;
 
 import std;
-import siege.platform.image;
-import siege.platform.palette;
-import siege.content.tim;
+import win32.wic;
 import siege.content.bmp;
 import siege.content.pal;
+import siege.content.tim;
+import siege.platform.image;
+import siege.platform.palette;
+import siege.platform.shared;
+import siege.platform.stream;
+
 export import pal.shared;
 
 namespace siege::views
@@ -60,28 +64,28 @@ namespace siege::views
 
   export std::span<const siege::fs_string_view> get_bmp_formats() noexcept
   {
-    constexpr static auto formats = std::array<siege::fs_string_view, 22>{ { FSL ".jpg",
-      FSL ".jpeg",
-      FSL ".gif",
-      FSL ".png",
-      FSL ".tag",
-      FSL ".bmp",
-      FSL ".pbm",
-      FSL ".dds",
-      FSL ".ico",
-      FSL ".tif",
-      FSL ".tiff",
-      FSL ".dib",
-      FSL ".tim",
-      FSL ".pba",
-      FSL ".dmb",
-      FSL ".db0",
-      FSL ".db1",
-      FSL ".db2",
-      FSL ".hba",
-      FSL ".hb0",
-      FSL ".hb1",
-      FSL ".hb2" } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 22>{ { FSL".jpg",
+      FSL".jpeg",
+      FSL".gif",
+      FSL".png",
+      FSL".tag",
+      FSL".bmp",
+      FSL".pbm",
+      FSL".dds",
+      FSL".ico",
+      FSL".tif",
+      FSL".tiff",
+      FSL".dib",
+      FSL".tim",
+      FSL".pba",
+      FSL".dmb",
+      FSL".db0",
+      FSL".db1",
+      FSL".db2",
+      FSL".hba",
+      FSL".hb0",
+      FSL".hb1",
+      FSL".hb2" } };
 
     return formats;
   }
@@ -236,7 +240,6 @@ namespace siege::views
           std::fstream file_data(path);
           return load_palette(std::move(path), file_data);
         });
-
 
         task_a.wait();
 

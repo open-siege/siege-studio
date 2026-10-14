@@ -1,11 +1,9 @@
-module;
-
-#include <siege/platform/shared.hpp>
-
 export module dml.shared;
 
 import std;
+
 import siege.content.dts;
+import siege.platform.shared;
 
 namespace siege::views
 {
@@ -22,7 +20,7 @@ namespace siege::views
 
   export std::span<const siege::fs_string_view> get_material_formats() noexcept
   {
-    constexpr static auto formats = std::array<siege::fs_string_view, 1>{ { FSL ".dml" } };
+    constexpr static auto formats = std::array<siege::fs_string_view, 1>{ { FSL".dml" } };
     return formats;
   }
 

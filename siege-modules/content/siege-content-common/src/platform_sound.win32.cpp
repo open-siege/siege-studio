@@ -1,14 +1,11 @@
-module;
-
-#include <spanstream>
-#include <siege/platform/win/com.hpp>
-#include <siege/platform/win/file.hpp>
-#include <siege/platform/stream.hpp>
-#include <siege/platform/wave.hpp>
-
 module siege.content.sfx;
 
 import std;
+import win32.file;
+import win32.com;
+
+import siege.platform.stream;
+import siege.platform.wave;
 
 namespace siege::content::sfx
 {
