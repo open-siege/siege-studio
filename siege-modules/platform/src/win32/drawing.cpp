@@ -285,7 +285,8 @@ export namespace win32::gdi
   {
     void operator()(HGDIOBJ gdi_obj)
     {
-      assert(::DeleteObject(gdi_obj) == TRUE);
+      [[maybe_unused]] const BOOL deleted = ::DeleteObject(gdi_obj);
+      assert(deleted == TRUE);
     }
   };
 
@@ -293,7 +294,8 @@ export namespace win32::gdi
   {
     void operator()(HICON gdi_obj)
     {
-      assert(::DestroyIcon(gdi_obj) == TRUE);
+      [[maybe_unused]] const BOOL destroyed = ::DestroyIcon(gdi_obj);
+      assert(destroyed == TRUE);
     }
   };
 
@@ -339,9 +341,11 @@ export namespace win32::gdi
     {
       if (state_index)
       {
-        assert(::RestoreDC(dc, state_index));
+        [[maybe_unused]] const BOOL restored = ::RestoreDC(dc, state_index);
+        assert(restored);
       }
-      assert(::DeleteDC(dc));
+      [[maybe_unused]] const BOOL deleted = ::DeleteDC(dc);
+      assert(deleted);
     }
   };
 
