@@ -10,9 +10,7 @@ module exe.shared;
 
 import std;
 import win32.window;
-
 import win32.dialog;
-
 import win32.capabilities;
 
 namespace siege::views
@@ -57,7 +55,7 @@ namespace siege::views
   // The most important thing is that we figure out the hardware
   // context to use as a default and then the preferred input device
   // for games which make use of it.
-std::vector<controller_info> get_connected_controllers()
+  std::vector<controller_info> get_connected_controllers()
   {
     std::vector<controller_info> results;
 
@@ -155,7 +153,7 @@ std::vector<controller_info> get_connected_controllers()
 
     return results;
   }
-std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT handle)
+  std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT handle)
   {
     RAWINPUTHEADER header{};
 
@@ -166,7 +164,7 @@ std::optional<controller_info> controller_info_for_raw_input_handle(HRAWINPUT ha
 
     return controller_info_for_raw_input_device_handle(header.hDevice);
   }
-std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDLE handle)
+  std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDLE handle)
   {
     controller_info result{ .backend = "user32" };
 
@@ -286,7 +284,7 @@ std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDL
   constexpr BYTE to_byte(USHORT caps, ULONG usage);
 
   std::optional<XINPUT_STATE> get_xinput_state(HANDLE file_handle);
-std::set<std::uint32_t> hardware_buttons(const controller_state& state)
+  std::set<std::uint32_t> hardware_buttons(const controller_state& state)
   {
     if (!state.caps.has_value())
     {
@@ -303,7 +301,7 @@ std::set<std::uint32_t> hardware_buttons(const controller_state& state)
 
     return results;
   }
-std::set<std::uint32_t> hardware_axes(const controller_state& state)
+  std::set<std::uint32_t> hardware_axes(const controller_state& state)
   {
     if (!state.caps.has_value())
     {
@@ -324,7 +322,7 @@ std::set<std::uint32_t> hardware_axes(const controller_state& state)
 
     return results;
   }
-std::uint32_t hardware_hat_count(const controller_state& state)
+  std::uint32_t hardware_hat_count(const controller_state& state)
   {
     if (!state.caps.has_value())
     {
@@ -339,7 +337,7 @@ std::uint32_t hardware_hat_count(const controller_state& state)
 
     return static_cast<std::uint32_t>(count);
   }
-DIJOYSTATE get_raw_state_for_handle(controller_state& state, HRAWINPUT handle)
+  DIJOYSTATE get_raw_state_for_handle(controller_state& state, HRAWINPUT handle)
   {
     DIJOYSTATE result{};
     hid_caps* caps = std::any_cast<hid_caps>(&state.caps);
@@ -480,7 +478,7 @@ DIJOYSTATE get_raw_state_for_handle(controller_state& state, HRAWINPUT handle)
 
     return result;
   }
-XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle)
+  XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle)
   {
     if (!populate_caps(state))
     {
@@ -791,7 +789,7 @@ XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT han
   {
     return (int)hint >= (int)hardware_context::global && (int)hint <= (int)hardware_context::mouse_wheel;
   }
-controller_info store_controller_context(const controller_info& info, siege::platform::hardware_context context)
+  controller_info store_controller_context(const controller_info& info, siege::platform::hardware_context context)
   {
     if (is_non_controller_context(context))
     {
@@ -821,7 +819,7 @@ controller_info store_controller_context(const controller_info& info, siege::pla
 
     return result;
   }
-controller_info detect_and_store_controller_context_from_hint(const controller_info& info, hardware_context hint)
+  controller_info detect_and_store_controller_context_from_hint(const controller_info& info, hardware_context hint)
   {
     if (is_non_controller_context(hint))
     {
@@ -847,7 +845,7 @@ controller_info detect_and_store_controller_context_from_hint(const controller_i
 
     return store_controller_context(result, hint);
   }
-std::set<std::uint32_t> mapped_buttons(const controller_info& info)
+  std::set<std::uint32_t> mapped_buttons(const controller_info& info)
   {
     if (!info.get_hardware_index)
     {
@@ -871,7 +869,7 @@ std::set<std::uint32_t> mapped_buttons(const controller_info& info)
 
     return indexes;
   }
-std::set<std::uint32_t> mapped_axes(const controller_info& info)
+  std::set<std::uint32_t> mapped_axes(const controller_info& info)
   {
     if (!info.get_hardware_index)
     {
@@ -895,7 +893,7 @@ std::set<std::uint32_t> mapped_axes(const controller_info& info)
 
     return indexes;
   }
-std::uint32_t mapped_hat_count(const controller_info& info)
+  std::uint32_t mapped_hat_count(const controller_info& info)
   {
     if (!info.get_hardware_index)
     {
@@ -920,7 +918,7 @@ std::uint32_t mapped_hat_count(const controller_info& info)
 
     return (std::uint32_t)indexes.size();
   }
-std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer)
+  std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer)
   {
     std::size_t result = 0;
     if (a.Gamepad.wButtons != b.Gamepad.wButtons)
@@ -954,7 +952,7 @@ std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_ST
         buffer[result++] = input_state_change{
           .vkey = key_positive,
           .new_value = scale_value(b),
-          .old_value = a > 0 ? scale_value(a) : std::uint16_t{0}
+          .old_value = a > 0 ? scale_value(a) : std::uint16_t{ 0 }
         };
         buffer[result++] = input_state_change{
           .vkey = key_negative,
@@ -1167,9 +1165,20 @@ std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_ST
     // TODO other bit sizes
     return {};
   }
-bool is_vkey_for_controller(WORD vkey)
+
+  bool is_vkey_for_controller(WORD vkey)
   {
     return vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
+  }
+
+  bool is_vkey_for_mouse(WORD vkey)
+  {
+    return vkey == VK_LBUTTON || vkey == VK_RBUTTON || vkey == VK_MBUTTON || vkey == VK_XBUTTON1 || vkey == VK_XBUTTON2;
+  }
+
+  bool is_vkey_for_keyboard(WORD vkey)
+  {
+    return !is_vkey_for_mouse(vkey) && !is_vkey_for_controller(vkey);
   }
 
   std::set<std::wstring>& strings()
@@ -1177,7 +1186,7 @@ bool is_vkey_for_controller(WORD vkey)
     static std::set<std::wstring> storage;
     return storage;
   }
-std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
+  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
   {
     using namespace siege::platform;
     if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
@@ -1202,7 +1211,7 @@ std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context con
 
     return L"Keyboard";
   }
-std::wstring label_for_vkey(SHORT vkey, siege::platform::controller_context context)
+  std::wstring label_for_vkey(SHORT vkey, siege::platform::controller_context context)
   {
     static std::map<std::wstring_view, SHORT> xbox_labels{
       { L"A Button", VK_GAMEPAD_A },

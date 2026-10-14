@@ -522,8 +522,47 @@ namespace siege::views
       game_args.action_bindings = std::move(action_bindings);
       game_args.controller_to_send_input_mappings = controller_to_send_input_mappings;
       game_args.controller_to_send_input_mappings.resize(256);
+      
+      auto simulate_mouse = stl::any_of(game_args.environment_settings, [&](const auto& setting) {
+        if (has_extension_module(state))
+        {
+          return true;
+        }
 
-      this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, global, for_client = has_client_preference(state)] mutable {
+        if (!setting.name)
+        {
+          return false;
+        }
+
+        if (!setting.value)
+        {
+          return false;
+        }
+
+        return setting.name == mouse_simulation_enabled_env && (setting.value == L"Yes"sv || setting.value == L"1"sv);
+      });
+      auto simulate_keyboard = stl::any_of(game_args.environment_settings, [&](const auto& setting) {
+        if (has_extension_module(state))
+        {
+          return true;
+        }
+
+        if (!setting.name)
+        {
+          return false;
+        }
+
+        if (!setting.value)
+        {
+          return false;
+        }
+
+        return setting.name == keyboard_simulation_enabled_env && (setting.value == L"Yes"sv || setting.value == L"1"sv);
+      });
+
+
+
+      this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .simulate_mouse = simulate_mouse, .simulate_keyboard = simulate_keyboard, .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, global, for_client = has_client_preference(state)] mutable {
                                                     reset_launch_state(state);
                                                     apply_launch_button_state(*this);
                                                     auto _ = std::shared_ptr<void>{

@@ -23,10 +23,13 @@ namespace stl = std::ranges;
 using siege::platform::predefined_int;
 using siege::platform::predefined_string;
 using siege::platform::game_command_line_caps;
+using namespace std::literals;
 
 namespace siege::views
 {
-  export constexpr auto zt_fallback_ip = L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4";
+  export constexpr auto zt_fallback_ip = L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4"sv;
+  export constexpr auto mouse_simulation_enabled_env = L"SIEGE_MOUSE_SIMULATION_ENABLED"sv;
+  export constexpr auto keyboard_simulation_enabled_env = L"SIEGE_KEYBOARD_SIMULATION_ENABLED"sv;
 
   export enum struct setting_group {
     other = 1,
@@ -538,6 +541,8 @@ namespace siege::views
   export std::uint32_t mapped_hat_count(const controller_info& info);
   export std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer);
   export bool is_vkey_for_controller(WORD vkey);
+  export bool is_vkey_for_mouse(WORD vkey);
+  export bool is_vkey_for_keyboard(WORD vkey);
   export std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
   export std::wstring label_for_vkey(SHORT vkey, siege::platform::controller_context context);
   export std::wstring label_for_vkey(SHORT vkey, siege::platform::hardware_context context);
@@ -826,6 +831,47 @@ namespace siege::views
         .value = std::wstring{},
         .display_name = L"Command Line Arguments",
         .group_id = setting_group::other });
+
+
+      self.launch_settings.emplace_back(game_setting{
+        .setting_name = std::wstring{ mouse_simulation_enabled_env },
+        .type = extension_setting_type::env_setting,
+        .value = std::wstring{ L"No" },
+        .display_name = L"Simulate Mouse Input",
+        .group_id = setting_group::input,
+        .get_predefined_string = [results = std::vector<predefined_string>{
+                                    predefined_string{
+                                      .label = L"Yes",
+                                      .value = L"Yes" },
+                                    predefined_string{
+                                      .label = L"No",
+                                      .value = L"No" } }](auto name) -> std::span<const predefined_string> {
+          if (name != mouse_simulation_enabled_env)
+          {
+            return std::span<const predefined_string>{};
+          }
+          return results;
+        } });
+
+      self.launch_settings.emplace_back(game_setting{
+        .setting_name = std::wstring{ keyboard_simulation_enabled_env },
+        .type = extension_setting_type::env_setting,
+        .value = std::wstring{ L"Yes" },
+        .display_name = L"Simulate Keyboard Input",
+        .group_id = setting_group::input,
+        .get_predefined_string = [results = std::vector<predefined_string>{
+                                    predefined_string{
+                                      .label = L"Yes",
+                                      .value = L"Yes" },
+                                    predefined_string{
+                                      .label = L"No",
+                                      .value = L"No" } }](auto name) -> std::span<const predefined_string> {
+          if (name != keyboard_simulation_enabled_env)
+          {
+            return std::span<const predefined_string>{};
+          }
+          return results;
+        } });
     }
 
     std::wstring_view dedicated_setting = caps.dedicated_setting ? caps.dedicated_setting : L"";
@@ -879,7 +925,7 @@ namespace siege::views
     if (!has_ip && can_support_zero_tier(state) && get_zero_tier_extension_folder_path(state))
     {
       self.launch_settings.emplace_back(game_setting{
-        .setting_name = zt_fallback_ip,
+        .setting_name = std::wstring{ zt_fallback_ip },
         .type = extension_setting_type::env_setting,
         .value = settings.last_ip_address.data(),
         .display_name = L"Broadcast Replacement IP",

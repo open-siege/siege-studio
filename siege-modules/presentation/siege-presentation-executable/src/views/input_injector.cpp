@@ -7,13 +7,10 @@ module;
 export module exe.input_injector;
 
 import std;
-
 import win32.capabilities;
 import win32.common_controls;
 import win32.window;
-
 import siege.extension.input_filter;
-
 import exe.shared;
 
 namespace siege::views
@@ -23,16 +20,10 @@ namespace siege::views
 
   export struct input_injector_args
   {
-    enum mode
-    {
-      none,
-      bind_input,
-      bind_action
-    };
-
     siege::platform::owning_packaged_args args;
     std::wstring script_host;
-    mode input_mode = bind_input;
+    bool simulate_mouse;
+    bool simulate_keyboard;
     std::function<HRESULT(siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info)> launch_game_with_extension;
     std::function<void()> on_process_closed;
   };
@@ -309,16 +300,34 @@ namespace siege::views
 
           constexpr static auto dead_zone = std::numeric_limits<std::uint16_t>::max() / 4;
 
+          if (mapping.to_context == hardware_context::mouse && !injector_args.simulate_mouse)
+          {
+            continue;
+          }
+
+          if (is_vkey_for_mouse(mapping.to_vkey) && mapping.to_context == hardware_context::global && !injector_args.simulate_mouse)
+          {
+            continue;
+          }
+
+          if (mapping.to_context == hardware_context::keyboard && !injector_args.simulate_keyboard)
+          {
+            continue;
+          }
+
+          if (is_vkey_for_keyboard(mapping.to_vkey) && mapping.to_context == hardware_context::global && !injector_args.simulate_keyboard)
+          {
+            continue;
+          }
+
           if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == VK_LEFT || mapping.to_vkey == VK_RIGHT))
           {
-
             x_mouse_changes[mapping.to_vkey] = mapped_vkey;
             continue;
           }
 
           if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == VK_UP || mapping.to_vkey == VK_DOWN))
           {
-
             y_mouse_changes[mapping.to_vkey] = mapped_vkey;
             continue;
           }
@@ -336,7 +345,6 @@ namespace siege::views
 
       if (!(x_mouse_changes.empty() || y_mouse_changes.empty()))
       {
-
         constexpr static auto dead_zone = std::numeric_limits<std::uint16_t>::max() / 8;
 
         bool should_reset = std::all_of(x_mouse_changes.begin(), x_mouse_changes.end(), [](auto& item) {
