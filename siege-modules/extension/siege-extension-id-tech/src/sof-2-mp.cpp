@@ -26,7 +26,17 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"net_noipx",
   .dedicated_setting = L"dedicated",
-  .controller_enabled_setting = L"in_joystick"
+  .render_backend_setting = L"r_glDriver",
+  .controller_enabled_setting = L"in_joystick",
+  .selected_map_setting = L"map",
+  .max_time_limit_setting = L"timelimit",
+  .max_score_limit_setting = L"scorelimit",
+  .multiplayer_game_mode_setting = L"g_gametype",
+  .predefined_resolution_setting = L"r_mode",
+  .custom_width_setting = L"r_customwidth",
+  .custom_height_setting = L"r_customheight",
+  .fullscreen_setting = L"r_fullscreen",
+  .fov_setting = L"cg_fov"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

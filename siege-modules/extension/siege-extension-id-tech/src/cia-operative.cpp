@@ -22,7 +22,10 @@ extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"width", L"height", L"joystick" } },
   .string_settings = { { L"name", L"map" } },
   .player_name_setting = L"name",
-  .controller_enabled_setting = L"joystick"
+  .controller_enabled_setting = L"joystick",
+  .selected_map_setting = L"map",
+  .custom_width_setting = L"width",
+  .custom_height_setting = L"height"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

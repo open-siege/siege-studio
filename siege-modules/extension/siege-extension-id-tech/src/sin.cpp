@@ -42,8 +42,11 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
+  .render_backend_setting = L"gl_driver",
   .selected_game_setting = L"game",
-  .controller_enabled_setting = L"in_joystick"
+  .controller_enabled_setting = L"in_joystick",
+  .selected_map_setting = L"map",
+  .predefined_resolution_setting = L"gl_mode"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

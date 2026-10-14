@@ -62,6 +62,7 @@ extern auto command_line_caps = game_command_line_caps{
   .dedicated_setting = L"serve",
   .controller_enabled_setting = L"Joystick",
   .mouse_enabled_setting = L"Mouse",
+  .selected_map_setting = L"map",
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

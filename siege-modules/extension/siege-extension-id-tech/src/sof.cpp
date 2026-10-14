@@ -26,8 +26,16 @@ extern auto command_line_caps = game_command_line_caps{
   .player_name_setting = L"name",
   .listen_setting = L"connect",
   .dedicated_setting = L"dedicated",
+  .render_backend_setting = L"gl_driver",
   .selected_game_setting = L"game",
-  .controller_enabled_setting = L"in_joystick"
+  .controller_enabled_setting = L"in_joystick",
+  .selected_map_setting = L"map",
+  .max_players_setting = L"maxclients",
+  .bot_count_setting = L"numbots",
+  .max_time_limit_setting = L"timelimit",
+  .max_score_limit_setting = L"fraglimit",
+  .multiplayer_game_mode_setting = L"deathmatch",
+  .predefined_resolution_setting = L"gl_mode"
 };
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };

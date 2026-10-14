@@ -19,16 +19,19 @@ using predefined_int = siege::platform::game_command_line_predefined_setting<int
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
 
 extern auto command_line_caps = game_command_line_caps{
-  // TODO figure out how to get hosting to work correctly
-  // Apparently a special variable has to be set to not contact the auth server, but this needs more investigation
-  //  .listen_setting = L"connect",
-  //  .dedicated_setting = L"dedicated",
-  //   .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode" } },
-  .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick" } },
+  .int_settings = { { L"dedicated", L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick", L"g_gametype", L"mp_gametype" } },
   .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
-  .controller_enabled_setting = L"in_joystick"
+  .listen_setting = L"g_gametype",
+  .dedicated_setting = L"dedicated",
+  .render_backend_setting = L"r_glDriver",
+  .controller_enabled_setting = L"in_joystick",
+  .selected_map_setting = L"map",
+  .multiplayer_game_mode_setting = L"mp_gametype",
+  .predefined_resolution_setting = L"r_mode",
+  .custom_width_setting = L"r_customwidth",
+  .custom_height_setting = L"r_customheight"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -275,6 +278,19 @@ predefined_int*
       predefined_int{ .label = L"1280x1024", .value = 8 },
       predefined_int{ .label = L"1600x1200", .value = 9 },
       predefined_int{ .label = L"Custom", .value = -1 },
+      predefined_int{},
+    };
+
+    return modes.data();
+  }
+
+  if (name_str == L"mp_gametype")
+  {
+    static auto modes = std::array<predefined_int, 5>{
+      predefined_int{ .label = L"Holomatch", .value = 0 },
+      predefined_int{ .label = L"Team Holomatch", .value = 1 },
+      predefined_int{ .label = L"Capture the Flag", .value = 2 },
+      predefined_int{ .label = L"Bomb Defusion", .value = 3 },
       predefined_int{},
     };
 

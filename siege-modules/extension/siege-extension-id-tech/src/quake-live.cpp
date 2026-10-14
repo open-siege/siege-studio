@@ -23,6 +23,8 @@ extern auto command_line_caps = game_command_line_caps{
   .string_settings = { { L"name", L"connect", L"map" } },
   .ip_connect_setting = L"connect",
   .player_name_setting = L"name",
+  .selected_map_setting = L"map",
+  .predefined_resolution_setting = L"r_mode",
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

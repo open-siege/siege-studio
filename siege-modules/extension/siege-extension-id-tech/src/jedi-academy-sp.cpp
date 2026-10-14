@@ -21,7 +21,11 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick" } },
   .string_settings = { { L"map" } },
-  .controller_enabled_setting = L"in_joystick"
+  .controller_enabled_setting = L"in_joystick",
+  .selected_map_setting = L"map",
+  .predefined_resolution_setting = L"r_mode",
+  .custom_width_setting = L"r_customwidth",
+  .custom_height_setting = L"r_customheight"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

@@ -25,6 +25,9 @@ extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"gl_mode" } },
   .string_settings = { { L"name", L"map", L"gl_driver" } },
   .player_name_setting = L"name",
+  .render_backend_setting = L"gl_driver",
+  .selected_map_setting = L"map",
+  .predefined_resolution_setting = L"gl_mode",
 };
 
 // TODO when it comes to controller support

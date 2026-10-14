@@ -29,7 +29,12 @@ extern auto command_line_caps = game_command_line_caps{
   // by this forces the UI to have the "listen" option.
   // TODO look into a better way of representing this
   .listen_setting = L"net_noipx",
-  .controller_enabled_setting = L"in_joystick"
+  .render_backend_setting = L"r_glDriver",
+  .controller_enabled_setting = L"in_joystick",
+  .selected_map_setting = L"map",
+  .predefined_resolution_setting = L"r_mode",
+  .custom_width_setting = L"r_customwidth",
+  .custom_height_setting = L"r_customheight"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

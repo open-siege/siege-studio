@@ -30,7 +30,11 @@ extern auto command_line_caps = game_command_line_caps{
   .dedicated_setting = L"dedicated",
   .selected_game_setting = L"game",
   .preferred_exe_setting = L"preferred_exe",
-  .controller_enabled_setting = L"joystick"
+  .controller_enabled_setting = L"joystick",
+  .selected_map_setting = L"map",
+  .predefined_resolution_setting = L"vid_mode",
+  .custom_width_setting = L"width",
+  .custom_height_setting = L"height"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {

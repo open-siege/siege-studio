@@ -20,10 +20,14 @@ using predefined_string = siege::platform::game_command_line_predefined_setting<
 
 extern auto command_line_caps = game_command_line_caps{
   .int_settings = { { L"r_customwidth", L"r_customheight", L"r_mode", L"in_joystick" } },
-  .string_settings = { { L"name", L"connect", L"map", L"r_glDriver" } },
-  .ip_connect_setting = L"connect",
+  .string_settings = { { L"name", L"map", L"r_glDriver" } },
   .player_name_setting = L"name",
-  .controller_enabled_setting = L"in_joystick"
+  .render_backend_setting = L"r_glDriver",
+  .controller_enabled_setting = L"in_joystick",
+  .selected_map_setting = L"map",
+  .predefined_resolution_setting = L"r_mode",
+  .custom_width_setting = L"r_customwidth",
+  .custom_height_setting = L"r_customheight"
 };
 
 extern auto game_actions = std::array<game_action, 32>{ {
@@ -51,7 +55,7 @@ extern auto game_actions = std::array<game_action, 32>{ {
 
 extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
 
-extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
+extern auto network_backends = std::array<const wchar_t*, 2>{ { L"none" } };
 
 using namespace std::literals;
 
