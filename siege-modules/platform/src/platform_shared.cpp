@@ -217,6 +217,36 @@ namespace siege::platform
     return to_upper<char>(some_string);
   }
 
+  export template<typename CharType>
+  std::basic_string<CharType> trim(std::basic_string_view<CharType> some_string)
+  {
+    auto is_not_space = [](CharType c) { return !std::isspace(c, std::locale()); };
+    auto first = std::find_if(some_string.begin(), some_string.end(), is_not_space);
+
+    if (first == some_string.end())
+    {
+      return {};
+    }
+
+    auto last = std::find_if(some_string.rbegin(), some_string.rend(), is_not_space).base();
+    return std::basic_string<CharType>(first, last);
+  }
+
+  export std::wstring trim(std::wstring_view some_string)
+  {
+    return trim<wchar_t>(some_string);
+  }
+
+  export std::u16string trim(std::u16string_view some_string)
+  {
+    return trim<char16_t>(some_string);
+  }
+
+  export std::string trim(std::string_view some_string)
+  {
+    return trim<char>(some_string);
+  }
+
   export bool ends_with(std::string_view value, std::string_view ending)
   {
     if (ending.size() > value.size())

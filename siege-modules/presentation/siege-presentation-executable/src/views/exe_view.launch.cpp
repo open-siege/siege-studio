@@ -30,7 +30,7 @@ namespace siege::views
   {
     decltype(exe_view::launch) launch{};
     launch.launch_table = *win32::CreateWindowExW<win32::list_view>({ .hwndParent = *this,
-      .style = WS_CHILD | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
+      .style = WS_CHILD | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER });
 
     launch.launch_table.InsertColumn(-1, LVCOLUMNW{
                                            .pszText = const_cast<wchar_t*>(L"Name"),
@@ -100,11 +100,14 @@ namespace siege::views
       }
 
       auto temp_rect = launch_table.GetSubItemRect(info.iItem, info.iSubItem, LVIR_BOUNDS);
+      auto client = launch_table.GetClientRect();
 
-      if (!temp_rect)
+      if (!temp_rect || !client)
       {
         return;
       }
+
+      ::IntersectRect(&*temp_rect, &*temp_rect, &*client);
 
       auto result = launch_table.MapWindowPoints(*this, *temp_rect);
 
@@ -174,11 +177,13 @@ namespace siege::views
         }
       }
 
-      if (this->launch.launch_table_edit_unbind)
+      if (this->launch.launch_table_post_edit_unbind)
       {
-        this->launch.launch_table_edit_unbind();
-        this->launch.launch_table_edit_unbind = nullptr;
+        this->launch.launch_table_post_edit_unbind();
+        this->launch.launch_table_post_edit_unbind = nullptr;
       }
+
+      ::ShowWindow(this->launch.launch_table_ip_address, SW_HIDE);
 
       if (uses_combo)
       {
@@ -187,7 +192,7 @@ namespace siege::views
         this->launch.launch_table_combo.SetWindowStyle(this->launch.launch_table_combo.GetWindowStyle() | WS_VISIBLE);
         this->launch.launch_table_combo.ShowDropDown();
 
-        this->launch.launch_table_edit_unbind = this->launch.launch_table_combo.bind_cbn_sel_change([this, info, setting](auto, const auto&) {
+        auto unbind_update = this->launch.launch_table_combo.bind_cbn_sel_change([this, info, setting](auto, const auto&) {
           std::fill_n(text.data(), text.size(), L'\0');
           auto selected_index = this->launch.launch_table_combo.GetCurSel();
 
@@ -214,6 +219,18 @@ namespace siege::views
             apply_launch_button_state(*this);
           }
         });
+
+        auto unbind_close = this->launch.launch_table_combo.bind_cbn_close_up([this](auto, const auto&) {
+          ::ShowWindow(this->launch.launch_table_combo, SW_HIDE);
+        });
+
+        this->launch.launch_table_post_edit_unbind = [unbind_update = std::move(unbind_update), unbind_close = std::move(unbind_close)]() {
+          assert(unbind_update);
+          unbind_update();
+
+          assert(unbind_close);
+          unbind_close();
+        };
       }
       else if (setting->get().type != extension_setting_type::computed_setting)
       {
@@ -229,28 +246,40 @@ namespace siege::views
 
           ::SetWindowTextW(this->launch.launch_table_ip_address, text.data());
 
-          this->launch.launch_table_edit_unbind = this->launch.launch_table_ip_address.bind_en_kill_focus([this, info, setting](auto, const auto&) {
-            this->launch.launch_table_ip_address.SetWindowStyle(this->launch.launch_table_ip_address.GetWindowStyle() & ~WS_VISIBLE);
+          this->launch.launch_table_post_edit_unbind = this->launch.launch_table_ip_address.bind_en_kill_focus([this, info, setting](auto, const auto&) {
             ::GetWindowTextW(this->launch.launch_table_ip_address, text.data(), (int)text.size());
             setting->get().update_value(text.data());
+
+            ::ShowWindow(this->launch.launch_table_ip_address, SW_HIDE);
           });
         }
         else
         {
           this->launch.launch_table_edit.SetWindowPos(result->second);
           this->launch.launch_table_edit.SetWindowPos(HWND_TOP);
-          this->launch.launch_table_edit.SetWindowStyle(this->launch.launch_table_edit.GetWindowStyle() | WS_VISIBLE | WS_BORDER);
+          this->launch.launch_table_edit.SetWindowStyle(this->launch.launch_table_edit.GetWindowStyle() | WS_BORDER);
+          ::ShowWindow(this->launch.launch_table_edit, SW_SHOW);
 
           launch_table.GetItemText(info.iItem, info.iSubItem, text);
 
           ::SetWindowTextW(this->launch.launch_table_edit, text.data());
 
-          this->launch.launch_table_edit_unbind = this->launch.launch_table_edit.bind_en_kill_focus([this, info, setting](auto, const auto&) {
-            this->launch.launch_table_edit.SetWindowStyle(this->launch.launch_table_edit.GetWindowStyle() & ~WS_VISIBLE);
+          auto unbind_update = this->launch.launch_table_edit.bind_en_change([this, info, setting](auto, const auto&) {
             ::GetWindowTextW(this->launch.launch_table_edit, text.data(), (int)text.size());
-
             setting->get().update_value(text.data());
           });
+
+          auto unbind_focus = this->launch.launch_table_edit.bind_en_kill_focus([this, info, setting](auto, const auto&) {
+            ::ShowWindow(this->launch.launch_table_edit, SW_HIDE);
+          });
+
+          this->launch.launch_table_post_edit_unbind = [unbind_update = std::move(unbind_update), unbind_focus = std::move(unbind_focus)]() {
+            assert(unbind_update);
+            unbind_update();
+
+            assert(unbind_focus);
+            unbind_focus();
+          };
         }
       }
     });
@@ -522,7 +551,7 @@ namespace siege::views
       game_args.action_bindings = std::move(action_bindings);
       game_args.controller_to_send_input_mappings = controller_to_send_input_mappings;
       game_args.controller_to_send_input_mappings.resize(256);
-      
+
       auto simulate_mouse = stl::any_of(game_args.environment_settings, [&](const auto& setting) {
         if (has_extension_module(state))
         {
@@ -559,7 +588,6 @@ namespace siege::views
 
         return setting.name == keyboard_simulation_enabled_env && (setting.value == L"Yes"sv || setting.value == L"1"sv);
       });
-
 
 
       this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .simulate_mouse = simulate_mouse, .simulate_keyboard = simulate_keyboard, .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, global, for_client = has_client_preference(state)] mutable {

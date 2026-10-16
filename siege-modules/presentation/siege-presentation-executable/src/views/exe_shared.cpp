@@ -560,6 +560,11 @@ namespace siege::views
     auto& self = get(state);
 
     self.launch_settings.clear();
+    self.flags.clear();
+    self.int_settings.clear();
+    self.float_settings.clear();
+    self.string_settings.clear();
+    self.environment_settings.clear();
     self.listen_setting_multiple_predefined = false;
     auto& caps = self.matching_extension && self.matching_extension->caps ? *self.matching_extension->caps : empty_caps;
 
@@ -3309,7 +3314,8 @@ namespace siege::views
 
       if (cmd_args != game_args.string_settings.end())
       {
-        args.append(cmd_args->value);
+        args.append(L" ");
+        args.append(siege::platform::trim(cmd_args->value));
       }
 
       auto deferred = configure_environment();

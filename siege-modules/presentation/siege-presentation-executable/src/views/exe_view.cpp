@@ -49,7 +49,7 @@ namespace siege::views
       win32::edit launch_table_edit;
       win32::combo_box_ex launch_table_combo;
       win32::ip_address_edit launch_table_ip_address;
-      std::function<void()> launch_table_edit_unbind;
+      std::function<void()> launch_table_post_edit_unbind;
       constexpr static int launch_selected_id = 10;
     } launch;
 

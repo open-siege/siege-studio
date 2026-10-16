@@ -4,7 +4,7 @@
 * In the controllers dialog, keyboards and mice are named by number instead of "X".
 * The controllers dialog is rendered with the correct theme now.
 * Moved and renamed network fields for clarity. 
-* The name of the game extension is always shown
+* The name of the game extension is always shown.
 * Settings for each game are grouped into more categories than just multiplayer and other.
 * Removed "scripting" tab from exe view and all function/variable name exports from each extension.
    * The idea was to have a reference for game scripts, but it's too basic for practical use.
@@ -17,6 +17,10 @@
 * Rule generation uses the exe name instead of the parent directory (which could sometimes be "System" or "bin" instead of the root game folder).
 * For games which use WinSock 2 or DirectPlay, "Add to Firewall" adds the network helper as its exception.
 * Added flags to disable input simulation for games without an extension.
+* Fixed command line args not consistently working.
+* Launch options now hide correctly after selecting a value.
+* Launch options are no longer cut-off or too big for the table they are in.
+* A space isn't needed at the start of command line arguments anymore.
 
 # Siege Studio + Siege Launcher 26.33 Development Release
 * Fixed crash/issue launching partially supported games.

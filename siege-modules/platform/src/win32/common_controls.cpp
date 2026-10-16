@@ -1771,6 +1771,11 @@ namespace win32
     {
       return bind_notification<combo_box_ex, NMHDR>(CBN_SELCHANGE, std::move(callback));
     }
+
+    [[maybe_unused]] std::function<void()> bind_cbn_close_up(std::move_only_function<void(combo_box_ex, const NMHDR&)> callback)
+    {
+      return bind_notification<combo_box_ex, NMHDR>(CBN_CLOSEUP, std::move(callback));
+    }
   };
 
 }// namespace win32
