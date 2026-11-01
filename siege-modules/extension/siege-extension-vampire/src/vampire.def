@@ -10,3 +10,4 @@ EXPORTS
 	init_keyboard_inputs PRIVATE
 	default_controller_inputs PRIVATE
 	get_predefined_string_command_line_settings PRIVATE
+	init_game_settings PRIVATE

@@ -521,4 +521,9 @@ predefined_string*
 
   return nullptr;
 }
+
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  return init_vampire_game_settings(args, FSL"tnp.cfg", FSL"userdef.cfg");
+}
 }

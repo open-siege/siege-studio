@@ -530,6 +530,11 @@ predefined_string*
   return nullptr;
 }
 
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  return init_vampire_game_settings(args, FSL"VAMPIRE.CFG", FSL"MAGE\\userdef.cfg");
+}
+
 static std::string VirtualDriveLetter;
 constexpr static std::string_view MageslayerDisc = "MAGESLAY";
 static auto* TrueGetLogicalDrives = GetLogicalDrives;

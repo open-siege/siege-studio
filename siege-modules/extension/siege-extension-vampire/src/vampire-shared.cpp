@@ -360,3 +360,52 @@ export std::optional<std::string_view> pov_key_for_vkey(const input_mapping_ex& 
 
   return std::nullopt;
 }
+
+export std::errc init_vampire_game_settings(siege::platform::common_game_settings* args, siege::fs_string_view default_cfg, siege::fs_string_view user_cfg)
+{
+  if (args == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  for (auto& config : {
+         load_config_from_file(default_cfg),
+         load_config_from_file(user_cfg),
+       })
+  {
+    if (!config)
+    {
+      continue;
+    }
+
+    for (auto key : config->keys())
+    {
+      if (key.at(0) == "bind" || key.at(0) == "//")
+      {
+        continue;
+      }
+
+      auto real_key = key.at(0);
+
+      if (real_key.empty())
+      {
+        continue;
+      }
+
+      for (auto& entry : config->entries_for(key))
+      {
+        if (entry.value.empty() || entry.value.at(0).empty())
+        {
+          continue;
+        }
+
+        if (!args->append_setting(real_key, entry.value.at(0)))
+        {
+          return std::errc{};
+        }
+      }
+    }
+  }
+
+  return std::errc{};
+}
