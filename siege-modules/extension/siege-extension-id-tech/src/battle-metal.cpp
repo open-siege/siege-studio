@@ -92,25 +92,29 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("metaldata/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  auto config = load_config_from_file(L"metaldata\\config.cfg")
+                  .or_else([]() { return load_config_from_pk3(L"metaldata\\default.cfg", L"metaldata/PAK0.pk3", L"metaldata/PAK0.pk3"); })
+                  .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  unbind_joystick_for_quake_1_config(config);
 
-  save_bindings_to_config(*args, config);
+  bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 
-  config.save(custom_bindings);
-
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-
-  if (iter != args->string_settings.end())
+  if (enable_controller)
   {
-    iter->name = L"exec";
-    iter->value = L"siege_studio_inputs.cfg";
+    config.emplace(siege::configuration::key_type({ "joyadvanced" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "joysidesensitivity" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "joypitchsensitivity" }), siege::configuration::key_type("1"));
+    config.emplace(siege::configuration::key_type({ "joyadvancedupdate" }), siege::configuration::key_type(""));
   }
 
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  std::ofstream custom_bindings("metaldata/config.cfg", std::ios::binary | std::ios::trunc);
+  config.save(custom_bindings);
+
+  bind_axis_to_send_input(*args, "+lookup", "+mlook");
+  bind_axis_to_send_input(*args, "+lookdown", "+mlook");
+
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }
