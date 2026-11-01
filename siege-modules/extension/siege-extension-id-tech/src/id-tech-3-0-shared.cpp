@@ -309,3 +309,59 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   return raw_args.data();
 }
 }
+
+export std::errc init_id_tech_3_0_game_settings(siege::platform::common_game_settings* args, const game_settings_files& files)
+{
+  if (args == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  auto append_from_config = [&](siege::configuration::text_game_config& config) {
+    for (auto key : config.keys())
+    {
+      if (key.at(0) == "bind" || key.at(0) == "unbind" || key.at(0) == "unbindall" || key.at(0) == "alias" || key.at(0) == "//")
+      {
+        continue;
+      }
+
+      auto real_key = key.at(0) == "set" || key.at(0) == "seta" ? key.at(1) : key.at(0);
+
+      if (real_key.empty())
+      {
+        continue;
+      }
+
+      for (auto& entry : config.entries_for(key))
+      {
+        if (!args->append_setting(real_key, entry.value.at(0)))
+        {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  if (auto config = load_config_from_pk3(
+        files.packed_default_cfg,
+        std::wstring(files.packed_default_cfg_pak),
+        std::wstring(files.packed_default_cfg_pak_folder)))
+  {
+    if (!append_from_config(*config))
+    {
+      return std::errc{};
+    }
+  }
+
+  if (auto config = load_config_from_file(files.loose_user_cfg))
+  {
+    if (!append_from_config(*config))
+    {
+      return std::errc{};
+    }
+  }
+
+  return std::errc{};
+}

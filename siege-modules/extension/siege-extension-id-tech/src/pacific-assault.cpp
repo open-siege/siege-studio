@@ -257,4 +257,56 @@ predefined_string*
 {
   return nullptr;
 }
+
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  if (args == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  // TODO: use a dedicated rez/pak settings loader once supported
+  siege::fs_string loose_user_cfg;
+
+  if (auto value = win32::GetEnvironmentVariable(L"KNOWN_FOLDER_DOCUMENTS"); value)
+  {
+    loose_user_cfg = (std::filesystem::path(*value) / "EA Games" / "Medal of Honor Pacific Assault(tm)" / "configs" / "unnamedsoldier.cfg").native();
+  }
+
+  for (auto& config : {
+         load_config_from_pak(FSL"main\\default.cfg", L"main/pak0.rez", L"main/pak0.rez"),
+         load_config_from_file(loose_user_cfg),
+       })
+  {
+    if (!config)
+    {
+      continue;
+    }
+
+    for (auto key : config->keys())
+    {
+      if (key.at(0) == "bind" || key.at(0) == "//")
+      {
+        continue;
+      }
+
+      auto real_key = key.at(1);
+
+      if (real_key.empty())
+      {
+        continue;
+      }
+
+      for (auto& entry : config->entries_for(key))
+      {
+        if (!args->append_setting(real_key, entry.value.at(0)))
+        {
+          return std::errc{};
+        }
+      }
+    }
+  }
+
+  return std::errc{};
+}
 }

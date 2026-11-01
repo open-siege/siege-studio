@@ -3,6 +3,7 @@ import std;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v3_0;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -262,5 +263,14 @@ predefined_string*
   }
 
   return nullptr;
+}
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  return init_id_tech_3_0_game_settings(args, {
+    .packed_default_cfg = FSL"base\\default.cfg",
+    .packed_default_cfg_pak = FSL"base/assets2.pk3",
+    .packed_default_cfg_pak_folder = FSL"base/assets2.pk3",
+    .loose_user_cfg = FSL"base\\jaconfig.cfg",
+  });
 }
 }

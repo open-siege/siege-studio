@@ -1,8 +1,11 @@
 import std;
+import win32.file;
+import win32.process;
 
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v3_0;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -115,9 +118,12 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     upsert_mouse_bindings(*config, *binding);
   }
 
-  if (auto config = load_config_from_file(L"st\\stxp.cfg"))
+  if (auto value = win32::GetEnvironmentVariable(L"KNOWN_FOLDER_DOCUMENTS"); value)
   {
-    upsert_mouse_bindings(*config, *binding);
+    if (auto config = load_config_from_file(std::filesystem::path(*value) / "st" / "st" / "stxp.cfg"))
+    {
+      upsert_mouse_bindings(*config, *binding);
+    }
   }
 
   std::array<std::pair<vkey, std::string_view>, 4> axes{
@@ -146,9 +152,12 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     upsert_keyboard_bindings(*config, *binding);
   }
 
-  if (auto config = load_config_from_file(L"st\\stxp.cfg"))
+  if (auto value = win32::GetEnvironmentVariable(L"KNOWN_FOLDER_DOCUMENTS"); value)
   {
-    upsert_keyboard_bindings(*config, *binding);
+    if (auto config = load_config_from_file(std::filesystem::path(*value) / "st" / "st" / "stxp.cfg"))
+    {
+      upsert_keyboard_bindings(*config, *binding);
+    }
   }
 
   return std::errc{};
@@ -227,5 +236,21 @@ predefined_string*
   }
 
   return nullptr;
+}
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  siege::fs_string loose_user_cfg;
+
+  if (auto value = win32::GetEnvironmentVariable(L"KNOWN_FOLDER_DOCUMENTS"); value)
+  {
+    loose_user_cfg = (std::filesystem::path(*value) / "st" / "st" / "stxp.cfg").native();
+  }
+
+  return init_id_tech_3_0_game_settings(args, {
+    .packed_default_cfg = FSL"st\\default.cfg",
+    .packed_default_cfg_pak = FSL"st/pak0.hwp",
+    .packed_default_cfg_pak_folder = FSL"st/pak0.hwp",
+    .loose_user_cfg = loose_user_cfg,
+  });
 }
 }

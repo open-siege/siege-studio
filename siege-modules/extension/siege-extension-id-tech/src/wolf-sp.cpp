@@ -3,6 +3,7 @@ import std;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v3_0;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -267,5 +268,14 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
   append_controller_defaults(game_actions, actions, *binding);
 
   return std::errc{};
+}
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  return init_id_tech_3_0_game_settings(args, {
+    .packed_default_cfg = FSL"Main\\default.cfg",
+    .packed_default_cfg_pak = FSL"Main/pak0.pk3",
+    .packed_default_cfg_pak_folder = FSL"Main/pak0.pk3",
+    .loose_user_cfg = FSL"Main\\wolfconfig.cfg",
+  });
 }
 }
