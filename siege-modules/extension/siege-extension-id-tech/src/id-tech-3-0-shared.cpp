@@ -1,5 +1,4 @@
 module;
-#include <siege/platform/windows.hpp>
 export module siege.extension.id_tech.v3_0;
 
 import std;
@@ -8,11 +7,14 @@ import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
 import siege.extension.shared;
+import siege.platform;
 import siege.platform.shared;
 import siege.resource.cab;
 import siege.resource.iso;
 import siege.resource.pak;
 import siege.resource.zip;
+
+using vk = siege::platform::vkey;
 
 extern "C" {
 
@@ -39,17 +41,17 @@ std::errc is_id_tech_3_input_mapping_valid(const siege::platform::hardware_conte
     return std::errc::bad_message;
   }
 
-  if (mapping->vkey == VK_LSHIFT || mapping->vkey == VK_RSHIFT)
+  if (mapping->vkey == std::to_underlying(vk::left_shift) || mapping->vkey == std::to_underlying(vk::right_shift))
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == VK_LCONTROL || mapping->vkey == VK_RCONTROL)
+  if (mapping->vkey == std::to_underlying(vk::left_control) || mapping->vkey == std::to_underlying(vk::right_control))
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == VK_LMENU || mapping->vkey == VK_RMENU)
+  if (mapping->vkey == std::to_underlying(vk::left_alt) || mapping->vkey == std::to_underlying(vk::right_alt))
   {
     return std::errc::not_supported;
   }
@@ -131,17 +133,17 @@ std::errc is_moh_input_mapping_valid(const siege::platform::hardware_context_cap
     return std::errc::bad_message;
   }
 
-  if (mapping->vkey == VK_SHIFT)
+  if (mapping->vkey == std::to_underlying(vk::shift))
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == VK_CONTROL)
+  if (mapping->vkey == std::to_underlying(vk::control))
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == VK_MENU)
+  if (mapping->vkey == std::to_underlying(vk::alt))
   {
     return std::errc::not_supported;
   }

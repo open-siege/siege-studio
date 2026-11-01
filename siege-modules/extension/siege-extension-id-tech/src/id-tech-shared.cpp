@@ -9,12 +9,15 @@ import std;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.shared;
+import siege.platform;
 export import siege.platform.extension;
 import siege.platform.shared;
 import siege.resource.cab;
 import siege.resource.iso;
 import siege.resource.pak;
 import siege.resource.zip;
+
+using vk = siege::platform::vkey;
 
 export using hardware_context = siege::platform::hardware_context;
 export using mouse_context = siege::platform::mouse_context;
@@ -83,12 +86,12 @@ export void bind_axis_to_send_input(siege::platform::game_command_line_args& arg
 
 export inline bool is_vkey_for_controller(WORD vkey)
 {
-  return vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
+  return vkey >= std::to_underlying(vk::gamepad_a) && vkey <= std::to_underlying(vk::gamepad_right_thumbstick_left);
 }
 
 export inline bool is_vkey_for_mouse(WORD vkey)
 {
-  return vkey == VK_LBUTTON || vkey == VK_RBUTTON || vkey == VK_MBUTTON || vkey == VK_XBUTTON1 || vkey == VK_XBUTTON2;
+  return vkey == std::to_underlying(vk::lbutton) || vkey == std::to_underlying(vk::rbutton) || vkey == std::to_underlying(vk::mbutton) || vkey == std::to_underlying(vk::xbutton1) || vkey == std::to_underlying(vk::xbutton2);
 }
 
 export inline bool is_vkey_for_keyboard(WORD vkey)
@@ -109,78 +112,78 @@ namespace fs = std::filesystem;
 const std::map<std::string_view, std::pair<WORD, hardware_context>>& get_key_to_vkey_mapping()
 {
   const static std::map<std::string_view, std::pair<WORD, hardware_context>> mapping = {
-    { "f1", std::make_pair(VK_F1, hardware_context::keyboard) },
-    { "f2", std::make_pair(VK_F2, hardware_context::keyboard) },
-    { "f3", std::make_pair(VK_F3, hardware_context::keyboard) },
-    { "f4", std::make_pair(VK_F4, hardware_context::keyboard) },
-    { "f5", std::make_pair(VK_F5, hardware_context::keyboard) },
-    { "f6", std::make_pair(VK_F6, hardware_context::keyboard) },
-    { "f7", std::make_pair(VK_F7, hardware_context::keyboard) },
-    { "f8", std::make_pair(VK_F8, hardware_context::keyboard) },
-    { "f9", std::make_pair(VK_F9, hardware_context::keyboard) },
-    { "f10", std::make_pair(VK_F10, hardware_context::keyboard) },
-    { "f11", std::make_pair(VK_F11, hardware_context::keyboard) },
-    { "f12", std::make_pair(VK_F12, hardware_context::keyboard) },
-    { "tab", std::make_pair(VK_TAB, hardware_context::keyboard) },
-    { "ctrl", std::make_pair(VK_CONTROL, hardware_context::keyboard) },
-    { "lctrl", std::make_pair(VK_LCONTROL, hardware_context::keyboard) },
-    { "rctrl", std::make_pair(VK_RCONTROL, hardware_context::keyboard) },
-    { "shift", std::make_pair(VK_SHIFT, hardware_context::keyboard) },
-    { "lshift", std::make_pair(VK_LSHIFT, hardware_context::keyboard) },
-    { "rshift", std::make_pair(VK_RSHIFT, hardware_context::keyboard) },
-    { "alt", std::make_pair(VK_MENU, hardware_context::keyboard) },
-    { "lalt", std::make_pair(VK_LMENU, hardware_context::keyboard) },
-    { "ralt", std::make_pair(VK_RMENU, hardware_context::keyboard) },
-    { "uparrow", std::make_pair(VK_UP, hardware_context::keyboard) },
-    { "downarrow", std::make_pair(VK_DOWN, hardware_context::keyboard) },
-    { "leftarrow", std::make_pair(VK_LEFT, hardware_context::keyboard) },
-    { "rightarrow", std::make_pair(VK_RIGHT, hardware_context::keyboard) },
-    { "enter", std::make_pair(VK_RETURN, hardware_context::keyboard) },
-    { "home", std::make_pair(VK_HOME, hardware_context::keyboard) },
-    { "ins", std::make_pair(VK_INSERT, hardware_context::keyboard) },
-    { "pause", std::make_pair(VK_PAUSE, hardware_context::keyboard) },
-    { "pgdn", std::make_pair(VK_NEXT, hardware_context::keyboard) },
-    { "pgup", std::make_pair(VK_PRIOR, hardware_context::keyboard) },
-    { "caps", std::make_pair(VK_CAPITAL, hardware_context::keyboard) },
-    { "del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
-    { "end", std::make_pair(VK_END, hardware_context::keyboard) },
-    { "kp_ins", std::make_pair(VK_INSERT, hardware_context::keypad) },
-    { "kp_pgdn", std::make_pair(VK_PAUSE, hardware_context::keypad) },
-    { "kp_del", std::make_pair(VK_DELETE, hardware_context::keyboard) },
-    { "kp_enter", std::make_pair(VK_RETURN, hardware_context::keypad) },
-    { "kp_downarrow", std::make_pair(VK_NUMPAD2, hardware_context::keypad) },
-    { "kp_end", std::make_pair(VK_END, hardware_context::keypad) },
-    { "kp_numlock", std::make_pair(VK_NUMLOCK, hardware_context::keypad) },
-    { "backspace", std::make_pair(VK_BACK, hardware_context::keyboard) },
-    { "space", std::make_pair(VK_SPACE, hardware_context::keyboard) },
-    { "mouse1", std::make_pair(VK_LBUTTON, hardware_context::mouse) },
-    { "mouse2", std::make_pair(VK_RBUTTON, hardware_context::mouse) },
-    { "mouse3", std::make_pair(VK_MBUTTON, hardware_context::mouse) },
-    { "mwheelup", std::make_pair(VK_UP, hardware_context::mouse_wheel) },
-    { "mwheeldown", std::make_pair(VK_DOWN, hardware_context::mouse_wheel) },
-    { "semicolon", std::make_pair(VK_OEM_1, hardware_context::keyboard) },
-    { ";", std::make_pair(VK_OEM_1, hardware_context::keyboard) },
-    { "/", std::make_pair(VK_OEM_2, hardware_context::keyboard) },
-    { "`", std::make_pair(VK_OEM_3, hardware_context::keyboard) },
-    { "[", std::make_pair(VK_OEM_4, hardware_context::keyboard) },
-    { "\\", std::make_pair(VK_OEM_5, hardware_context::keyboard) },
-    { "]", std::make_pair(VK_OEM_6, hardware_context::keyboard) },
-    { "'", std::make_pair(VK_OEM_6, hardware_context::keyboard) },
-    { "-", std::make_pair(VK_OEM_MINUS, hardware_context::keyboard) },
-    { "=", std::make_pair(VK_OEM_PLUS, hardware_context::keyboard) },
-    { ",", std::make_pair(VK_OEM_COMMA, hardware_context::keyboard) },
-    { ".", std::make_pair(VK_OEM_PERIOD, hardware_context::keyboard) },
-    { ":", std::make_pair(VK_OEM_1, hardware_context::keyboard_shifted) },
-    { "?", std::make_pair(VK_OEM_2, hardware_context::keyboard_shifted) },
-    { "~", std::make_pair(VK_OEM_3, hardware_context::keyboard_shifted) },
-    { "{", std::make_pair(VK_OEM_4, hardware_context::keyboard_shifted) },
-    { "|", std::make_pair(VK_OEM_5, hardware_context::keyboard_shifted) },
-    { "}", std::make_pair(VK_OEM_6, hardware_context::keyboard_shifted) },
-    { "\"", std::make_pair(VK_OEM_6, hardware_context::keyboard_shifted) },
-    { "_", std::make_pair(VK_OEM_MINUS, hardware_context::keyboard_shifted) },
-    { "+", std::make_pair(VK_OEM_PLUS, hardware_context::keyboard_shifted) },
-    { "<", std::make_pair(VK_OEM_COMMA, hardware_context::keyboard_shifted) },
-    { "<", std::make_pair(VK_OEM_PERIOD, hardware_context::keyboard_shifted) },
+    { "f1", std::make_pair(std::to_underlying(vk::f1), hardware_context::keyboard) },
+    { "f2", std::make_pair(std::to_underlying(vk::f2), hardware_context::keyboard) },
+    { "f3", std::make_pair(std::to_underlying(vk::f3), hardware_context::keyboard) },
+    { "f4", std::make_pair(std::to_underlying(vk::f4), hardware_context::keyboard) },
+    { "f5", std::make_pair(std::to_underlying(vk::f5), hardware_context::keyboard) },
+    { "f6", std::make_pair(std::to_underlying(vk::f6), hardware_context::keyboard) },
+    { "f7", std::make_pair(std::to_underlying(vk::f7), hardware_context::keyboard) },
+    { "f8", std::make_pair(std::to_underlying(vk::f8), hardware_context::keyboard) },
+    { "f9", std::make_pair(std::to_underlying(vk::f9), hardware_context::keyboard) },
+    { "f10", std::make_pair(std::to_underlying(vk::f10), hardware_context::keyboard) },
+    { "f11", std::make_pair(std::to_underlying(vk::f11), hardware_context::keyboard) },
+    { "f12", std::make_pair(std::to_underlying(vk::f12), hardware_context::keyboard) },
+    { "tab", std::make_pair(std::to_underlying(vk::tab), hardware_context::keyboard) },
+    { "ctrl", std::make_pair(std::to_underlying(vk::control), hardware_context::keyboard) },
+    { "lctrl", std::make_pair(std::to_underlying(vk::left_control), hardware_context::keyboard) },
+    { "rctrl", std::make_pair(std::to_underlying(vk::right_control), hardware_context::keyboard) },
+    { "shift", std::make_pair(std::to_underlying(vk::shift), hardware_context::keyboard) },
+    { "lshift", std::make_pair(std::to_underlying(vk::left_shift), hardware_context::keyboard) },
+    { "rshift", std::make_pair(std::to_underlying(vk::right_shift), hardware_context::keyboard) },
+    { "alt", std::make_pair(std::to_underlying(vk::alt), hardware_context::keyboard) },
+    { "lalt", std::make_pair(std::to_underlying(vk::left_alt), hardware_context::keyboard) },
+    { "ralt", std::make_pair(std::to_underlying(vk::right_alt), hardware_context::keyboard) },
+    { "uparrow", std::make_pair(std::to_underlying(vk::up), hardware_context::keyboard) },
+    { "downarrow", std::make_pair(std::to_underlying(vk::down), hardware_context::keyboard) },
+    { "leftarrow", std::make_pair(std::to_underlying(vk::left), hardware_context::keyboard) },
+    { "rightarrow", std::make_pair(std::to_underlying(vk::right), hardware_context::keyboard) },
+    { "enter", std::make_pair(std::to_underlying(vk::enter), hardware_context::keyboard) },
+    { "home", std::make_pair(std::to_underlying(vk::home), hardware_context::keyboard) },
+    { "ins", std::make_pair(std::to_underlying(vk::insert), hardware_context::keyboard) },
+    { "pause", std::make_pair(std::to_underlying(vk::pause), hardware_context::keyboard) },
+    { "pgdn", std::make_pair(std::to_underlying(vk::page_down), hardware_context::keyboard) },
+    { "pgup", std::make_pair(std::to_underlying(vk::page_up), hardware_context::keyboard) },
+    { "caps", std::make_pair(std::to_underlying(vk::caps_lock), hardware_context::keyboard) },
+    { "del", std::make_pair(std::to_underlying(vk::del), hardware_context::keyboard) },
+    { "end", std::make_pair(std::to_underlying(vk::end), hardware_context::keyboard) },
+    { "kp_ins", std::make_pair(std::to_underlying(vk::insert), hardware_context::keypad) },
+    { "kp_pgdn", std::make_pair(std::to_underlying(vk::pause), hardware_context::keypad) },
+    { "kp_del", std::make_pair(std::to_underlying(vk::del), hardware_context::keyboard) },
+    { "kp_enter", std::make_pair(std::to_underlying(vk::enter), hardware_context::keypad) },
+    { "kp_downarrow", std::make_pair(std::to_underlying(vk::numpad_2), hardware_context::keypad) },
+    { "kp_end", std::make_pair(std::to_underlying(vk::end), hardware_context::keypad) },
+    { "kp_numlock", std::make_pair(std::to_underlying(vk::num_lock), hardware_context::keypad) },
+    { "backspace", std::make_pair(std::to_underlying(vk::backspace), hardware_context::keyboard) },
+    { "space", std::make_pair(std::to_underlying(vk::space), hardware_context::keyboard) },
+    { "mouse1", std::make_pair(std::to_underlying(vk::lbutton), hardware_context::mouse) },
+    { "mouse2", std::make_pair(std::to_underlying(vk::rbutton), hardware_context::mouse) },
+    { "mouse3", std::make_pair(std::to_underlying(vk::mbutton), hardware_context::mouse) },
+    { "mwheelup", std::make_pair(std::to_underlying(vk::up), hardware_context::mouse_wheel) },
+    { "mwheeldown", std::make_pair(std::to_underlying(vk::down), hardware_context::mouse_wheel) },
+    { "semicolon", std::make_pair(std::to_underlying(vk::oem_1), hardware_context::keyboard) },
+    { ";", std::make_pair(std::to_underlying(vk::oem_1), hardware_context::keyboard) },
+    { "/", std::make_pair(std::to_underlying(vk::oem_2), hardware_context::keyboard) },
+    { "`", std::make_pair(std::to_underlying(vk::oem_3), hardware_context::keyboard) },
+    { "[", std::make_pair(std::to_underlying(vk::oem_4), hardware_context::keyboard) },
+    { "\\", std::make_pair(std::to_underlying(vk::oem_5), hardware_context::keyboard) },
+    { "]", std::make_pair(std::to_underlying(vk::oem_6), hardware_context::keyboard) },
+    { "'", std::make_pair(std::to_underlying(vk::oem_6), hardware_context::keyboard) },
+    { "-", std::make_pair(std::to_underlying(vk::oem_minus), hardware_context::keyboard) },
+    { "=", std::make_pair(std::to_underlying(vk::oem_plus), hardware_context::keyboard) },
+    { ",", std::make_pair(std::to_underlying(vk::oem_comma), hardware_context::keyboard) },
+    { ".", std::make_pair(std::to_underlying(vk::oem_period), hardware_context::keyboard) },
+    { ":", std::make_pair(std::to_underlying(vk::oem_1), hardware_context::keyboard_shifted) },
+    { "?", std::make_pair(std::to_underlying(vk::oem_2), hardware_context::keyboard_shifted) },
+    { "~", std::make_pair(std::to_underlying(vk::oem_3), hardware_context::keyboard_shifted) },
+    { "{", std::make_pair(std::to_underlying(vk::oem_4), hardware_context::keyboard_shifted) },
+    { "|", std::make_pair(std::to_underlying(vk::oem_5), hardware_context::keyboard_shifted) },
+    { "}", std::make_pair(std::to_underlying(vk::oem_6), hardware_context::keyboard_shifted) },
+    { "\"", std::make_pair(std::to_underlying(vk::oem_6), hardware_context::keyboard_shifted) },
+    { "_", std::make_pair(std::to_underlying(vk::oem_minus), hardware_context::keyboard_shifted) },
+    { "+", std::make_pair(std::to_underlying(vk::oem_plus), hardware_context::keyboard_shifted) },
+    { "<", std::make_pair(std::to_underlying(vk::oem_comma), hardware_context::keyboard_shifted) },
+    { "<", std::make_pair(std::to_underlying(vk::oem_period), hardware_context::keyboard_shifted) },
   };
 
   return mapping;
@@ -305,13 +308,13 @@ std::optional<std::string_view> dpad_name_id_tech_2_0(WORD vkey)
 {
   switch (vkey)
   {
-  case VK_GAMEPAD_DPAD_UP:
+  case std::to_underlying(vk::gamepad_dpad_up):
     return "AUX29";
-  case VK_GAMEPAD_DPAD_DOWN:
+  case std::to_underlying(vk::gamepad_dpad_down):
     return "AUX29";
-  case VK_GAMEPAD_DPAD_LEFT:
+  case std::to_underlying(vk::gamepad_dpad_left):
     return "AUX29";
-  case VK_GAMEPAD_DPAD_RIGHT:
+  case std::to_underlying(vk::gamepad_dpad_right):
     return "AUX29";
   default:
     return std::nullopt;
@@ -321,13 +324,13 @@ std::optional<std::string_view> dpad_name_id_tech_3_0(WORD vkey)
 {
   switch (vkey)
   {
-  case VK_GAMEPAD_DPAD_UP:
+  case std::to_underlying(vk::gamepad_dpad_up):
     return "JOY24";
-  case VK_GAMEPAD_DPAD_DOWN:
+  case std::to_underlying(vk::gamepad_dpad_down):
     return "JOY25";
-  case VK_GAMEPAD_DPAD_LEFT:
+  case std::to_underlying(vk::gamepad_dpad_left):
     return "JOY27";
-  case VK_GAMEPAD_DPAD_RIGHT:
+  case std::to_underlying(vk::gamepad_dpad_right):
     return "JOY26";
   default:
     return std::nullopt;
@@ -336,17 +339,17 @@ std::optional<std::string_view> dpad_name_id_tech_3_0(WORD vkey)
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD vkey, WORD index)
 {
-  if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_LEFT_SHOULDER)
+  if (vkey >= std::to_underlying(vk::gamepad_a) && vkey <= std::to_underlying(vk::gamepad_left_shoulder))
   {
     return std::nullopt;
   }
 
-  if (vkey >= VK_GAMEPAD_DPAD_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON)
+  if (vkey >= std::to_underlying(vk::gamepad_dpad_up) && vkey <= std::to_underlying(vk::gamepad_right_thumbstick_button))
   {
     return std::nullopt;
   }
 
-  bool is_positive = vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_LEFT_TRIGGER;
+  bool is_positive = vkey == std::to_underlying(vk::gamepad_left_thumbstick_up) || vkey == std::to_underlying(vk::gamepad_left_thumbstick_right) || vkey == std::to_underlying(vk::gamepad_right_thumbstick_up) || vkey == std::to_underlying(vk::gamepad_right_thumbstick_right) || vkey == std::to_underlying(vk::gamepad_left_trigger);
   switch (index)
   {
   case 0: {
@@ -368,7 +371,7 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_3_0(WORD
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD vkey, WORD index)
 {
-  if (!(vkey == VK_GAMEPAD_LEFT_TRIGGER || vkey == VK_GAMEPAD_RIGHT_TRIGGER || (vkey >= VK_GAMEPAD_LEFT_THUMBSTICK_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)))
+  if (!(vkey == std::to_underlying(vk::gamepad_left_trigger) || vkey == std::to_underlying(vk::gamepad_right_trigger) || (vkey >= std::to_underlying(vk::gamepad_left_thumbstick_up) && vkey <= std::to_underlying(vk::gamepad_right_thumbstick_left))))
   {
     return std::nullopt;
   }
@@ -394,7 +397,7 @@ std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_5(WORD
 
 std::optional<std::string_view> hardware_index_to_joystick_axis_id_tech_2_0(WORD vkey, WORD index)
 {
-  if (!(vkey == VK_GAMEPAD_LEFT_TRIGGER || vkey == VK_GAMEPAD_RIGHT_TRIGGER || (vkey >= VK_GAMEPAD_LEFT_THUMBSTICK_UP && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)))
+  if (!(vkey == std::to_underlying(vk::gamepad_left_trigger) || vkey == std::to_underlying(vk::gamepad_right_trigger) || (vkey >= std::to_underlying(vk::gamepad_left_thumbstick_up) && vkey <= std::to_underlying(vk::gamepad_right_thumbstick_left))))
   {
     return std::nullopt;
   }
@@ -776,7 +779,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
 
     if (setting)
     {
-      if ((binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER) && context.supports_triggers_as_buttons)
+      if ((binding.vkey == std::to_underlying(vk::gamepad_left_trigger) || binding.vkey == std::to_underlying(vk::gamepad_right_trigger)) && context.supports_triggers_as_buttons)
       {
         goto button_section;
       }
@@ -818,23 +821,23 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
     {
     button_section:
       auto dpad_name = context.dpad_name(binding.vkey);
-      if (binding.vkey == VK_GAMEPAD_DPAD_UP && dpad_name)
+      if (binding.vkey == std::to_underlying(vk::gamepad_dpad_up) && dpad_name)
       {
         config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
       }
-      else if (binding.vkey == VK_GAMEPAD_DPAD_DOWN && dpad_name)
+      else if (binding.vkey == std::to_underlying(vk::gamepad_dpad_down) && dpad_name)
       {
         config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
       }
-      else if (binding.vkey == VK_GAMEPAD_DPAD_LEFT && dpad_name)
+      else if (binding.vkey == std::to_underlying(vk::gamepad_dpad_left) && dpad_name)
       {
         config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
       }
-      else if (binding.vkey == VK_GAMEPAD_DPAD_RIGHT && dpad_name)
+      else if (binding.vkey == std::to_underlying(vk::gamepad_dpad_right) && dpad_name)
       {
         config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
       }
-      else if (binding.vkey == VK_GAMEPAD_LEFT_TRIGGER || binding.vkey == VK_GAMEPAD_RIGHT_TRIGGER)
+      else if (binding.vkey == std::to_underlying(vk::gamepad_left_trigger) || binding.vkey == std::to_underlying(vk::gamepad_right_trigger))
       {
         if (binding.context == hardware_context::controller_xbox && context.supports_triggers_as_buttons)
         {
