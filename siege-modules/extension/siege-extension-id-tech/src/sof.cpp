@@ -103,9 +103,10 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("user/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  auto config = load_config_from_file(FSL "user\\config.cfg")
+                  .or_else([]() { return load_config_from_pak(FSL "base\\configs\\default.cfg", FSL "base/pak0.pak", FSL "base/pak0.pak"); })
+                  .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
   unbind_joystick_for_quake_2_config(config);
 
   constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8>{ { { "+melee-attack", "weaponselect 1; +attack" },
@@ -133,6 +134,7 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
     config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));
   }
 
+  std::ofstream custom_bindings("user/config.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
 
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
@@ -145,7 +147,7 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
 
   if (int_iter != args->int_settings.end())
   {
-    std::ofstream custom_bindings("user/add_bots.cfg", std::ios::binary | std::ios::trunc);
+    std::ofstream bots_stream("user/add_bots.cfg", std::ios::binary | std::ios::trunc);
 
     siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
@@ -161,7 +163,7 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
       command.append("bot_add");
     }
 
-    config.save(custom_bindings);
+    config.save(bots_stream);
 
     insert_string_setting_once(*args, FSL "exec", FSL "add_bots.cfg");
   }
@@ -172,11 +174,11 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
 std::errc init_game_settings(siege::platform::common_game_settings* args)
 {
   return init_id_tech_2_5_game_settings(args, {
-    .packed_default_cfg = FSL"base\\default.cfg",
-    .packed_default_cfg_pak = FSL"base/pak0.pak",
-    .packed_default_cfg_pak_folder = FSL"base/pak0.pak",
-    .loose_user_cfg = FSL"user\\config.cfg",
-  });
+                                                .packed_default_cfg = FSL "base\\default.cfg",
+                                                .packed_default_cfg_pak = FSL "base/pak0.pak",
+                                                .packed_default_cfg_pak_folder = FSL "base/pak0.pak",
+                                                .loose_user_cfg = FSL "user\\config.cfg",
+                                              });
 }
 
 std::errc init_mouse_inputs(mouse_binding* binding)

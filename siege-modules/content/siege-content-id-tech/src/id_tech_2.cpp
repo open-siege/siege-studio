@@ -62,7 +62,7 @@ namespace siege::configuration::id_tech
           {
             start = first_quote.value() + 1;
             first_quote.reset();
-            append_not_empty(line.substr(start, i - start));
+            segments.emplace_back(line.substr(start, i - start));
             start = i + 1;
 
             if (i < line.size() - 1 && line[i + 1] == ' ')
@@ -86,7 +86,7 @@ namespace siege::configuration::id_tech
         }
         else if (i == line.size() - 1)
         {
-          append_not_empty(line.substr(start, i));
+          append_not_empty(line.substr(start, i + 1 - start));
         }
       }
 
@@ -144,7 +144,7 @@ namespace siege::configuration::id_tech
 
         if (segments.size() == 1)
         {
-          config_data.emplace_back(config_line{ line, segments, std::string_view{ "" } });
+          config_data.emplace_back(config_line{ line, segments, key_type{ std::vector<std::string_view>{} } });
           continue;
         }
 
@@ -192,7 +192,7 @@ namespace siege::configuration::id_tech
 
       if (!line.value.empty())
       {
-        bool should_add_quotes = line.value.at(0).contains(' ') || line.value.at(0).contains(';') || !line.value.at(0).starts_with('+');
+        bool should_add_quotes = line.value.at(0).empty() || line.value.at(0).contains(' ') || line.value.at(0).contains(';') || !line.value.at(0).starts_with('+');
 
         if (should_add_quotes)
         {
@@ -206,12 +206,18 @@ namespace siege::configuration::id_tech
           result.push_back('\"');
         }
       }
-      else if (result.back() == ' ')
+      else if (!result.empty() && result.back() == ' ')
       {
         result.pop_back();
       }
 
       return result;
+    }
+
+    bool is_comment_line(const config_line& entry)
+    {
+      auto first = entry.key_segments.at(0);
+      return first == "//" || first.starts_with("//");
     }
 
     export void save_config(const std::any& context, const std::vector<config_line>& entries, std::ostream& raw_data)
@@ -225,9 +231,16 @@ namespace siege::configuration::id_tech
 
       for (auto& entry : entries)
       {
-        auto line = join_line(entry);
+        if (is_comment_line(entry) && !entry.raw_line.empty())
+        {
+          raw_data.write(entry.raw_line.data(), entry.raw_line.size());
+        }
+        else
+        {
+          auto line = join_line(entry);
+          raw_data.write(line.data(), line.size());
+        }
 
-        raw_data.write(line.data(), line.size());
         raw_data.write(real_context.default_end_line.data(), real_context.default_end_line.size());
       }
     }

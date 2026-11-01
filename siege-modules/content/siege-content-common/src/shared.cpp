@@ -34,12 +34,12 @@ namespace siege::configuration
     bool operator==(std::string_view rhs) const
     {
       return std::visit([&](auto& a) {
-        if (a.size() > 0)
+        if (a.empty())
         {
-          return a[0] == rhs;
+          return rhs.empty();
         }
 
-        return false;
+        return a[0] == rhs;
       },
         data);
     }
@@ -265,6 +265,7 @@ namespace siege::configuration
   void text_game_config::save(std::ostream& stream) const
   {
     save_config(context, line_entries, stream);
+    stream.flush();
   }
 
   bool is_ascii_text_config(std::istream& raw_data)
@@ -273,8 +274,9 @@ namespace siege::configuration
     int count = 0;
     bool result = std::all_of(std::istreambuf_iterator<char>{ raw_data }, std::istreambuf_iterator<char>{}, [&](char raw) {
       auto value = static_cast<unsigned char>(raw);
-      return count++ != 8192 && std::isalpha(value) || std::isdigit(value) || std::isspace(value) || std::ispunct(value);
+      return count++ < 8192 && (std::isalpha(value) || std::isdigit(value) || std::isspace(value) || std::ispunct(value));
     });
+    raw_data.clear();
     raw_data.seekg(current_pos, std::ios::beg);
     return count > 0 && result;
   }
