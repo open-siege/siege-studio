@@ -13,35 +13,37 @@ using keyboard_binding = siege::platform::keyboard_binding;
 using mouse_binding = siege::platform::mouse_binding;
 using controller_binding = siege::platform::controller_binding;
 using vkey = siege::platform::vkey;
+using fs_char = siege::fs_char;
+using fs_string_view = siege::fs_string_view;
 
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
-using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+using predefined_string = siege::platform::game_command_line_predefined_setting<const fs_char*>;
 namespace fs = std::filesystem;
 
 extern "C" {
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { L"dedicated", L"deathmatch", L"timelimit", L"fraglimit", L"maxclients", L"numbots", L"gl_mode", L"in_joystick" } },
-  .string_settings = { { L"name", L"connect", L"map", L"gl_driver", L"game" } },
-  .ip_connect_setting = L"connect",
-  .player_name_setting = L"name",
-  .listen_setting = L"connect",
-  .dedicated_setting = L"dedicated",
-  .render_backend_setting = L"gl_driver",
-  .selected_game_setting = L"game",
-  .controller_enabled_setting = L"in_joystick",
-  .selected_map_setting = L"map",
-  .max_players_setting = L"maxclients",
-  .bot_count_setting = L"numbots",
-  .max_time_limit_setting = L"timelimit",
-  .max_score_limit_setting = L"fraglimit",
-  .multiplayer_game_mode_setting = L"deathmatch",
-  .predefined_resolution_setting = L"gl_mode"
+  .int_settings = { { FSL"dedicated", FSL"deathmatch", FSL"timelimit", FSL"fraglimit", FSL"maxclients", FSL"numbots", FSL"gl_mode", FSL"in_joystick" } },
+  .string_settings = { { FSL"name", FSL"connect", FSL"map", FSL"gl_driver", FSL"game" } },
+  .ip_connect_setting = FSL"connect",
+  .player_name_setting = FSL"name",
+  .listen_setting = FSL"connect",
+  .dedicated_setting = FSL"dedicated",
+  .render_backend_setting = FSL"gl_driver",
+  .selected_game_setting = FSL"game",
+  .controller_enabled_setting = FSL"in_joystick",
+  .selected_map_setting = FSL"map",
+  .max_players_setting = FSL"maxclients",
+  .bot_count_setting = FSL"numbots",
+  .max_time_limit_setting = FSL"timelimit",
+  .max_score_limit_setting = FSL"fraglimit",
+  .multiplayer_game_mode_setting = FSL"deathmatch",
+  .predefined_resolution_setting = FSL"gl_mode"
 };
 
-extern auto controller_input_backends = std::array<const wchar_t*, 2>{ { L"winmm" } };
+extern auto controller_input_backends = std::array<const fs_char*, 2>{ { FSL"winmm" } };
 
-extern auto network_backends = std::array<const wchar_t*, 2>{ { L"wsock32" } };
+extern auto network_backends = std::array<const fs_char*, 2>{ { FSL"wsock32" } };
 
 extern auto game_actions = std::array<game_action, 33>{ {
   game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
@@ -83,12 +85,12 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> fu
 
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
 
-std::errc executable_is_supported(const wchar_t* filename) noexcept
+std::errc executable_is_supported(const fs_char* filename) noexcept
 {
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform::game_command_line_args* args)
 {
   if (exe_path_str == nullptr)
   {
@@ -135,10 +137,10 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
-  insert_string_setting_once(*args, L"console", L"1");
+  insert_string_setting_once(*args, FSL"exec", FSL"siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, FSL"console", FSL"1");
 
-  auto int_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.name == std::wstring_view(L"numbots"); });
+  auto int_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.name == fs_string_view(FSL"numbots"); });
 
   if (int_iter != args->int_settings.end())
   {
@@ -160,7 +162,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
     config.save(custom_bindings);
 
-    insert_string_setting_once(*args, L"exec", L"add_bots.cfg");
+    insert_string_setting_once(*args, FSL"exec", FSL"add_bots.cfg");
   }
 
   return std::errc{};
@@ -173,12 +175,12 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     return std::errc::bad_address;
   }
 
-  if (auto config = load_config_from_pak(L"base\\configs\\DEFAULT_KEYS.cfg", L"base/pak0.pak", L"base/pak0.pak/configs"))
+  if (auto config = load_config_from_pak(FSL"base\\configs\\DEFAULT_KEYS.cfg", FSL"base/pak0.pak", FSL"base/pak0.pak/configs"))
   {
     upsert_mouse_bindings(*config, *binding);
   }
 
-  if (auto config = load_config_from_file(L"user\\config.cfg"))
+  if (auto config = load_config_from_file(FSL"user\\config.cfg"))
   {
     upsert_mouse_bindings(*config, *binding);
   }
@@ -204,12 +206,12 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  if (auto config = load_config_from_pak(L"base\\configs\\DEFAULT_KEYS.cfg", L"base/pak0.pak", L"base/pak0.pak/configs"))
+  if (auto config = load_config_from_pak(FSL"base\\configs\\DEFAULT_KEYS.cfg", FSL"base/pak0.pak", FSL"base/pak0.pak/configs"))
   {
     upsert_keyboard_bindings(*config, *binding);
   }
 
-  if (auto config = load_config_from_file(L"user\\config.cfg"))
+  if (auto config = load_config_from_file(FSL"user\\config.cfg"))
   {
     upsert_keyboard_bindings(*config, *binding);
   }
@@ -263,41 +265,41 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
 }
 
 predefined_int*
-  get_predefined_int_command_line_settings(const wchar_t* name) noexcept
+  get_predefined_int_command_line_settings(const fs_char* name) noexcept
 {
   if (name == nullptr)
   {
     return nullptr;
   }
 
-  auto name_str = std::wstring_view(name);
+  auto name_str = fs_string_view(name);
 
-  if (name_str == L"gl_mode")
+  if (name_str == FSL"gl_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"640x480", .value = 3 },
-      predefined_int{ .label = L"800x600", .value = 4 },
-      predefined_int{ .label = L"960x720", .value = 5 },
-      predefined_int{ .label = L"1024x768", .value = 6 },
-      predefined_int{ .label = L"1152x864", .value = 7 },
-      predefined_int{ .label = L"1280x960", .value = 8 },
-      predefined_int{ .label = L"1600x1200", .value = 9 },
+      predefined_int{ .label = FSL"640x480", .value = 3 },
+      predefined_int{ .label = FSL"800x600", .value = 4 },
+      predefined_int{ .label = FSL"960x720", .value = 5 },
+      predefined_int{ .label = FSL"1024x768", .value = 6 },
+      predefined_int{ .label = FSL"1152x864", .value = 7 },
+      predefined_int{ .label = FSL"1280x960", .value = 8 },
+      predefined_int{ .label = FSL"1600x1200", .value = 9 },
       predefined_int{},
     };
 
     return modes.data();
   }
 
-  if (name_str == L"deathmatch")
+  if (name_str == FSL"deathmatch")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = L"Deathmatch", .value = 1 },
-      predefined_int{ .label = L"Assassin", .value = 2 },
-      predefined_int{ .label = L"Arsenal (aka Gun Game)", .value = 3 },
-      predefined_int{ .label = L"Capture the Flag", .value = 4 },
-      predefined_int{ .label = L"Realistic", .value = 5 },
-      predefined_int{ .label = L"Control", .value = 6 },
-      predefined_int{ .label = L"Conquer the Bunker", .value = 7 },
+      predefined_int{ .label = FSL"Deathmatch", .value = 1 },
+      predefined_int{ .label = FSL"Assassin", .value = 2 },
+      predefined_int{ .label = FSL"Arsenal (aka Gun Game)", .value = 3 },
+      predefined_int{ .label = FSL"Capture the Flag", .value = 4 },
+      predefined_int{ .label = FSL"Realistic", .value = 5 },
+      predefined_int{ .label = FSL"Control", .value = 6 },
+      predefined_int{ .label = FSL"Conquer the Bunker", .value = 7 },
       predefined_int{},
     };
 
@@ -308,11 +310,11 @@ predefined_int*
 }
 
 predefined_string*
-  get_predefined_string_command_line_settings(const wchar_t* name) noexcept
+  get_predefined_string_command_line_settings(const fs_char* name) noexcept
 {
-  if (name && std::wstring_view(name) == L"map")
+  if (name && fs_string_view(name) == FSL"map")
   {
-    return get_predefined_id_tech_2_map_command_line_settings(L"base", false);
+    return get_predefined_id_tech_2_map_command_line_settings(FSL"base", false);
   }
 
   return nullptr;
