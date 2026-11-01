@@ -3,6 +3,7 @@ import std;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v2_5;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -170,51 +171,12 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
 
 std::errc init_game_settings(siege::platform::common_game_settings* args)
 {
-  if (args == nullptr)
-  {
-    return std::errc::bad_address;
-  }
-
-  for (auto& config : {
-         load_config_from_pak(FSL "base\\default.cfg", FSL "base/pak0.pak", FSL "base/pak0.pak"),
-         load_config_from_file(FSL "user\\config.cfg"),
-       })
-  {
-    if (!config)
-    {
-      continue;
-    }
-
-    for (auto key : config->keys())
-    {
-      if (key.at(0) == "bind")
-      {
-        continue;
-      }
-
-      if (key.at(0) == "//")
-      {
-        continue;
-      }
-
-      auto real_key = key.at(1);
-
-      if (real_key.empty())
-      {
-        continue;
-      }
-
-      for (auto& entry : config->entries_for(key))
-      {
-        if (!args->append_setting(real_key, entry.value.at(0)))
-        {
-          return std::errc{};
-        }
-      }
-    }
-  }
-
-  return std::errc{};
+  return init_id_tech_2_5_game_settings(args, {
+    .packed_default_cfg = FSL"base\\default.cfg",
+    .packed_default_cfg_pak = FSL"base/pak0.pak",
+    .packed_default_cfg_pak_folder = FSL"base/pak0.pak",
+    .loose_user_cfg = FSL"user\\config.cfg",
+  });
 }
 
 std::errc init_mouse_inputs(mouse_binding* binding)

@@ -3,6 +3,7 @@ import std;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v2_5;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -223,6 +224,16 @@ predefined_string*
   }
 
   return nullptr;
+}
+
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  return init_id_tech_2_5_game_settings(args, {
+    .packed_default_cfg = FSL"anoxdata\\CONFIGS\\Default.cfg",
+    .packed_default_cfg_pak = FSL"anoxdata/SCRIPTS.dat",
+    .packed_default_cfg_pak_folder = FSL"anoxdata/SCRIPTS.dat",
+    .loose_user_cfg = FSL"anoxdata\\CONFIGS\\anox.cfg",
+  });
 }
 
 std::errc executable_is_supported(const wchar_t* filename) noexcept
