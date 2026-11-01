@@ -49,3 +49,38 @@ TEST_CASE("With sample ini lines, with multiple groups and values, values conver
   REQUIRE(value.value().find({ "Engine.Input"sv, "RightMouse"sv }) == "AltFire");
   REQUIRE(value.value().find({ "Engine.Input"sv, "Ctrl"sv }) == "Duck");
 }
+
+TEST_CASE("Ini save round-trips Unreal-style aliases and preserves comments")
+{
+  std::string source =
+    "; player prefs\r\n"
+    "[DefaultPlayer]\r\n"
+    "Name=Player\r\n"
+    "\r\n"
+    "[Engine.Input]\r\n"
+    "Aliases[0]=(Command=\"Button bFire | Fire\",Alias=Fire)\r\n"
+    "LeftMouse=Fire\r\n"
+    "Joy1=Fire\r\n";
+
+  std::stringstream raw_config(source);
+  auto value = ini::load_config(raw_config, source.size());
+  REQUIRE(value.has_value());
+
+  value->emplace({ "Engine.Input"sv, "Aliases[0]"sv },
+    siege::configuration::key_type{ "(Command=\"Button bFire | Fire\",Alias=Fire)"sv });
+  value->emplace({ "Engine.Input"sv, "Joy2"sv }, siege::configuration::key_type{ "Jump"sv });
+  value->emplace({ "DefaultPlayer"sv, "Name"sv }, siege::configuration::key_type{ "SiegePlayer"sv });
+
+  std::stringstream saved;
+  value->save(saved);
+
+  auto reloaded = ini::load_config(saved, saved.str().size());
+  REQUIRE(reloaded.has_value());
+  REQUIRE(reloaded->find({ "DefaultPlayer"sv, "Name"sv }) == "SiegePlayer");
+  REQUIRE(reloaded->find({ "Engine.Input"sv, "Aliases[0]"sv }) == "(Command=\"Button bFire | Fire\",Alias=Fire)");
+  REQUIRE(reloaded->find({ "Engine.Input"sv, "LeftMouse"sv }) == "Fire");
+  REQUIRE(reloaded->find({ "Engine.Input"sv, "Joy1"sv }) == "Fire");
+  REQUIRE(reloaded->find({ "Engine.Input"sv, "Joy2"sv }) == "Jump");
+  REQUIRE(saved.str().contains("SiegePlayer"));
+  REQUIRE(saved.str().contains("Joy2=Jump"));
+}
