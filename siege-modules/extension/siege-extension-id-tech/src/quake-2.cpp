@@ -105,9 +105,10 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("baseq2/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  auto config = load_config_from_file(L"baseq2\\config.cfg")
+                  .or_else([]() { return load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak"); })
+                  .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
   unbind_joystick_for_quake_2_config(config);
 
   for (auto& alias : quake2_aliases)
@@ -128,12 +129,14 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     config.emplace(siege::configuration::key_type({ "joy_advancedupdate" }), siege::configuration::key_type{});
   }
 
+  std::ofstream custom_bindings("baseq2/config.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
+
+  write_aliases_to_autoexec(L"baseq2\\autoexec.cfg", quake2_aliases);
 
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};

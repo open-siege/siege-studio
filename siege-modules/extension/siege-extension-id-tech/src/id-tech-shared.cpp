@@ -83,6 +83,7 @@ export void unbind_joystick_for_quake_2_config(siege::configuration::text_game_c
 export void unbind_joystick_for_quake_3_config(siege::configuration::text_game_config& config, mapping_context context = q3_mapping_context{});
 export bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
 export void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<vk> not_target_vkey = std::nullopt);
+export void write_aliases_to_autoexec(std::filesystem::path autoexec_path, std::span<const std::array<std::string_view, 2>> aliases);
 
 export struct game_settings_files
 {
@@ -956,6 +957,25 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
       break;
     }
   }
+}
+
+void write_aliases_to_autoexec(std::filesystem::path autoexec_path, std::span<const std::array<std::string_view, 2>> aliases)
+{
+  if (aliases.empty())
+  {
+    return;
+  }
+
+  auto autoexec = load_config_from_file(autoexec_path)
+                    .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
+
+  for (auto& alias : aliases)
+  {
+    autoexec.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
+  }
+
+  std::ofstream stream(autoexec_path, std::ios::binary | std::ios::trunc);
+  autoexec.save(stream);
 }
 
 extern "C" {

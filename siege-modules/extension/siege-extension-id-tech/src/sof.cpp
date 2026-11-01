@@ -139,17 +139,7 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
   std::ofstream custom_bindings("user/config.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
 
-  auto autoexec = load_config_from_file(FSL "user\\autoexec.cfg")
-                    .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
-
-
-  for (auto& alias : sof_aliases)
-  {
-    autoexec.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
-  }
-
-  std::ofstream autoexec_stream("user/autoexec.cfg", std::ios::binary | std::ios::trunc);
-  autoexec.save(autoexec_stream);
+  write_aliases_to_autoexec(FSL"user\\autoexec.cfg", sof_aliases);
 
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");

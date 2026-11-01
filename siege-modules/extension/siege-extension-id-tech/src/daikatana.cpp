@@ -92,9 +92,10 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("data/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  auto config = load_config_from_file(L"data\\current.cfg")
+                  .or_else([]() { return load_config_from_pak(L"data\\daikatana.cfg", L"data/pak1.pak", L"data/pak1.pak"); })
+                  .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
   unbind_joystick_for_quake_2_config(config);
 
   bool enable_controller = save_bindings_to_config(*args, config);
@@ -108,12 +109,12 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));
   }
 
+  std::ofstream custom_bindings("data/current.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
 
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};

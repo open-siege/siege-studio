@@ -85,25 +85,20 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("anoxdata/CONFIGS/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  auto config = load_config_from_file(L"anoxdata\\CONFIGS\\anox.cfg")
+                  .or_else([]() { return load_config_from_pak(L"anoxdata\\CONFIGS\\Default.cfg", L"anoxdata/SCRIPTS.dat", L"anoxdata/SCRIPTS.dat"); })
+                  .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  unbind_joystick_for_quake_2_config(config);
 
   save_bindings_to_config(*args, config);
 
+
+  std::ofstream custom_bindings("anoxdata/CONFIGS/anox.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
 
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
 
-  if (iter != args->string_settings.end())
-  {
-    // iter->name = L"exec";
-    // iter->value = L"CONFIGS/siege_studio_inputs.cfg";
-  }
-
-  std::advance(iter, 1);
-  iter->name = L"console";
-  iter->value = L"1";
+  insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
 }
