@@ -103,9 +103,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("uo/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
-
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  auto config = load_config_from_file(L"uo\\uoconfig_mp.cfg")
+                  .or_else([]() { return load_config_from_pk3(L"uo\\default_mp.cfg", L"uo/localized_english_pakuo00.pk3", L"uo/localized_english_pakuo00.pk3"); })
+                  .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
   unbind_joystick_for_quake_3_config(config);
 
   bool enable_controller = save_bindings_to_config(*args, config);
@@ -115,9 +115,8 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     config.emplace(siege::configuration::key_type({ "set", "in_joystick" }), siege::configuration::key_type("1"));
   }
 
+  std::ofstream custom_bindings("uo/uoconfig_mp.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
-
-  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};

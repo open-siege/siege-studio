@@ -110,9 +110,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("maintt/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
-
-  siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
+  auto config = load_config_from_file(L"maintt\\configs\\unnamedsoldier.cfg")
+                  .or_else([]() { return load_config_from_pk3(L"maintt\\default.cfg", L"maintt/pak1.pk3", L"maintt/pak1.pk3"); })
+                  .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
   unbind_joystick_for_quake_3_config(config);
 
   for (auto& vstr : moh_vstrs)
@@ -127,9 +127,12 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
 
   save_bindings_to_config(*args, config, q3_mapping_context{});
 
+  std::error_code last_error;
+  std::filesystem::create_directories("maintt/configs", last_error);
+  std::ofstream custom_bindings("maintt/configs/unnamedsoldier.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
 
-  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
+  write_aliases_to_autoexec(L"maintt\\autoexec.cfg", moh_aliases);
   insert_string_setting_once(*args, L"console", L"1");
   insert_string_setting_once(*args, L"cl_playintro", L"0");
   insert_string_setting_once(*args, L"ui_weaponsbar", L"0");

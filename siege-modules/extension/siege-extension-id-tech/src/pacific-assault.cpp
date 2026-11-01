@@ -96,18 +96,29 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("main/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
-
   namespace id_tech = siege::configuration::id_tech::id_tech_2;
 
-  siege::configuration::text_game_config config(id_tech::id_tech_context{ .default_end_line = "\n" }, id_tech::save_config);
+  std::filesystem::path user_cfg;
+  if (auto value = win32::GetEnvironmentVariable(L"KNOWN_FOLDER_DOCUMENTS"); value)
+  {
+    user_cfg = std::filesystem::path(*value) / "EA Games" / "Medal of Honor Pacific Assault(tm)" / "configs" / "unnamedsoldier.cfg";
+  }
+
+  auto config = (user_cfg.empty() ? std::optional<siege::configuration::text_game_config>{} : load_config_from_file(user_cfg))
+                  .or_else([]() { return load_config_from_pak(L"main\\default.cfg", L"main/pak0.rez", L"main/pak0.rez"); })
+                  .value_or(siege::configuration::text_game_config(id_tech::id_tech_context{ .default_end_line = "\n" }, id_tech::save_config));
   unbind_joystick_for_quake_3_config(config);
 
   save_bindings_to_config(*args, config, q3_mapping_context{});
 
-  config.save(custom_bindings);
+  if (!user_cfg.empty())
+  {
+    std::error_code last_error;
+    std::filesystem::create_directories(user_cfg.parent_path(), last_error);
+    std::ofstream custom_bindings(user_cfg, std::ios::binary | std::ios::trunc);
+    config.save(custom_bindings);
+  }
 
-  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
   insert_string_setting_once(*args, L"cl_playintro", L"0");
   insert_string_setting_once(*args, L"g_aimtoggle", L"0");

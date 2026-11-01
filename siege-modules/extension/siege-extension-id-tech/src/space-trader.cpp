@@ -100,7 +100,6 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   // are completely broken.
   // I'll have to do keyboard + mouse emulation instead
 
-  insert_string_setting_once(*args, L"exec", L"siege_studio_inputs.cfg");
   insert_string_setting_once(*args, L"console", L"1");
 
   return std::errc{};
