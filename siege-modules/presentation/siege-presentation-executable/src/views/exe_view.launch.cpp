@@ -24,6 +24,7 @@ namespace stl = std::ranges;
 
 namespace siege::views
 {
+  using vkey = siege::platform::vkey;
   void apply_launch_button_state(exe_view& self);
 
   decltype(exe_view::launch) exe_view::create_launch_controls()

@@ -3,6 +3,7 @@
 import std;
 import win32.window;
 import win32.utils;
+import siege.platform;
 import siege.platform.shared;
 import siege.platform.stream;
 import exe.shared;

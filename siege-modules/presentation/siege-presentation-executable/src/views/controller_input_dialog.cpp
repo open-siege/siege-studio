@@ -18,7 +18,7 @@ namespace siege::views
 {
   struct selected_input
   {
-    WORD vkey;
+    vkey vkey;
     siege::platform::hardware_context context;
   };
 
@@ -127,6 +127,7 @@ namespace siege::views
           {
             ::SetPropW(dialog, L"IsProcessing", (HANDLE)1);
             using namespace siege::platform;
+            using vkey = siege::platform::vkey;
             std::vector<TASKDIALOG_BUTTON> default_buttons = {
               TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::controller_playstation_4, .pszButtonText = L"Playstation" },
               TASKDIALOG_BUTTON{ .nButtonID = (int)hardware_context::joystick, .pszButtonText = L"Joystick" },
@@ -192,7 +193,7 @@ namespace siege::views
 
             // but prefer buttons
             std::stable_partition(changes.begin(), changes.begin(), [](auto& item) {
-              return item.vkey >= VK_GAMEPAD_A && item.vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON && item.new_value != 0;
+              return item.vkey >= vkey::gamepad_a && item.vkey <= vkey::gamepad_right_thumbstick_button && item.new_value != 0;
             });
 
             ::EndDialog(dialog, MAKELRESULT(changes.begin()->vkey, info->second.info.detected_context));
@@ -211,7 +212,7 @@ namespace siege::views
     }
 
     return std::make_optional<selected_input>(
-      win32::loword(result),
+      static_cast<vkey>(win32::loword(result)),
       static_cast<siege::platform::hardware_context>(win32::hiword(result)));
   }
 

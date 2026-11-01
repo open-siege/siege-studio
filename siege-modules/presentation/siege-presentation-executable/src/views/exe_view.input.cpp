@@ -19,13 +19,13 @@ import exe.shared;
 
 namespace siege::views
 {
-  int get_image_index_for_button(WORD vkey);
+  int get_image_index_for_button(vkey key);
   std::optional<LRESULT> handle_keyboard_mouse_press(win32::window_ref dialog, INT message, WPARAM wparam, LPARAM lparam);
   void show_connected_devices_dialog(win32::window_ref parent);
 
   struct selected_input
   {
-    WORD vkey;
+    vkey vkey;
     siege::platform::hardware_context context;
   };
 
@@ -117,7 +117,7 @@ namespace siege::views
 
       auto& binding = get_action_bindings(state)[item->lParam];
 
-      auto vkey = win32::loword(result);
+      auto vkey = static_cast<siege::platform::vkey>(win32::loword(result));
       auto context = static_cast<decltype(binding.context)>(win32::hiword(result));
 
       if (auto real_vkey = get_expected_vkey_for_keyboard_mouse(state, context, vkey, binding.action_index); real_vkey)
@@ -188,7 +188,7 @@ namespace siege::views
       auto& binding = this->input.bound_inputs.at(item->lParam);
 
       auto context = static_cast<siege::platform::hardware_context>(win32::hiword(result));
-      auto vkey = win32::loword(result);
+      auto vkey = static_cast<siege::platform::vkey>(win32::loword(result));
 
       std::wstring temp = category_for_vkey(vkey, context);
       controller_table.SetItemText(message.iItem, 1, temp);
@@ -259,54 +259,55 @@ namespace siege::views
                                              });
 
       using namespace siege::platform;
-      std::map<WORD, std::pair<WORD, hardware_context>> default_mappings = {
-        { VK_GAMEPAD_DPAD_UP, std::make_pair(VK_UP, hardware_context::keyboard) },
-        { VK_GAMEPAD_DPAD_DOWN, std::make_pair(VK_DOWN, hardware_context::keyboard) },
-        { VK_GAMEPAD_DPAD_LEFT, std::make_pair(VK_LEFT, hardware_context::keyboard) },
-        { VK_GAMEPAD_DPAD_RIGHT, std::make_pair(VK_RIGHT, hardware_context::keyboard) },
-        { VK_GAMEPAD_A, std::make_pair(VK_SPACE, hardware_context::keyboard) },
-        { VK_GAMEPAD_B, std::make_pair(VK_LCONTROL, hardware_context::keyboard) },
-        { VK_GAMEPAD_X, std::make_pair('F', hardware_context::keyboard) },
-        { VK_GAMEPAD_Y, std::make_pair(VK_OEM_4, hardware_context::keyboard) },
-        { VK_GAMEPAD_LEFT_SHOULDER, std::make_pair('G', hardware_context::keyboard) },
-        { VK_GAMEPAD_RIGHT_SHOULDER, std::make_pair('T', hardware_context::keyboard) },
-        { VK_GAMEPAD_LEFT_TRIGGER, std::make_pair(VK_RBUTTON, hardware_context::keyboard) },
-        { VK_GAMEPAD_RIGHT_TRIGGER, std::make_pair(VK_LBUTTON, hardware_context::keyboard) },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, std::make_pair(VK_LSHIFT, hardware_context::keyboard) },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, std::make_pair('W', hardware_context::keyboard) },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, std::make_pair('S', hardware_context::keyboard) },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, std::make_pair('A', hardware_context::keyboard) },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, std::make_pair('D', hardware_context::keyboard) },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, std::make_pair('E', hardware_context::keyboard) },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, std::make_pair(VK_UP, hardware_context::mouse) },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, std::make_pair(VK_DOWN, hardware_context::mouse) },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, std::make_pair(VK_LEFT, hardware_context::mouse) },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, std::make_pair(VK_RIGHT, hardware_context::mouse) },
+      using vkey = siege::platform::vkey;
+      std::map<vkey, std::pair<vkey, hardware_context>> default_mappings = {
+        { vkey::gamepad_dpad_up, std::make_pair(vkey::up, hardware_context::keyboard) },
+        { vkey::gamepad_dpad_down, std::make_pair(vkey::down, hardware_context::keyboard) },
+        { vkey::gamepad_dpad_left, std::make_pair(vkey::left, hardware_context::keyboard) },
+        { vkey::gamepad_dpad_right, std::make_pair(vkey::right, hardware_context::keyboard) },
+        { vkey::gamepad_a, std::make_pair(vkey::space, hardware_context::keyboard) },
+        { vkey::gamepad_b, std::make_pair(vkey::left_control, hardware_context::keyboard) },
+        { vkey::gamepad_x, std::make_pair(static_cast<vkey>('F'), hardware_context::keyboard) },
+        { vkey::gamepad_y, std::make_pair(vkey::oem_4, hardware_context::keyboard) },
+        { vkey::gamepad_left_shoulder, std::make_pair(static_cast<vkey>('G'), hardware_context::keyboard) },
+        { vkey::gamepad_right_shoulder, std::make_pair(static_cast<vkey>('T'), hardware_context::keyboard) },
+        { vkey::gamepad_left_trigger, std::make_pair(vkey::rbutton, hardware_context::keyboard) },
+        { vkey::gamepad_right_trigger, std::make_pair(vkey::lbutton, hardware_context::keyboard) },
+        { vkey::gamepad_left_thumbstick_button, std::make_pair(vkey::left_shift, hardware_context::keyboard) },
+        { vkey::gamepad_left_thumbstick_up, std::make_pair(static_cast<vkey>('W'), hardware_context::keyboard) },
+        { vkey::gamepad_left_thumbstick_down, std::make_pair(static_cast<vkey>('S'), hardware_context::keyboard) },
+        { vkey::gamepad_left_thumbstick_left, std::make_pair(static_cast<vkey>('A'), hardware_context::keyboard) },
+        { vkey::gamepad_left_thumbstick_right, std::make_pair(static_cast<vkey>('D'), hardware_context::keyboard) },
+        { vkey::gamepad_right_thumbstick_button, std::make_pair(static_cast<vkey>('E'), hardware_context::keyboard) },
+        { vkey::gamepad_right_thumbstick_up, std::make_pair(vkey::up, hardware_context::mouse) },
+        { vkey::gamepad_right_thumbstick_down, std::make_pair(vkey::down, hardware_context::mouse) },
+        { vkey::gamepad_right_thumbstick_left, std::make_pair(vkey::left, hardware_context::mouse) },
+        { vkey::gamepad_right_thumbstick_right, std::make_pair(vkey::right, hardware_context::mouse) },
       };
 
-      std::map<WORD, int> grouping = {
-        { VK_GAMEPAD_DPAD_UP, 1 },
-        { VK_GAMEPAD_DPAD_DOWN, 1 },
-        { VK_GAMEPAD_DPAD_LEFT, 1 },
-        { VK_GAMEPAD_DPAD_RIGHT, 1 },
-        { VK_GAMEPAD_A, 2 },
-        { VK_GAMEPAD_B, 2 },
-        { VK_GAMEPAD_X, 2 },
-        { VK_GAMEPAD_Y, 2 },
-        { VK_GAMEPAD_LEFT_SHOULDER, 3 },
-        { VK_GAMEPAD_RIGHT_SHOULDER, 3 },
-        { VK_GAMEPAD_LEFT_TRIGGER, 3 },
-        { VK_GAMEPAD_RIGHT_TRIGGER, 3 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 4 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 5 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 4 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 4 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 4 },
-        { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 4 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 5 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 5 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 5 },
-        { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 5 },
+      std::map<vkey, int> grouping = {
+        { vkey::gamepad_dpad_up, 1 },
+        { vkey::gamepad_dpad_down, 1 },
+        { vkey::gamepad_dpad_left, 1 },
+        { vkey::gamepad_dpad_right, 1 },
+        { vkey::gamepad_a, 2 },
+        { vkey::gamepad_b, 2 },
+        { vkey::gamepad_x, 2 },
+        { vkey::gamepad_y, 2 },
+        { vkey::gamepad_left_shoulder, 3 },
+        { vkey::gamepad_right_shoulder, 3 },
+        { vkey::gamepad_left_trigger, 3 },
+        { vkey::gamepad_right_trigger, 3 },
+        { vkey::gamepad_left_thumbstick_button, 4 },
+        { vkey::gamepad_right_thumbstick_button, 5 },
+        { vkey::gamepad_left_thumbstick_up, 4 },
+        { vkey::gamepad_left_thumbstick_down, 4 },
+        { vkey::gamepad_left_thumbstick_left, 4 },
+        { vkey::gamepad_left_thumbstick_right, 4 },
+        { vkey::gamepad_right_thumbstick_up, 5 },
+        { vkey::gamepad_right_thumbstick_down, 5 },
+        { vkey::gamepad_right_thumbstick_left, 5 },
+        { vkey::gamepad_right_thumbstick_right, 5 },
       };
 
       for (auto mapping : default_mappings)
@@ -353,7 +354,7 @@ namespace siege::views
 
       struct context
       {
-        WORD vkey;
+        vkey vkey;
         siege::platform::hardware_context context;
         siege::platform::game_action action;
         WORD action_index;
@@ -390,7 +391,7 @@ namespace siege::views
       {
         win32::list_view_item up((wchar_t*)context.action.action_display_name.data());
 
-        if (context.vkey)
+        if (context.vkey != vkey::none)
         {
           up.iImage = get_image_index_for_button(context.vkey);
           up.mask = up.mask | LVIF_IMAGE;
@@ -458,15 +459,15 @@ namespace siege::views
       return FALSE;
     }
     case WM_TIMER: {
-      constexpr static std::array<SHORT, 8> states = { { VK_RETURN, VK_ESCAPE, VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_TAB, VK_SNAPSHOT } };
+      constexpr static std::array<vkey, 8> states = { { vkey::enter, vkey::escape, vkey::up, vkey::down, vkey::left, vkey::right, vkey::tab, vkey::snapshot } };
 
       for (auto state : states)
       {
-        if (::GetKeyState(state) & 0x80)
+        if (::GetKeyState(std::to_underlying(state)) & 0x80)
         {
           ::KillTimer(dialog, 1);
 
-          if (state == VK_RETURN)
+          if (state == vkey::enter)
           {
             auto context = hardware_context::keyboard;
             temp.resize(255);
@@ -474,11 +475,11 @@ namespace siege::views
             temp.resize(::GetKeyNameTextW(lparam, temp.data(), temp.size() + 1));
 
             context = temp == L"Numpad Enter" ? hardware_context::keypad : hardware_context::keyboard;
-            ::EndDialog(dialog, MAKELRESULT(state, context));
+            ::EndDialog(dialog, MAKELRESULT(std::to_underlying(state), context));
           }
           else
           {
-            ::EndDialog(dialog, MAKELRESULT(state, hardware_context::keyboard));
+            ::EndDialog(dialog, MAKELRESULT(std::to_underlying(state), hardware_context::keyboard));
           }
           break;
         }
@@ -491,31 +492,31 @@ namespace siege::views
       if (wparam & MK_LBUTTON)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, MAKELRESULT(VK_LBUTTON, hardware_context::mouse));
+        EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::lbutton), hardware_context::mouse));
       }
 
       if (wparam & MK_RBUTTON)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, MAKELRESULT(VK_RBUTTON, hardware_context::mouse));
+        EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::rbutton), hardware_context::mouse));
       }
 
       if (wparam & MK_MBUTTON)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, MAKELRESULT(VK_MBUTTON, hardware_context::mouse));
+        EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::mbutton), hardware_context::mouse));
       }
 
       if (wparam & MK_XBUTTON1)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, MAKELRESULT(VK_XBUTTON1, hardware_context::mouse));
+        EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::xbutton1), hardware_context::mouse));
       }
 
       if (wparam & MK_XBUTTON2)
       {
         KillTimer(dialog, 1);
-        EndDialog(dialog, MAKELRESULT(VK_XBUTTON2, hardware_context::mouse));
+        EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::xbutton2), hardware_context::mouse));
       }
 
       return 0;
@@ -523,15 +524,15 @@ namespace siege::views
     case WM_SYSKEYDOWN: {
       KillTimer(dialog, 1);
 
-      if (wparam == VK_MENU)
+      if (wparam == std::to_underlying(vkey::alt))
       {
-        if (::GetKeyState(VK_LMENU) & 0x80)
+        if (::GetKeyState(std::to_underlying(vkey::left_alt)) & 0x80)
         {
-          EndDialog(dialog, MAKELRESULT(VK_LMENU, hardware_context::keyboard));
+          EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::left_alt), hardware_context::keyboard));
         }
-        else if (::GetKeyState(VK_RMENU) & 0x80)
+        else if (::GetKeyState(std::to_underlying(vkey::right_alt)) & 0x80)
         {
-          EndDialog(dialog, MAKELRESULT(VK_RMENU, hardware_context::keyboard));
+          EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::right_alt), hardware_context::keyboard));
         }
       }
       else
@@ -543,26 +544,26 @@ namespace siege::views
     }
     case WM_KEYDOWN: {
       KillTimer(dialog, 1);
-      if (wparam == VK_SHIFT)
+      if (wparam == std::to_underlying(vkey::shift))
       {
-        if (::GetKeyState(VK_LSHIFT) & 0x80)
+        if (::GetKeyState(std::to_underlying(vkey::left_shift)) & 0x80)
         {
-          EndDialog(dialog, MAKELRESULT(VK_LSHIFT, hardware_context::keyboard));
+          EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::left_shift), hardware_context::keyboard));
         }
-        else if (::GetKeyState(VK_RSHIFT) & 0x80)
+        else if (::GetKeyState(std::to_underlying(vkey::right_shift)) & 0x80)
         {
-          EndDialog(dialog, MAKELRESULT(VK_RSHIFT, hardware_context::keyboard));
+          EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::right_shift), hardware_context::keyboard));
         }
       }
-      else if (wparam == VK_CONTROL)
+      else if (wparam == std::to_underlying(vkey::control))
       {
-        if (::GetKeyState(VK_LCONTROL) & 0x80)
+        if (::GetKeyState(std::to_underlying(vkey::left_control)) & 0x80)
         {
-          EndDialog(dialog, MAKELRESULT(VK_LCONTROL, hardware_context::keyboard));
+          EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::left_control), hardware_context::keyboard));
         }
-        else if (::GetKeyState(VK_RCONTROL) & 0x80)
+        else if (::GetKeyState(std::to_underlying(vkey::right_control)) & 0x80)
         {
-          EndDialog(dialog, MAKELRESULT(VK_RCONTROL, hardware_context::keyboard));
+          EndDialog(dialog, MAKELRESULT(std::to_underlying(vkey::right_control), hardware_context::keyboard));
         }
       }
       else
@@ -576,35 +577,35 @@ namespace siege::views
     };
   }
 
-  int get_image_index_for_button(WORD vkey)
+  int get_image_index_for_button(vkey key)
   {
-    const static std::map<WORD, int> images = {
-      { VK_GAMEPAD_A, 1 },
-      { VK_GAMEPAD_B, 2 },
-      { VK_GAMEPAD_X, 3 },
-      { VK_GAMEPAD_Y, 4 },
-      { VK_GAMEPAD_LEFT_SHOULDER, 5 },
-      { VK_GAMEPAD_RIGHT_SHOULDER, 6 },
-      { VK_GAMEPAD_LEFT_TRIGGER, 7 },
-      { VK_GAMEPAD_RIGHT_TRIGGER, 8 },
-      { VK_GAMEPAD_DPAD_UP, 10 },
-      { VK_GAMEPAD_DPAD_DOWN, 11 },
-      { VK_GAMEPAD_DPAD_LEFT, 12 },
-      { VK_GAMEPAD_DPAD_RIGHT, 13 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, 14 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, 15 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_UP, 16 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, 17 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, 18 },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, 19 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_UP, 16 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, 17 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, 18 },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, 19 },
-      { VK_GAMEPAD_VIEW, 20 },
-      { VK_GAMEPAD_MENU, 21 },
+    const static std::map<vkey, int> images = {
+      { vkey::gamepad_a, 1 },
+      { vkey::gamepad_b, 2 },
+      { vkey::gamepad_x, 3 },
+      { vkey::gamepad_y, 4 },
+      { vkey::gamepad_left_shoulder, 5 },
+      { vkey::gamepad_right_shoulder, 6 },
+      { vkey::gamepad_left_trigger, 7 },
+      { vkey::gamepad_right_trigger, 8 },
+      { vkey::gamepad_dpad_up, 10 },
+      { vkey::gamepad_dpad_down, 11 },
+      { vkey::gamepad_dpad_left, 12 },
+      { vkey::gamepad_dpad_right, 13 },
+      { vkey::gamepad_left_thumbstick_button, 14 },
+      { vkey::gamepad_right_thumbstick_button, 15 },
+      { vkey::gamepad_left_thumbstick_up, 16 },
+      { vkey::gamepad_left_thumbstick_down, 17 },
+      { vkey::gamepad_left_thumbstick_left, 18 },
+      { vkey::gamepad_left_thumbstick_right, 19 },
+      { vkey::gamepad_right_thumbstick_up, 16 },
+      { vkey::gamepad_right_thumbstick_down, 17 },
+      { vkey::gamepad_right_thumbstick_left, 18 },
+      { vkey::gamepad_right_thumbstick_right, 19 },
+      { vkey::gamepad_view, 20 },
+      { vkey::gamepad_menu, 21 },
     };
 
-    return images.at(vkey);
+    return images.at(key);
   }
 }// namespace siege::views

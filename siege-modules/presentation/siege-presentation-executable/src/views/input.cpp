@@ -16,14 +16,15 @@ import win32.capabilities;
 namespace siege::views
 {
   using namespace siege::platform;
+  using vkey = siege::platform::vkey;
 
-  std::optional<hardware_index> hardware_index_for_xbox_vkey(SHORT vkey, controller_info::button_preference);
-  std::optional<hardware_index> hardware_index_for_ps3_vkey(SHORT vkey, controller_info::button_preference);
-  std::optional<hardware_index> hardware_index_for_ps4_vkey(SHORT vkey, controller_info::button_preference);
-  std::optional<hardware_index> hardware_index_for_joystick_vkey(SHORT vkey, controller_info::button_preference);
+  std::optional<hardware_index> hardware_index_for_xbox_vkey(vkey key, controller_info::button_preference);
+  std::optional<hardware_index> hardware_index_for_ps3_vkey(vkey key, controller_info::button_preference);
+  std::optional<hardware_index> hardware_index_for_ps4_vkey(vkey key, controller_info::button_preference);
+  std::optional<hardware_index> hardware_index_for_joystick_vkey(vkey key, controller_info::button_preference);
 
-  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_from_cache(HKEY cache);
-  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_lookup_from_context(hardware_context context, HKEY cache);
+  std::function<std::optional<hardware_index>(vkey, controller_info::button_preference)> hardware_index_from_cache(HKEY cache);
+  std::function<std::optional<hardware_index>(vkey, controller_info::button_preference)> hardware_index_lookup_from_context(hardware_context context, HKEY cache);
 
   std::wstring_view context_to_string(hardware_context value);
   hardware_context string_to_context(std::wstring_view value);
@@ -31,22 +32,22 @@ namespace siege::views
   std::set<std::wstring>& strings();
   std::optional<controller_info> controller_info_for_raw_input_device_handle(HANDLE handle);
 
-  constexpr static auto vk_to_xinput_buttons = std::array<std::pair<WORD, SHORT>, 14>{
+  constexpr static auto vk_to_xinput_buttons = std::array<std::pair<vkey, SHORT>, 14>{
     {
-      { VK_GAMEPAD_A, XINPUT_GAMEPAD_A },
-      { VK_GAMEPAD_B, XINPUT_GAMEPAD_B },
-      { VK_GAMEPAD_X, XINPUT_GAMEPAD_X },
-      { VK_GAMEPAD_Y, XINPUT_GAMEPAD_Y },
-      { VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, XINPUT_GAMEPAD_LEFT_THUMB },
-      { VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, XINPUT_GAMEPAD_RIGHT_THUMB },
-      { VK_GAMEPAD_LEFT_SHOULDER, XINPUT_GAMEPAD_LEFT_SHOULDER },
-      { VK_GAMEPAD_RIGHT_SHOULDER, XINPUT_GAMEPAD_RIGHT_SHOULDER },
-      { VK_GAMEPAD_MENU, XINPUT_GAMEPAD_START },
-      { VK_GAMEPAD_VIEW, XINPUT_GAMEPAD_BACK },
-      { VK_GAMEPAD_DPAD_UP, XINPUT_GAMEPAD_DPAD_UP },
-      { VK_GAMEPAD_DPAD_DOWN, XINPUT_GAMEPAD_DPAD_DOWN },
-      { VK_GAMEPAD_DPAD_LEFT, XINPUT_GAMEPAD_DPAD_LEFT },
-      { VK_GAMEPAD_DPAD_RIGHT, XINPUT_GAMEPAD_DPAD_RIGHT },
+      { vkey::gamepad_a, XINPUT_GAMEPAD_A },
+      { vkey::gamepad_b, XINPUT_GAMEPAD_B },
+      { vkey::gamepad_x, XINPUT_GAMEPAD_X },
+      { vkey::gamepad_y, XINPUT_GAMEPAD_Y },
+      { vkey::gamepad_left_thumbstick_button, XINPUT_GAMEPAD_LEFT_THUMB },
+      { vkey::gamepad_right_thumbstick_button, XINPUT_GAMEPAD_RIGHT_THUMB },
+      { vkey::gamepad_left_shoulder, XINPUT_GAMEPAD_LEFT_SHOULDER },
+      { vkey::gamepad_right_shoulder, XINPUT_GAMEPAD_RIGHT_SHOULDER },
+      { vkey::gamepad_menu, XINPUT_GAMEPAD_START },
+      { vkey::gamepad_view, XINPUT_GAMEPAD_BACK },
+      { vkey::gamepad_dpad_up, XINPUT_GAMEPAD_DPAD_UP },
+      { vkey::gamepad_dpad_down, XINPUT_GAMEPAD_DPAD_DOWN },
+      { vkey::gamepad_dpad_left, XINPUT_GAMEPAD_DPAD_LEFT },
+      { vkey::gamepad_dpad_right, XINPUT_GAMEPAD_DPAD_RIGHT },
     }
   };
 
@@ -557,7 +558,7 @@ namespace siege::views
           auto usage = usages[i] - button->Range.UsageMin;
           for (auto& button : vk_to_xinput_buttons)
           {
-            if (button.first >= VK_GAMEPAD_DPAD_UP && button.first <= VK_GAMEPAD_DPAD_RIGHT)
+            if (button.first >= vkey::gamepad_dpad_up && button.first <= vkey::gamepad_dpad_right)
             {
               continue;
             }
@@ -568,13 +569,13 @@ namespace siege::views
               break;
             }
 
-            if (auto index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_button);
+            if (auto index = state.info.get_hardware_index(vkey::gamepad_left_trigger, controller_info::prefer_button);
               caps->has_triggers_as_buttons && index && index->index == usage)
             {
               result.Gamepad.bLeftTrigger = 255;
             }
 
-            if (auto index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_button);
+            if (auto index = state.info.get_hardware_index(vkey::gamepad_right_trigger, controller_info::prefer_button);
               caps->has_triggers_as_buttons && index && index->index == usage)
             {
               result.Gamepad.bRightTrigger = 255;
@@ -627,23 +628,23 @@ namespace siege::views
 
         auto index = value.Range.UsageMin - HID_USAGE_GENERIC_X;
 
-        if (auto ll_index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, controller_info::prefer_axis); ll_index && ll_index->index == index)
+        if (auto ll_index = state.info.get_hardware_index(vkey::gamepad_left_thumbstick_left, controller_info::prefer_axis); ll_index && ll_index->index == index)
         {
           result.Gamepad.sThumbLX = to_s16(value.BitSize, usage);
         }
-        else if (auto lu_index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_THUMBSTICK_UP, controller_info::prefer_axis); lu_index && lu_index->index == index)
+        else if (auto lu_index = state.info.get_hardware_index(vkey::gamepad_left_thumbstick_up, controller_info::prefer_axis); lu_index && lu_index->index == index)
         {
           result.Gamepad.sThumbLY = -to_s16(value.BitSize, usage);
         }
-        else if (auto rl_index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, controller_info::prefer_axis); rl_index && rl_index->index == index)
+        else if (auto rl_index = state.info.get_hardware_index(vkey::gamepad_right_thumbstick_left, controller_info::prefer_axis); rl_index && rl_index->index == index)
         {
           result.Gamepad.sThumbRX = to_s16(value.BitSize, usage);
         }
-        else if (auto ru_index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, controller_info::prefer_axis); ru_index && ru_index->index == index)
+        else if (auto ru_index = state.info.get_hardware_index(vkey::gamepad_right_thumbstick_up, controller_info::prefer_axis); ru_index && ru_index->index == index)
         {
           result.Gamepad.sThumbRY = -to_s16(value.BitSize, usage);
         }
-        else if (auto lt_index = state.info.get_hardware_index(VK_GAMEPAD_LEFT_TRIGGER, controller_info::prefer_axis); caps->trigger_value_count == 1 && lt_index && lt_index->index == index)
+        else if (auto lt_index = state.info.get_hardware_index(vkey::gamepad_left_trigger, controller_info::prefer_axis); caps->trigger_value_count == 1 && lt_index && lt_index->index == index)
         {
           auto [left, right] = to_byte_pair(value.BitSize, usage);
           result.Gamepad.bLeftTrigger = left;
@@ -653,7 +654,7 @@ namespace siege::views
         {
           result.Gamepad.bLeftTrigger = to_byte(value.BitSize, usage);
         }
-        else if (auto rt_index = state.info.get_hardware_index(VK_GAMEPAD_RIGHT_TRIGGER, controller_info::prefer_axis);
+        else if (auto rt_index = state.info.get_hardware_index(vkey::gamepad_right_trigger, controller_info::prefer_axis);
           caps->trigger_value_count >= 2 && rt_index && rt_index->index == index)
         {
           result.Gamepad.bRightTrigger = to_byte(value.BitSize, usage);
@@ -852,9 +853,9 @@ namespace siege::views
       return {};
     }
     std::set<std::uint32_t> indexes;
-    for (auto i = VK_GAMEPAD_A; i <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT; ++i)
+    for (auto i = std::to_underlying(vkey::gamepad_a); i <= std::to_underlying(vkey::gamepad_right_thumbstick_left); ++i)
     {
-      auto value = info.get_hardware_index(i, controller_info::button_preference::prefer_button);
+      auto value = info.get_hardware_index(static_cast<vkey>(i), controller_info::button_preference::prefer_button);
 
       if (!value)
       {
@@ -876,9 +877,9 @@ namespace siege::views
       return {};
     }
     std::set<std::uint32_t> indexes;
-    for (auto i = VK_GAMEPAD_A; i <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT; ++i)
+    for (auto i = std::to_underlying(vkey::gamepad_a); i <= std::to_underlying(vkey::gamepad_right_thumbstick_left); ++i)
     {
-      auto value = info.get_hardware_index(i, controller_info::button_preference::prefer_button);
+      auto value = info.get_hardware_index(static_cast<vkey>(i), controller_info::button_preference::prefer_button);
 
       if (!value)
       {
@@ -901,9 +902,9 @@ namespace siege::views
     }
 
     std::set<siege::views::hardware_index> indexes;
-    for (auto i = VK_GAMEPAD_A; i <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT; ++i)
+    for (auto i = std::to_underlying(vkey::gamepad_a); i <= std::to_underlying(vkey::gamepad_right_thumbstick_left); ++i)
     {
-      auto value = info.get_hardware_index(i, controller_info::button_preference::prefer_button);
+      auto value = info.get_hardware_index(static_cast<vkey>(i), controller_info::button_preference::prefer_button);
 
       if (!value)
       {
@@ -939,7 +940,7 @@ namespace siege::views
       }
     }
 
-    auto process_axis = [&](std::int16_t a, std::int16_t b, WORD key_positive, WORD key_negative) {
+    auto process_axis = [&](std::int16_t a, std::int16_t b, vkey key_positive, vkey key_negative) {
       if (a == b)
       {
         return;
@@ -977,17 +978,17 @@ namespace siege::views
       }
     };
 
-    process_axis(a.Gamepad.sThumbLX, b.Gamepad.sThumbLX, VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, VK_GAMEPAD_LEFT_THUMBSTICK_LEFT);
-    process_axis(a.Gamepad.sThumbLY, b.Gamepad.sThumbLY, VK_GAMEPAD_LEFT_THUMBSTICK_UP, VK_GAMEPAD_LEFT_THUMBSTICK_DOWN);
-    process_axis(a.Gamepad.sThumbRX, b.Gamepad.sThumbRX, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT);
-    process_axis(a.Gamepad.sThumbRY, b.Gamepad.sThumbRY, VK_GAMEPAD_RIGHT_THUMBSTICK_UP, VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN);
+    process_axis(a.Gamepad.sThumbLX, b.Gamepad.sThumbLX, vkey::gamepad_left_thumbstick_right, vkey::gamepad_left_thumbstick_left);
+    process_axis(a.Gamepad.sThumbLY, b.Gamepad.sThumbLY, vkey::gamepad_left_thumbstick_up, vkey::gamepad_left_thumbstick_down);
+    process_axis(a.Gamepad.sThumbRX, b.Gamepad.sThumbRX, vkey::gamepad_right_thumbstick_right, vkey::gamepad_right_thumbstick_left);
+    process_axis(a.Gamepad.sThumbRY, b.Gamepad.sThumbRY, vkey::gamepad_right_thumbstick_up, vkey::gamepad_right_thumbstick_down);
 
     if (a.Gamepad.bLeftTrigger != b.Gamepad.bLeftTrigger)
     {
       auto trigger_b = (std::uint16_t)b.Gamepad.bLeftTrigger;
       auto trigger_a = (std::uint16_t)b.Gamepad.bLeftTrigger;
       buffer[result++] = input_state_change{
-        .vkey = VK_GAMEPAD_LEFT_TRIGGER,
+        .vkey = vkey::gamepad_left_trigger,
         .new_value = static_cast<std::uint16_t>(trigger_b * 257),
         .old_value = static_cast<std::uint16_t>(trigger_a * 257)
       };
@@ -998,7 +999,7 @@ namespace siege::views
       auto trigger_b = (std::uint16_t)b.Gamepad.bRightTrigger;
       auto trigger_a = (std::uint16_t)a.Gamepad.bRightTrigger;
       buffer[result++] = input_state_change{
-        .vkey = VK_GAMEPAD_RIGHT_TRIGGER,
+        .vkey = vkey::gamepad_right_trigger,
         .new_value = static_cast<std::uint16_t>(trigger_b * 257),
         .old_value = static_cast<std::uint16_t>(trigger_a * 257)
       };
@@ -1166,19 +1167,19 @@ namespace siege::views
     return {};
   }
 
-  bool is_vkey_for_controller(WORD vkey)
+  bool is_vkey_for_controller(vkey key)
   {
-    return vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT;
+    return key >= vkey::gamepad_a && key <= vkey::gamepad_right_thumbstick_left;
   }
 
-  bool is_vkey_for_mouse(WORD vkey)
+  bool is_vkey_for_mouse(vkey key)
   {
-    return vkey == VK_LBUTTON || vkey == VK_RBUTTON || vkey == VK_MBUTTON || vkey == VK_XBUTTON1 || vkey == VK_XBUTTON2;
+    return key == vkey::lbutton || key == vkey::rbutton || key == vkey::mbutton || key == vkey::xbutton1 || key == vkey::xbutton2;
   }
 
-  bool is_vkey_for_keyboard(WORD vkey)
+  bool is_vkey_for_keyboard(vkey key)
   {
-    return !is_vkey_for_mouse(vkey) && !is_vkey_for_controller(vkey);
+    return !is_vkey_for_mouse(key) && !is_vkey_for_controller(key);
   }
 
   std::set<std::wstring>& strings()
@@ -1186,10 +1187,10 @@ namespace siege::views
     static std::set<std::wstring> storage;
     return storage;
   }
-  std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context)
+  std::wstring category_for_vkey(vkey key, siege::platform::hardware_context context)
   {
     using namespace siege::platform;
-    if (vkey >= VK_LBUTTON && vkey <= VK_XBUTTON2)
+    if (key >= vkey::lbutton && key <= vkey::xbutton2)
     {
       return L"Mouse";
     }
@@ -1199,7 +1200,7 @@ namespace siege::views
       return L"Mouse";
     }
 
-    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    if (key >= vkey::gamepad_a && key <= vkey::gamepad_right_thumbstick_left)
     {
       return L"Controller";
     }
@@ -1211,53 +1212,53 @@ namespace siege::views
 
     return L"Keyboard";
   }
-  std::wstring label_for_vkey(SHORT vkey, siege::platform::controller_context context)
+  std::wstring label_for_vkey(vkey key, siege::platform::controller_context context)
   {
-    static std::map<std::wstring_view, SHORT> xbox_labels{
-      { L"A Button", VK_GAMEPAD_A },
-      { L"B Button", VK_GAMEPAD_B },
-      { L"X Button", VK_GAMEPAD_X },
-      { L"Y Button", VK_GAMEPAD_Y },
-      { L"Left Bumper", VK_GAMEPAD_LEFT_SHOULDER },
-      { L"Right Bumper", VK_GAMEPAD_RIGHT_SHOULDER },
-      { L"Left Trigger", VK_GAMEPAD_LEFT_TRIGGER },
-      { L"Right Trigger", VK_GAMEPAD_RIGHT_TRIGGER },
-      { L"D-pad Up", VK_GAMEPAD_DPAD_UP },
-      { L"D-pad Down", VK_GAMEPAD_DPAD_DOWN },
-      { L"D-pad Left", VK_GAMEPAD_DPAD_LEFT },
-      { L"D-pad Right", VK_GAMEPAD_DPAD_RIGHT },
-      { L"Left Stick Button", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON },
-      { L"Left Stick Up", VK_GAMEPAD_LEFT_THUMBSTICK_UP },
-      { L"Left Stick Down", VK_GAMEPAD_LEFT_THUMBSTICK_DOWN },
-      { L"Left Stick Left", VK_GAMEPAD_LEFT_THUMBSTICK_LEFT },
-      { L"Left Stick Right", VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT },
-      { L"Right Stick Button", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON },
-      { L"Right Stick Up", VK_GAMEPAD_RIGHT_THUMBSTICK_UP },
-      { L"Right Stick Down", VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN },
-      { L"Right Stick Left", VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT },
-      { L"Right Stick Right", VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT },
-      { L"View Button", VK_GAMEPAD_VIEW },
-      { L"Menu Button", VK_GAMEPAD_MENU },
+    static std::map<std::wstring_view, vkey> xbox_labels{
+      { L"A Button", vkey::gamepad_a },
+      { L"B Button", vkey::gamepad_b },
+      { L"X Button", vkey::gamepad_x },
+      { L"Y Button", vkey::gamepad_y },
+      { L"Left Bumper", vkey::gamepad_left_shoulder },
+      { L"Right Bumper", vkey::gamepad_right_shoulder },
+      { L"Left Trigger", vkey::gamepad_left_trigger },
+      { L"Right Trigger", vkey::gamepad_right_trigger },
+      { L"D-pad Up", vkey::gamepad_dpad_up },
+      { L"D-pad Down", vkey::gamepad_dpad_down },
+      { L"D-pad Left", vkey::gamepad_dpad_left },
+      { L"D-pad Right", vkey::gamepad_dpad_right },
+      { L"Left Stick Button", vkey::gamepad_left_thumbstick_button },
+      { L"Left Stick Up", vkey::gamepad_left_thumbstick_up },
+      { L"Left Stick Down", vkey::gamepad_left_thumbstick_down },
+      { L"Left Stick Left", vkey::gamepad_left_thumbstick_left },
+      { L"Left Stick Right", vkey::gamepad_left_thumbstick_right },
+      { L"Right Stick Button", vkey::gamepad_right_thumbstick_button },
+      { L"Right Stick Up", vkey::gamepad_right_thumbstick_up },
+      { L"Right Stick Down", vkey::gamepad_right_thumbstick_down },
+      { L"Right Stick Left", vkey::gamepad_right_thumbstick_left },
+      { L"Right Stick Right", vkey::gamepad_right_thumbstick_right },
+      { L"View Button", vkey::gamepad_view },
+      { L"Menu Button", vkey::gamepad_menu },
     };
 
-    static std::map<std::wstring_view, SHORT> playstation_labels{
-      { L"Cross Button", VK_GAMEPAD_A },
-      { L"Circle Button", VK_GAMEPAD_B },
-      { L"Square Button", VK_GAMEPAD_X },
-      { L"Triangle Button", VK_GAMEPAD_Y },
-      { L"L1", VK_GAMEPAD_LEFT_SHOULDER },
-      { L"R1", VK_GAMEPAD_RIGHT_SHOULDER },
-      { L"L2", VK_GAMEPAD_LEFT_TRIGGER },
-      { L"R2", VK_GAMEPAD_RIGHT_TRIGGER },
-      { L"L3", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON },
-      { L"R3", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON },
-      { L"Select Button", VK_GAMEPAD_VIEW },
-      { L"Start Button", VK_GAMEPAD_MENU },
+    static std::map<std::wstring_view, vkey> playstation_labels{
+      { L"Cross Button", vkey::gamepad_a },
+      { L"Circle Button", vkey::gamepad_b },
+      { L"Square Button", vkey::gamepad_x },
+      { L"Triangle Button", vkey::gamepad_y },
+      { L"L1", vkey::gamepad_left_shoulder },
+      { L"R1", vkey::gamepad_right_shoulder },
+      { L"L2", vkey::gamepad_left_trigger },
+      { L"R2", vkey::gamepad_right_trigger },
+      { L"L3", vkey::gamepad_left_thumbstick_button },
+      { L"R3", vkey::gamepad_right_thumbstick_button },
+      { L"Select Button", vkey::gamepad_view },
+      { L"Start Button", vkey::gamepad_menu },
     };
 
     if (context == controller_context::controller_playstation_3 || context == controller_context::controller_playstation_4)
     {
-      auto label = std::find_if(playstation_labels.begin(), playstation_labels.end(), [vkey](auto& name) { return name.second == vkey; });
+      auto label = std::find_if(playstation_labels.begin(), playstation_labels.end(), [key](auto& name) { return name.second == key; });
 
       if (label != playstation_labels.end())
       {
@@ -1265,7 +1266,7 @@ namespace siege::views
       }
     }
 
-    auto label = std::find_if(xbox_labels.begin(), xbox_labels.end(), [vkey](auto& name) { return name.second == vkey; });
+    auto label = std::find_if(xbox_labels.begin(), xbox_labels.end(), [key](auto& name) { return name.second == key; });
 
     if (label == xbox_labels.end())
     {
@@ -1275,7 +1276,7 @@ namespace siege::views
     return std::wstring{ label->first };
   }
 
-  std::wstring label_for_vkey(SHORT vkey, siege::platform::hardware_context context)
+  std::wstring label_for_vkey(vkey key, siege::platform::hardware_context context)
   {
     constexpr static auto directions = std::array<std::wstring_view, 4>{
       {
@@ -1288,136 +1289,136 @@ namespace siege::views
 
     if (context == siege::platform::hardware_context::mouse)
     {
-      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      if (key >= vkey::left && key <= vkey::down)
       {
         std::wstring result(L"Move ");
-        result.append(directions[vkey - VK_LEFT]);
+        result.append(directions[std::to_underlying(key) - std::to_underlying(vkey::left)]);
         return result;
       }
     }
 
     if (context == siege::platform::hardware_context::mouse_wheel)
     {
-      if (vkey >= VK_LEFT && vkey <= VK_DOWN)
+      if (key >= vkey::left && key <= vkey::down)
       {
         std::wstring result(L"Scroll ");
-        result.append(directions[vkey - VK_LEFT]);
+        result.append(directions[std::to_underlying(key) - std::to_underlying(vkey::left)]);
         return result;
       }
     }
 
-    if (vkey >= VK_NUMPAD0 && vkey <= VK_NUMPAD9)
+    if (key >= vkey::numpad_0 && key <= vkey::numpad_9)
     {
       std::wstring result(L"Numpad ");
-      result.push_back(L'0' + vkey - VK_NUMPAD0);
+      result.push_back(L'0' + static_cast<wchar_t>(std::to_underlying(key) - std::to_underlying(vkey::numpad_0)));
       return result;
     }
 
-    if (vkey >= VK_F1 && vkey <= VK_F9)
+    if (key >= vkey::f1 && key <= vkey::f9)
     {
       std::wstring result(1, 'F');
-      result.push_back(L'1' + vkey - VK_F1);
+      result.push_back(static_cast<wchar_t>(L'1' + std::to_underlying(key) - std::to_underlying(vkey::f1)));
       return result;
     }
 
-    if (vkey >= VK_F10 && vkey <= VK_F19)
+    if (key >= vkey::f10 && key <= vkey::f19)
     {
       std::wstring result(1, 'F');
       result.push_back(L'1');
-      result.push_back(L'0' + vkey - VK_F10);
+      result.push_back(static_cast<wchar_t>(L'0' + std::to_underlying(key) - std::to_underlying(vkey::f10)));
       return result;
     }
 
-    if (vkey >= VK_F20 && vkey <= VK_F24)
+    if (key >= vkey::f20 && key <= vkey::f24)
     {
       std::wstring result(1, 'F');
       result.push_back(L'2');
-      result.push_back(L'0' + vkey - VK_F20);
+      result.push_back(L'0' + static_cast<wchar_t>(std::to_underlying(key) - std::to_underlying(vkey::f20)));
       return result;
     }
 
-    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    if (key >= vkey::gamepad_a && key <= vkey::gamepad_right_thumbstick_left)
     {
-      return label_for_vkey(vkey, (siege::platform::controller_context)context);
+      return label_for_vkey(key, (siege::platform::controller_context)context);
     }
 
-    switch (vkey)
+    switch (key)
     {
-    case VK_LBUTTON:
+    case vkey::lbutton:
       return L"Left Button";
-    case VK_RBUTTON:
+    case vkey::rbutton:
       return L"Right Button";
-    case VK_MBUTTON:
+    case vkey::mbutton:
       return L"Middle Button";
-    case VK_XBUTTON1:
+    case vkey::xbutton1:
       return L"Extra Button 1";
-    case VK_XBUTTON2:
+    case vkey::xbutton2:
       return L"Extra Button 2";
-    case VK_TAB:
+    case vkey::tab:
       return L"Tab";
-    case VK_CONTROL:
+    case vkey::control:
       return L"Left/Right Control";
-    case VK_LCONTROL:
+    case vkey::left_control:
       return L"Left Control";
-    case VK_RCONTROL:
+    case vkey::right_control:
       return L"Right Control";
-    case VK_MENU:
+    case vkey::alt:
       return L"Left/Right Alt";
-    case VK_LMENU:
+    case vkey::left_alt:
       return L"Left Alt";
-    case VK_RMENU:
+    case vkey::right_alt:
       return L"Right Alt";
-    case VK_SHIFT:
+    case vkey::shift:
       return L"Left/Right Shift";
-    case VK_LSHIFT:
+    case vkey::left_shift:
       return L"Left Shift";
-    case VK_RSHIFT:
+    case vkey::right_shift:
       return L"Right Shift";
-    case VK_LWIN:
+    case vkey::left_win:
       return L"Left Windows Key";
-    case VK_RWIN:
+    case vkey::right_win:
       return L"Right Windows Key";
-    case VK_RETURN:
+    case vkey::enter:
       return L"Enter";
-    case VK_UP:
+    case vkey::up:
       return L"Up Arrow";
-    case VK_DOWN:
+    case vkey::down:
       return L"Down Arrow";
-    case VK_LEFT:
+    case vkey::left:
       return L"Left Arrow";
-    case VK_RIGHT:
+    case vkey::right:
       return L"Right Arrow";
-    case VK_SPACE:
+    case vkey::space:
       return L"Spacebar";
-    case VK_SNAPSHOT:
+    case vkey::snapshot:
       return L"Print Screen";
-    case VK_CAPITAL:
+    case vkey::caps_lock:
       return L"Caps Lock";
-    case VK_NUMLOCK:
+    case vkey::num_lock:
       return L"Num Lock";
-    case VK_SCROLL:
+    case vkey::scroll_lock:
       return L"Scroll Lock";
-    case VK_HOME:
+    case vkey::home:
       return L"Home";
-    case VK_DELETE:
+    case vkey::del:
       return L"Delete";
-    case VK_ESCAPE:
+    case vkey::escape:
       return L"Escape";
-    case VK_INSERT:
+    case vkey::insert:
       return L"Insert";
-    case VK_PRIOR:
+    case vkey::page_up:
       return L"Page Down";
-    case VK_NEXT:
+    case vkey::page_down:
       return L"Page Up";
-    case VK_PAUSE:
+    case vkey::pause:
       return L"Pause";
-    case VK_BACK:
+    case vkey::backspace:
       return L"Backspace";
     default:
-      return std::wstring(1, ::MapVirtualKeyW(vkey, MAPVK_VK_TO_CHAR));
+      return std::wstring(1, ::MapVirtualKeyW(std::to_underlying(key), MAPVK_VK_TO_CHAR));
     }
   }
-  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_lookup_from_context(hardware_context context, HKEY cache)
+  std::function<std::optional<hardware_index>(vkey, controller_info::button_preference)> hardware_index_lookup_from_context(hardware_context context, HKEY cache)
   {
     if (context == hardware_context::controller_xbox)
     {

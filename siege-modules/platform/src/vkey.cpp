@@ -9,6 +9,7 @@ export namespace siege::platform
   // Gamepad enumerators follow Win32 VK_GAMEPAD_* order so range checks stay valid later.
   enum struct vkey : std::uint16_t
   {
+    none = 0,
     lbutton,
     rbutton,
     mbutton,
@@ -23,6 +24,7 @@ export namespace siege::platform
     alt,
     pause,
     caps_lock,
+    escape,
     space,
     page_up,
     page_down,
@@ -32,8 +34,11 @@ export namespace siege::platform
     up,
     right,
     down,
+    print,
+    snapshot,
     insert,
     del,
+    scroll_lock,
 
     f1,
     f2,
@@ -47,9 +52,30 @@ export namespace siege::platform
     f10,
     f11,
     f12,
+    f13,
+    f14,
+    f15,
+    f16,
+    f17,
+    f18,
+    f19,
+    f20,
+    f21,
+    f22,
+    f23,
+    f24,
 
     num_lock,
+    numpad_0,
+    numpad_1,
     numpad_2,
+    numpad_3,
+    numpad_4,
+    numpad_5,
+    numpad_6,
+    numpad_7,
+    numpad_8,
+    numpad_9,
 
     left_shift,
     right_shift,
@@ -57,6 +83,8 @@ export namespace siege::platform
     right_control,
     left_alt,
     right_alt,
+    left_win,
+    right_win,
 
     oem_1,
     oem_plus,
@@ -68,6 +96,7 @@ export namespace siege::platform
     oem_4,
     oem_5,
     oem_6,
+    oem_7,
 
     gamepad_a,
     gamepad_b,
@@ -94,4 +123,9 @@ export namespace siege::platform
     gamepad_right_thumbstick_right,
     gamepad_right_thumbstick_left,
   };
+
+  constexpr std::strong_ordering operator<=>(vkey a, vkey b) noexcept
+  {
+    return std::to_underlying(a) <=> std::to_underlying(b);
+  }
 }

@@ -18,10 +18,11 @@ import exe.shared;
 
 namespace siege::views
 {
+  using vkey = siege::platform::vkey;
   struct input_mapping
   {
     hardware_index index;
-    WORD vkey;
+    vkey vkey;
   };
 
   using controller_state = siege::views::controller_state;
@@ -30,7 +31,7 @@ namespace siege::views
   using input_type = decltype(siege::views::hardware_index::type);
   namespace stl = std::ranges;
 
-  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> store_custom_controller_mapping(const controller_info& info, std::span<input_mapping> mappings);
+  std::function<std::optional<hardware_index>(vkey, controller_info::button_preference)> store_custom_controller_mapping(const controller_info& info, std::span<input_mapping> mappings);
   controller_info store_controller_context(const controller_info& info, hardware_context context);
 
   struct raw_selected_input
@@ -54,7 +55,7 @@ namespace siege::views
       WPARAM item;
       bool visible = false;
       hardware_index index;
-      WORD vkey;
+      vkey vkey;
     };
 
     win32::list_view device_selection;
@@ -384,7 +385,7 @@ namespace siege::views
         auto button_or_axis = stl::find_if(mappings, [&](auto& mapping) {
           return mapping.item == message.iItem;
         });
-        if (button_or_axis != mappings.end() && (button_or_axis->vkey == VK_GAMEPAD_LEFT_TRIGGER || button_or_axis->vkey == VK_GAMEPAD_RIGHT_TRIGGER))
+        if (button_or_axis != mappings.end() && (button_or_axis->vkey == vkey::gamepad_left_trigger || button_or_axis->vkey == vkey::gamepad_right_trigger))
         {
           auto selected_item = get_raw_input_from_dialog(this->ref(), controller->first, controller->second.state, std::nullopt);
           if (!selected_item)
@@ -1065,18 +1066,18 @@ namespace siege::views
       }
 
       for (auto button : {
-             VK_GAMEPAD_A,
-             VK_GAMEPAD_B,
-             VK_GAMEPAD_X,
-             VK_GAMEPAD_Y,
-             VK_GAMEPAD_LEFT_SHOULDER,
-             VK_GAMEPAD_RIGHT_SHOULDER,
-             VK_GAMEPAD_LEFT_TRIGGER,
-             VK_GAMEPAD_RIGHT_TRIGGER,
-             VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON,
-             VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON,
-             VK_GAMEPAD_VIEW,
-             VK_GAMEPAD_MENU,
+             vkey::gamepad_a,
+             vkey::gamepad_b,
+             vkey::gamepad_x,
+             vkey::gamepad_y,
+             vkey::gamepad_left_shoulder,
+             vkey::gamepad_right_shoulder,
+             vkey::gamepad_left_trigger,
+             vkey::gamepad_right_trigger,
+             vkey::gamepad_left_thumbstick_button,
+             vkey::gamepad_right_thumbstick_button,
+             vkey::gamepad_view,
+             vkey::gamepad_menu,
            })
       {
         if (!state.info.get_hardware_index)
@@ -1096,16 +1097,16 @@ namespace siege::views
       }
 
       for (auto axis : {
-             VK_GAMEPAD_LEFT_THUMBSTICK_LEFT,
-             VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT,
-             VK_GAMEPAD_LEFT_THUMBSTICK_UP,
-             VK_GAMEPAD_LEFT_THUMBSTICK_DOWN,
-             VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT,
-             VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT,
-             VK_GAMEPAD_RIGHT_THUMBSTICK_UP,
-             VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN,
-             VK_GAMEPAD_LEFT_TRIGGER,
-             VK_GAMEPAD_RIGHT_TRIGGER,
+             vkey::gamepad_left_thumbstick_left,
+             vkey::gamepad_left_thumbstick_right,
+             vkey::gamepad_left_thumbstick_up,
+             vkey::gamepad_left_thumbstick_down,
+             vkey::gamepad_right_thumbstick_left,
+             vkey::gamepad_right_thumbstick_right,
+             vkey::gamepad_right_thumbstick_up,
+             vkey::gamepad_right_thumbstick_down,
+             vkey::gamepad_left_trigger,
+             vkey::gamepad_right_trigger,
            })
       {
         if (!state.info.get_hardware_index)

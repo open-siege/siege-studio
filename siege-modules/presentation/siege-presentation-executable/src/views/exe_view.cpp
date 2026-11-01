@@ -20,11 +20,13 @@ import win32.shell;
 import win32.theming;
 
 import siege.extension.input_filter;
+import siege.platform;
 
 import exe.shared;
 
 namespace siege::views
 {
+  using vkey = siege::platform::vkey;
   using namespace std::literals;
 
   struct exe_view final : win32::basic_window<exe_view>
@@ -55,9 +57,9 @@ namespace siege::views
 
     struct controller_send_input_binding
     {
-      std::uint16_t from_vkey;
+      siege::platform::vkey from_vkey;
       siege::platform::hardware_context from_context;
-      std::uint16_t to_vkey;
+      siege::platform::vkey to_vkey;
       siege::platform::hardware_context to_context;
     };
 

@@ -1,6 +1,5 @@
 module;
 
-#include <siege/platform/windows.hpp>
 export module siege.extension.vampire;
 
 import std;
@@ -9,7 +8,10 @@ import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
 import siege.extension.shared;
+import siege.platform;
 import siege.platform.shared;
+
+using vkey = siege::platform::vkey;
 
 using siege::platform::input_mapping_ex;
 using siege::platform::controller_input_type;
@@ -115,17 +117,17 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
 
 export std::optional<std::string_view> mouse_key_for_vkey(const input_mapping_ex& mapping) noexcept
 {
-  if (mapping.vkey == VK_LBUTTON)
+  if (mapping.vkey == vkey::lbutton)
   {
     return "mouse1"sv;
   }
 
-  if (mapping.vkey == VK_RBUTTON)
+  if (mapping.vkey == vkey::rbutton)
   {
     return "mouse2"sv;
   }
 
-  if (mapping.vkey == VK_MBUTTON)
+  if (mapping.vkey == vkey::mbutton)
   {
     return "mouse3"sv;
   }
@@ -136,20 +138,20 @@ export std::optional<std::string_view> mouse_key_for_vkey(const input_mapping_ex
 export std::optional<input_mapping_ex> vkey_for_mouse_key(const std::string_view& mapping) noexcept
 {
   input_mapping_ex result{};
-  result.vkey = VK_LBUTTON;
+  result.vkey = vkey::lbutton;
 
   if (mouse_key_for_vkey(result) == mapping)
   {
     return result;
   }
 
-  result.vkey = VK_RBUTTON;
+  result.vkey = vkey::rbutton;
 
   if (mouse_key_for_vkey(result) == mapping)
   {
     return result;
   }
-  result.vkey = VK_MBUTTON;
+  result.vkey = vkey::mbutton;
 
   if (mouse_key_for_vkey(result) == mapping)
   {
@@ -188,7 +190,7 @@ export std::optional<std::string_view> joy_key_for_vkey(const input_mapping_ex& 
 
 struct mapping
 {
-  WORD vkey;
+  vkey vkey;
   std::string_view name;
 };
 
@@ -200,16 +202,16 @@ constexpr auto& get_ascii_keys()
 
     for (auto i = 0; i < upper_keys.size(); ++i)
     {
-      results[i].vkey = (WORD)upper_keys[i];
+      results[i].vkey = static_cast<vkey>(upper_keys[i]);
       results[i].name = upper_keys.substr(i, 1);
     }
     return results;
   }();
 
-  static_assert(uppercase_keys[0].vkey == 0x41);
+  static_assert(std::to_underlying(uppercase_keys[0].vkey) == 0x41);
   static_assert(uppercase_keys[0].name == "A"sv);
 
-  static_assert(uppercase_keys[uppercase_keys.size() - 1].vkey == 0x39);
+  static_assert(std::to_underlying(uppercase_keys[uppercase_keys.size() - 1].vkey) == 0x39);
   static_assert(uppercase_keys[uppercase_keys.size() - 1].name == "9"sv);
   return uppercase_keys;
 }
@@ -217,52 +219,52 @@ constexpr auto& get_ascii_keys()
 constexpr auto& get_special_keys()
 {
   constexpr static auto special_keys = std::array<mapping, 46>{ {
-    { .vkey = VK_UP, .name = "UPARROW"sv },
-    { VK_DOWN, "DOWNARROW"sv },
-    { VK_LEFT, "LEFTARROW"sv },
-    { VK_RIGHT, "UPARROW"sv },
-    { VK_CONTROL, "CTRL"sv },
-    { VK_RETURN, "ENTER"sv },
-    { VK_SHIFT, "SHIFT"sv },
-    { VK_MENU, "ALT"sv },
-    { VK_HOME, "HOME"sv },
-    { VK_PRIOR, "PGUP"sv },
-    { VK_ESCAPE, "ESCAPE"sv },
-    { VK_NEXT, "PGDN"sv },
-    { VK_END, "END"sv },
-    { VK_DELETE, "DEL"sv },
-    { VK_INSERT, "INS"sv },
-    { VK_PRINT, "PRINTSCREEN"sv },
-    { VK_CAPITAL, "CAPS"sv },
-    { VK_PAUSE, "PAUSE"sv },
-    { VK_TAB, "TAB"sv },
-    { VK_SPACE, "SPACE"sv },
-    { VK_OEM_1, "SEMICOLON"sv },
-    { VK_OEM_7, "QUOTE"sv },
-    { VK_SCROLL, "SCROLL"sv },
-    { VK_F1, "F1"sv },
-    { VK_F2, "F2"sv },
-    { VK_F3, "F3"sv },
-    { VK_F4, "F4"sv },
-    { VK_F5, "F5"sv },
-    { VK_F6, "F6"sv },
-    { VK_F7, "F7"sv },
-    { VK_F8, "F8"sv },
-    { VK_F9, "F9"sv },
-    { VK_F10, "F10"sv },
-    { VK_F11, "F11"sv },
-    { VK_F12, "F12"sv },
-    { VK_OEM_COMMA, ","sv },
-    { VK_OEM_PERIOD, "."sv },
-    { VK_OEM_MINUS, "-"sv },
-    { VK_OEM_PLUS, "="sv },
-    { VK_OEM_1, ";"sv },
-    { VK_OEM_2, "/"sv },
-    { VK_OEM_3, "`"sv },
-    { VK_OEM_4, "["sv },
-    { VK_OEM_5, "\\"sv },
-    { VK_OEM_6, "]"sv },
-    { VK_OEM_7, "'"sv },
+    { .vkey = vkey::up, .name = "UPARROW"sv },
+    { vkey::down, "DOWNARROW"sv },
+    { vkey::left, "LEFTARROW"sv },
+    { vkey::right, "UPARROW"sv },
+    { vkey::control, "CTRL"sv },
+    { vkey::enter, "ENTER"sv },
+    { vkey::shift, "SHIFT"sv },
+    { vkey::alt, "ALT"sv },
+    { vkey::home, "HOME"sv },
+    { vkey::page_up, "PGUP"sv },
+    { vkey::escape, "ESCAPE"sv },
+    { vkey::page_down, "PGDN"sv },
+    { vkey::end, "END"sv },
+    { vkey::del, "DEL"sv },
+    { vkey::insert, "INS"sv },
+    { vkey::print, "PRINTSCREEN"sv },
+    { vkey::caps_lock, "CAPS"sv },
+    { vkey::pause, "PAUSE"sv },
+    { vkey::tab, "TAB"sv },
+    { vkey::space, "SPACE"sv },
+    { vkey::oem_1, "SEMICOLON"sv },
+    { vkey::oem_7, "QUOTE"sv },
+    { vkey::scroll_lock, "SCROLL"sv },
+    { vkey::f1, "F1"sv },
+    { vkey::f2, "F2"sv },
+    { vkey::f3, "F3"sv },
+    { vkey::f4, "F4"sv },
+    { vkey::f5, "F5"sv },
+    { vkey::f6, "F6"sv },
+    { vkey::f7, "F7"sv },
+    { vkey::f8, "F8"sv },
+    { vkey::f9, "F9"sv },
+    { vkey::f10, "F10"sv },
+    { vkey::f11, "F11"sv },
+    { vkey::f12, "F12"sv },
+    { vkey::oem_comma, ","sv },
+    { vkey::oem_period, "."sv },
+    { vkey::oem_minus, "-"sv },
+    { vkey::oem_plus, "="sv },
+    { vkey::oem_1, ";"sv },
+    { vkey::oem_2, "/"sv },
+    { vkey::oem_3, "`"sv },
+    { vkey::oem_4, "["sv },
+    { vkey::oem_5, "\\"sv },
+    { vkey::oem_6, "]"sv },
+    { vkey::oem_7, "'"sv },
   } };
   return special_keys;
 }

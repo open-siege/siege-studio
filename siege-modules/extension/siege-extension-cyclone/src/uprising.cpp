@@ -4,6 +4,7 @@ import std;
 import siege.configuration.uprising;
 import siege.extension.shared;
 import siege.platform.extension;
+import siege.platform;
 import siege.platform.shared;
 
 namespace fs = std::filesystem;
@@ -26,6 +27,7 @@ using game_action = siege::platform::game_action;
 using keyboard_binding = siege::platform::keyboard_binding;
 using mouse_binding = siege::platform::mouse_binding;
 using controller_binding = siege::platform::controller_binding;
+using vkey = siege::platform::vkey;
 using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
@@ -262,17 +264,17 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     return std::errc::bad_address;
   }
 
-  std::array<std::pair<WORD, action_str>, 2> buttons{
-    { std::make_pair<WORD, action_str>(VK_LBUTTON, str(action::fire_weapon_1)),
-      std::make_pair<WORD, action_str>(VK_RBUTTON, str(action::fire_weapon_2)) }
+  std::array<std::pair<vkey, action_str>, 2> buttons{
+    { { vkey::lbutton, str(action::fire_weapon_1) },
+      { vkey::rbutton, str(action::fire_weapon_2) } }
   };
 
-  std::array<std::pair<WORD, action_str>, 4> axes{
+  std::array<std::pair<vkey, action_str>, 4> axes{
     {
-      std::make_pair<WORD, action_str>(VK_UP, str(action::look_up)),
-      std::make_pair<WORD, action_str>(VK_DOWN, str(action::look_down)),
-      std::make_pair<WORD, action_str>(VK_LEFT, str(action::turn_left)),
-      std::make_pair<WORD, action_str>(VK_RIGHT, str(action::turn_right)),
+      { vkey::up, str(action::look_up) },
+      { vkey::down, str(action::look_down) },
+      { vkey::left, str(action::turn_left) },
+      { vkey::right, str(action::turn_right) },
     }
   };
 
@@ -283,10 +285,10 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     axes = {
       {
-        std::make_pair<WORD, action_str>(VK_UP, str(action::look_down)),
-        std::make_pair<WORD, action_str>(VK_DOWN, str(action::look_up)),
-        std::make_pair<WORD, action_str>(VK_LEFT, str(action::turn_left)),
-        std::make_pair<WORD, action_str>(VK_RIGHT, str(action::turn_right)),
+        { vkey::up, str(action::look_down) },
+        { vkey::down, str(action::look_up) },
+        { vkey::left, str(action::turn_left) },
+        { vkey::right, str(action::turn_right) },
       }
     };
   }
@@ -356,7 +358,7 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
       break;
     }
     first_available->input_type = siege::platform::controller_input_type::button;
-    first_available->virtual_key = ::MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX);
+    first_available->virtual_key = static_cast<vkey>(::MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX));
     first_available->action_name = str(action);
     scan_code++;
   }
@@ -376,32 +378,32 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
     return std::errc::invalid_argument;
   }
 
-  std::array<std::pair<WORD, action_str>, 24> actions{
+  std::array<std::pair<vkey, action_str>, 24> actions{
     {
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_RIGHT_TRIGGER, str(action::fire_weapon_1)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_LEFT_TRIGGER, str(action::fire_weapon_2)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_LEFT_SHOULDER, str(action::call_power_building)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_RIGHT_SHOULDER, str(action::call_ksat_building)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, str(action::cycle_power_triangle)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, str(action::change_tank_view)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_A, str(action::select_ai_unit)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_B, str(action::sell_back)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_X, str(action::auto_call_in)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_Y, str(action::weapon_2_up)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_DPAD_UP, str(action::call_soldier_building)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_DPAD_DOWN, str(action::call_tank_building)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_DPAD_LEFT, str(action::call_aav_building)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_DPAD_RIGHT, str(action::call_bomber_building)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_VIEW, str(action::jump_to_citadel)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_MENU, str(action::pause_menu)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, str(action::move_forward)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, str(action::move_back)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, str(action::strafe_left)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, str(action::strafe_right)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, str(action::look_up)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, str(action::look_down)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, str(action::turn_left)),
-      std::make_pair<WORD, action_str>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, str(action::turn_right)),
+      { vkey::gamepad_right_trigger, str(action::fire_weapon_1) },
+      { vkey::gamepad_left_trigger, str(action::fire_weapon_2) },
+      { vkey::gamepad_left_shoulder, str(action::call_power_building) },
+      { vkey::gamepad_right_shoulder, str(action::call_ksat_building) },
+      { vkey::gamepad_left_thumbstick_button, str(action::cycle_power_triangle) },
+      { vkey::gamepad_right_thumbstick_button, str(action::change_tank_view) },
+      { vkey::gamepad_a, str(action::select_ai_unit) },
+      { vkey::gamepad_b, str(action::sell_back) },
+      { vkey::gamepad_x, str(action::auto_call_in) },
+      { vkey::gamepad_y, str(action::weapon_2_up) },
+      { vkey::gamepad_dpad_up, str(action::call_soldier_building) },
+      { vkey::gamepad_dpad_down, str(action::call_tank_building) },
+      { vkey::gamepad_dpad_left, str(action::call_aav_building) },
+      { vkey::gamepad_dpad_right, str(action::call_bomber_building) },
+      { vkey::gamepad_view, str(action::jump_to_citadel) },
+      { vkey::gamepad_menu, str(action::pause_menu) },
+      { vkey::gamepad_left_thumbstick_up, str(action::move_forward) },
+      { vkey::gamepad_left_thumbstick_down, str(action::move_back) },
+      { vkey::gamepad_left_thumbstick_left, str(action::strafe_left) },
+      { vkey::gamepad_left_thumbstick_right, str(action::strafe_right) },
+      { vkey::gamepad_right_thumbstick_up, str(action::look_up) },
+      { vkey::gamepad_right_thumbstick_down, str(action::look_down) },
+      { vkey::gamepad_right_thumbstick_left, str(action::turn_left) },
+      { vkey::gamepad_right_thumbstick_right, str(action::turn_right) },
     }
   };
 

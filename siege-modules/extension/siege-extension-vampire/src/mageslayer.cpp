@@ -9,6 +9,7 @@ import siege.configuration.shared;
 import siege.extension.id_tech;
 import siege.extension.shared;
 import siege.extension.vampire;
+import siege.platform;
 import siege.platform.shared;
 
 using siege::platform::hardware_context;
@@ -24,6 +25,7 @@ using siege::platform::game_command_line_caps;
 using siege::platform::game_action;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
 using predefined_string = siege::platform::game_command_line_predefined_setting<const wchar_t*>;
+using vkey = siege::platform::vkey;
 
 namespace fs = std::filesystem;
 namespace stl = std::ranges;
@@ -149,17 +151,17 @@ std::errc is_input_mapping_valid(const siege::platform::hardware_context_caps* c
     return std::errc::bad_message;
   }
 
-  if (mapping->vkey == VK_LSHIFT || mapping->vkey == VK_RSHIFT)
+  if (mapping->vkey == vkey::left_shift || mapping->vkey == vkey::right_shift)
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == VK_LCONTROL || mapping->vkey == VK_RCONTROL)
+  if (mapping->vkey == vkey::left_control || mapping->vkey == vkey::right_control)
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == VK_LMENU || mapping->vkey == VK_RMENU)
+  if (mapping->vkey == vkey::left_alt || mapping->vkey == vkey::right_alt)
   {
     return std::errc::not_supported;
   }
@@ -384,12 +386,12 @@ std::errc init_mouse_inputs(mouse_binding* binding) noexcept
     upsert_inputs(*config);
   }
 
-  std::array<std::pair<WORD, std::string_view>, 4> axes{
+  std::array<std::pair<vkey, std::string_view>, 4> axes{
     {
-      std::make_pair<WORD, std::string_view>(VK_UP, "+forward"),
-      std::make_pair<WORD, std::string_view>(VK_DOWN, "+backward"),
-      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
-      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
+      { vkey::up, "+forward" },
+      { vkey::down, "+backward" },
+      { vkey::left, "+left" },
+      { vkey::right, "+right" },
     }
   };
 
@@ -485,30 +487,30 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
     return std::errc::invalid_argument;
   }
 
-  std::array<std::pair<WORD, std::string_view>, 24> actions{
+  std::array<std::pair<vkey, std::string_view>, 24> actions{
     {
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attack"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "impulse 10"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "sb_usespecificitem 12"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "sb_usespecificitem 13"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+jump"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+down"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "sb_useitem"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "sb_nextitem"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+backward"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, "+strafeleft"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, "+straferight"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, "+turnleft"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+turnright"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+attack2"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_UP, "impulse 3"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "zoomtoggle"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "impulse 1"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "impsule 3"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+look"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "ToggleHelp"),
+      { vkey::gamepad_right_trigger, "+attack" },
+      { vkey::gamepad_left_trigger, "impulse 10" },
+      { vkey::gamepad_left_shoulder, "sb_usespecificitem 12" },
+      { vkey::gamepad_right_shoulder, "sb_usespecificitem 13" },
+      { vkey::gamepad_a, "+jump" },
+      { vkey::gamepad_b, "+down" },
+      { vkey::gamepad_x, "sb_useitem" },
+      { vkey::gamepad_y, "sb_nextitem" },
+      { vkey::gamepad_left_thumbstick_button, "+speed" },
+      { vkey::gamepad_left_thumbstick_up, "+forward" },
+      { vkey::gamepad_left_thumbstick_down, "+backward" },
+      { vkey::gamepad_left_thumbstick_left, "+strafeleft" },
+      { vkey::gamepad_left_thumbstick_right, "+straferight" },
+      { vkey::gamepad_right_thumbstick_left, "+turnleft" },
+      { vkey::gamepad_right_thumbstick_right, "+turnright" },
+      { vkey::gamepad_right_thumbstick_button, "+attack2" },
+      { vkey::gamepad_dpad_up, "impulse 3" },
+      { vkey::gamepad_dpad_down, "zoomtoggle" },
+      { vkey::gamepad_dpad_left, "impulse 1" },
+      { vkey::gamepad_dpad_right, "impsule 3" },
+      { vkey::gamepad_view, "+look" },
+      { vkey::gamepad_menu, "ToggleHelp" },
     }
   };
 

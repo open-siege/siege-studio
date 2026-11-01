@@ -183,12 +183,12 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     upsert_mouse_bindings(*config, *binding);
   }
 
-  std::array<std::pair<std::uint16_t, std::string_view>, 4> axes{
+  std::array<std::pair<vkey, std::string_view>, 4> axes{
     {
-      { std::to_underlying(vkey::up), "+lookup" },
-      { std::to_underlying(vkey::down), "+lookdown" },
-      { std::to_underlying(vkey::left), "+left" },
-      { std::to_underlying(vkey::right), "+right" },
+      { vkey::up, "+lookup" },
+      { vkey::down, "+lookdown" },
+      { vkey::left, "+left" },
+      { vkey::right, "+right" },
     }
   };
 
@@ -229,31 +229,31 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
     return std::errc::invalid_argument;
   }
 
-  std::array<std::pair<std::uint16_t, std::string_view>, 23> actions{
+  std::array<std::pair<vkey, std::string_view>, 23> actions{
     {
-      { std::to_underlying(vkey::gamepad_right_trigger), "+attack" },
-      { std::to_underlying(vkey::gamepad_left_trigger), "+altattack" },
-      { std::to_underlying(vkey::gamepad_a), "+moveup" },
-      { std::to_underlying(vkey::gamepad_b), "+movedown" },
-      { std::to_underlying(vkey::gamepad_left_thumbstick_button), "+speed" },
-      { std::to_underlying(vkey::gamepad_left_thumbstick_up), "+forward" },
-      { std::to_underlying(vkey::gamepad_left_thumbstick_down), "+back" },
-      { std::to_underlying(vkey::gamepad_left_thumbstick_left), "+moveleft" },
-      { std::to_underlying(vkey::gamepad_left_thumbstick_right), "+moveright" },
-      { std::to_underlying(vkey::gamepad_right_thumbstick_left), "+left" },
-      { std::to_underlying(vkey::gamepad_right_thumbstick_right), "+right" },
-      { std::to_underlying(vkey::gamepad_right_thumbstick_up), "+lookup" },
-      { std::to_underlying(vkey::gamepad_right_thumbstick_down), "+lookdown" },
-      { std::to_underlying(vkey::gamepad_right_thumbstick_button), "+melee-attack" },
-      { std::to_underlying(vkey::gamepad_x), "+use" },
-      { std::to_underlying(vkey::gamepad_y), "weapnext" },
-      { std::to_underlying(vkey::gamepad_left_shoulder), "itemnext" },
-      { std::to_underlying(vkey::gamepad_right_shoulder), "itemuse" },
-      { std::to_underlying(vkey::gamepad_dpad_down), "weapondrop" },
-      { std::to_underlying(vkey::gamepad_dpad_left), "weapprev" },
-      { std::to_underlying(vkey::gamepad_dpad_right), "weapnext" },
-      { std::to_underlying(vkey::gamepad_view), "score" },
-      { std::to_underlying(vkey::gamepad_menu), "menu objectives" },
+      { vkey::gamepad_right_trigger, "+attack" },
+      { vkey::gamepad_left_trigger, "+altattack" },
+      { vkey::gamepad_a, "+moveup" },
+      { vkey::gamepad_b, "+movedown" },
+      { vkey::gamepad_left_thumbstick_button, "+speed" },
+      { vkey::gamepad_left_thumbstick_up, "+forward" },
+      { vkey::gamepad_left_thumbstick_down, "+back" },
+      { vkey::gamepad_left_thumbstick_left, "+moveleft" },
+      { vkey::gamepad_left_thumbstick_right, "+moveright" },
+      { vkey::gamepad_right_thumbstick_left, "+left" },
+      { vkey::gamepad_right_thumbstick_right, "+right" },
+      { vkey::gamepad_right_thumbstick_up, "+lookup" },
+      { vkey::gamepad_right_thumbstick_down, "+lookdown" },
+      { vkey::gamepad_right_thumbstick_button, "+melee-attack" },
+      { vkey::gamepad_x, "+use" },
+      { vkey::gamepad_y, "weapnext" },
+      { vkey::gamepad_left_shoulder, "itemnext" },
+      { vkey::gamepad_right_shoulder, "itemuse" },
+      { vkey::gamepad_dpad_down, "weapondrop" },
+      { vkey::gamepad_dpad_left, "weapprev" },
+      { vkey::gamepad_dpad_right, "weapnext" },
+      { vkey::gamepad_view, "score" },
+      { vkey::gamepad_menu, "menu objectives" },
     }
   };
 

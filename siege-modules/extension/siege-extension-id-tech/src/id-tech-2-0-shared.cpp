@@ -51,17 +51,17 @@ std::errc is_id_tech_2_0_input_mapping_valid(const siege::platform::hardware_con
     return std::errc{};
   }
 
-  if (mapping->vkey == std::to_underlying(vk::left_shift) || mapping->vkey == std::to_underlying(vk::right_shift))
+  if (mapping->vkey == vk::left_shift || mapping->vkey == vk::right_shift)
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == std::to_underlying(vk::left_control) || mapping->vkey == std::to_underlying(vk::right_control))
+  if (mapping->vkey == vk::left_control || mapping->vkey == vk::right_control)
   {
     return std::errc::not_supported;
   }
 
-  if (mapping->vkey == std::to_underlying(vk::left_alt) || mapping->vkey == std::to_underlying(vk::right_alt))
+  if (mapping->vkey == vk::left_alt || mapping->vkey == vk::right_alt)
   {
     return std::errc::not_supported;
   }

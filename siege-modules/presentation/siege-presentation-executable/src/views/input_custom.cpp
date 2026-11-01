@@ -10,18 +10,19 @@ import win32.capabilities;
 namespace siege::views
 {
   using namespace siege::platform;
-  std::wstring reg_name_for_controller_vkey(SHORT vkey);
+  using vkey = siege::platform::vkey;
+  std::wstring reg_name_for_controller_vkey(vkey key);
   std::wstring_view input_type_to_string(input_type value);
   std::wstring_view context_to_string(hardware_context value);
-  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_from_cache(HKEY cache);
+  std::function<std::optional<hardware_index>(vkey, controller_info::button_preference)> hardware_index_from_cache(HKEY cache);
 
   struct input_mapping
   {
     hardware_index index;
-    WORD vkey;
+    vkey vkey;
   };
 
-  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> store_custom_controller_mapping(const controller_info& info, std::span<input_mapping> mappings)
+  std::function<std::optional<hardware_index>(vkey, controller_info::button_preference)> store_custom_controller_mapping(const controller_info& info, std::span<input_mapping> mappings)
   {
     std::wstring key = L"Software\\The Siege Hub\\Siege Studio\\ControllerCache";
     HKEY user_key = nullptr;
@@ -48,10 +49,10 @@ namespace siege::views
   }
 
   std::optional<input_type> string_to_input_type(std::wstring_view value);
-  std::map<std::wstring_view, SHORT>& controller_vkey_reg_names();
-  std::function<std::optional<hardware_index>(SHORT, controller_info::button_preference)> hardware_index_from_cache(HKEY cache)
+  std::map<std::wstring_view, vkey>& controller_vkey_reg_names();
+  std::function<std::optional<hardware_index>(vkey, controller_info::button_preference)> hardware_index_from_cache(HKEY cache)
   {
-    std::map<SHORT, hardware_index> mapping{};
+    std::map<vkey, hardware_index> mapping{};
 
     std::wstring buffer;
     DWORD count = 0;
@@ -87,47 +88,47 @@ namespace siege::views
       }
     }
 
-    return [mapping = std::move(mapping)](SHORT vkey, controller_info::button_preference pref) -> std::optional<hardware_index> {
+    return [mapping = std::move(mapping)](vkey key, controller_info::button_preference pref) -> std::optional<hardware_index> {
       auto result = mapping.end();
 
-      auto is_vkey_pair = [&](auto a, auto b) { return vkey == a || vkey == b; };
+      auto is_vkey_pair = [&](auto a, auto b) { return key == a || key == b; };
 
       auto find_mapping_pair = [&](auto pos, auto neg) {
         auto pos_result = mapping.find(pos);
         auto neg_result = mapping.find(neg);
 
-        if (pos == vkey && pos_result == mapping.end() && neg_result != mapping.end() && neg_result->second.type == input_type::axis)
+        if (pos == key && pos_result == mapping.end() && neg_result != mapping.end() && neg_result->second.type == input_type::axis)
         {
           return neg_result;
         }
 
-        if (neg == vkey && neg_result == mapping.end() && pos_result != mapping.end() && pos_result->second.type == input_type::axis)
+        if (neg == key && neg_result == mapping.end() && pos_result != mapping.end() && pos_result->second.type == input_type::axis)
         {
           return pos_result;
         }
 
-        return pos == vkey ? pos_result : neg_result;
+        return pos == key ? pos_result : neg_result;
       };
 
-      if (is_vkey_pair(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT))
+      if (is_vkey_pair(vkey::gamepad_left_thumbstick_left, vkey::gamepad_left_thumbstick_right))
       {
-        result = find_mapping_pair(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT);
+        result = find_mapping_pair(vkey::gamepad_left_thumbstick_left, vkey::gamepad_left_thumbstick_right);
       }
-      else if (is_vkey_pair(VK_GAMEPAD_LEFT_THUMBSTICK_UP, VK_GAMEPAD_LEFT_THUMBSTICK_DOWN))
+      else if (is_vkey_pair(vkey::gamepad_left_thumbstick_up, vkey::gamepad_left_thumbstick_down))
       {
-        result = find_mapping_pair(VK_GAMEPAD_LEFT_THUMBSTICK_UP, VK_GAMEPAD_LEFT_THUMBSTICK_DOWN);
+        result = find_mapping_pair(vkey::gamepad_left_thumbstick_up, vkey::gamepad_left_thumbstick_down);
       }
-      else if (is_vkey_pair(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT))
+      else if (is_vkey_pair(vkey::gamepad_right_thumbstick_left, vkey::gamepad_right_thumbstick_right))
       {
-        result = find_mapping_pair(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT);
+        result = find_mapping_pair(vkey::gamepad_right_thumbstick_left, vkey::gamepad_right_thumbstick_right);
       }
-      else if (is_vkey_pair(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN))
+      else if (is_vkey_pair(vkey::gamepad_right_thumbstick_up, vkey::gamepad_right_thumbstick_down))
       {
-        result = find_mapping_pair(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN);
+        result = find_mapping_pair(vkey::gamepad_right_thumbstick_up, vkey::gamepad_right_thumbstick_down);
       }
       else
       {
-        result = mapping.find(vkey);
+        result = mapping.find(key);
       }
 
       if (result == mapping.end())
@@ -139,47 +140,47 @@ namespace siege::views
     };
   }
 
-  std::map<std::wstring_view, SHORT>& controller_vkey_reg_names()
+  std::map<std::wstring_view, vkey>& controller_vkey_reg_names()
   {
-    static std::map<std::wstring_view, SHORT> vkeys{
-      { L"AButton", VK_GAMEPAD_A },
-      { L"BButton", VK_GAMEPAD_B },
-      { L"XButton", VK_GAMEPAD_X },
-      { L"YButton", VK_GAMEPAD_Y },
-      { L"LeftBumper", VK_GAMEPAD_LEFT_SHOULDER },
-      { L"RightBumper", VK_GAMEPAD_RIGHT_SHOULDER },
-      { L"LeftTrigger", VK_GAMEPAD_LEFT_TRIGGER },
-      { L"RightTrigger", VK_GAMEPAD_RIGHT_TRIGGER },
-      { L"DPadUp", VK_GAMEPAD_DPAD_UP },
-      { L"DPadDown", VK_GAMEPAD_DPAD_DOWN },
-      { L"DPadLeft", VK_GAMEPAD_DPAD_LEFT },
-      { L"DPadRight", VK_GAMEPAD_DPAD_RIGHT },
-      { L"LeftStickButton", VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON },
-      { L"LeftStickUp", VK_GAMEPAD_LEFT_THUMBSTICK_UP },
-      { L"LeftStickDown", VK_GAMEPAD_LEFT_THUMBSTICK_DOWN },
-      { L"LeftStickLeft", VK_GAMEPAD_LEFT_THUMBSTICK_LEFT },
-      { L"LeftStickRight", VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT },
-      { L"RightStickButton", VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON },
-      { L"RightStickUp", VK_GAMEPAD_RIGHT_THUMBSTICK_UP },
-      { L"RightStickDown", VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN },
-      { L"RightStickLeft", VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT },
-      { L"RightStickRight", VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT },
-      { L"ViewButton", VK_GAMEPAD_VIEW },
-      { L"MenuButton", VK_GAMEPAD_MENU },
+    static std::map<std::wstring_view, vkey> vkeys{
+      { L"AButton", vkey::gamepad_a },
+      { L"BButton", vkey::gamepad_b },
+      { L"XButton", vkey::gamepad_x },
+      { L"YButton", vkey::gamepad_y },
+      { L"LeftBumper", vkey::gamepad_left_shoulder },
+      { L"RightBumper", vkey::gamepad_right_shoulder },
+      { L"LeftTrigger", vkey::gamepad_left_trigger },
+      { L"RightTrigger", vkey::gamepad_right_trigger },
+      { L"DPadUp", vkey::gamepad_dpad_up },
+      { L"DPadDown", vkey::gamepad_dpad_down },
+      { L"DPadLeft", vkey::gamepad_dpad_left },
+      { L"DPadRight", vkey::gamepad_dpad_right },
+      { L"LeftStickButton", vkey::gamepad_left_thumbstick_button },
+      { L"LeftStickUp", vkey::gamepad_left_thumbstick_up },
+      { L"LeftStickDown", vkey::gamepad_left_thumbstick_down },
+      { L"LeftStickLeft", vkey::gamepad_left_thumbstick_left },
+      { L"LeftStickRight", vkey::gamepad_left_thumbstick_right },
+      { L"RightStickButton", vkey::gamepad_right_thumbstick_button },
+      { L"RightStickUp", vkey::gamepad_right_thumbstick_up },
+      { L"RightStickDown", vkey::gamepad_right_thumbstick_down },
+      { L"RightStickLeft", vkey::gamepad_right_thumbstick_left },
+      { L"RightStickRight", vkey::gamepad_right_thumbstick_right },
+      { L"ViewButton", vkey::gamepad_view },
+      { L"MenuButton", vkey::gamepad_menu },
     };
     return vkeys;
   }
 
-  SHORT controller_vkey_reg_name(std::wstring_view name)
+  vkey controller_vkey_reg_name(std::wstring_view name)
   {
     return controller_vkey_reg_names().at(name);
   }
 
-  std::wstring reg_name_for_controller_vkey(SHORT vkey)
+  std::wstring reg_name_for_controller_vkey(vkey key)
   {
     auto& names = controller_vkey_reg_names();
 
-    auto name = std::find_if(names.begin(), names.end(), [vkey](auto& name) { return name.second == vkey; });
+    auto name = std::find_if(names.begin(), names.end(), [key](auto& name) { return name.second == key; });
 
     if (name == names.end())
     {

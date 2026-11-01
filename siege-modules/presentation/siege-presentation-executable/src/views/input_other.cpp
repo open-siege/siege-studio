@@ -10,6 +10,7 @@ import win32.capabilities;
 
 namespace siege::views
 {
+  using vkey = siege::platform::vkey;
   using input_type = siege::platform::controller_input_type;
 
   constexpr USAGE to_index(USAGE value)
@@ -17,44 +18,44 @@ namespace siege::views
     return value - HID_USAGE_GENERIC_X;
   }
 
-  std::optional<hardware_index> hardware_index_for_joystick_vkey(SHORT vkey, controller_info::button_preference)
+  std::optional<hardware_index> hardware_index_for_joystick_vkey(vkey key, controller_info::button_preference)
   {
-    switch (vkey)
+    switch (key)
     {
-    case VK_GAMEPAD_DPAD_UP:
-    case VK_GAMEPAD_DPAD_DOWN:
-    case VK_GAMEPAD_DPAD_LEFT:
-    case VK_GAMEPAD_DPAD_RIGHT:
+    case vkey::gamepad_dpad_up:
+    case vkey::gamepad_dpad_down:
+    case vkey::gamepad_dpad_left:
+    case vkey::gamepad_dpad_right:
       return hardware_index{ input_type::hat, 0 };
-    case VK_GAMEPAD_RIGHT_TRIGGER:
+    case vkey::gamepad_right_trigger:
       return hardware_index{ input_type::button, 0 };
-    case VK_GAMEPAD_LEFT_TRIGGER:
+    case vkey::gamepad_left_trigger:
       return hardware_index{ input_type::button, 1 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON:
+    case vkey::gamepad_left_thumbstick_button:
       return hardware_index{ input_type::button, 2 };
-    case VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON:
+    case vkey::gamepad_right_thumbstick_button:
       return hardware_index{ input_type::button, 3 };
-    case VK_GAMEPAD_LEFT_SHOULDER:
+    case vkey::gamepad_left_shoulder:
       return hardware_index{ input_type::button, 4 };
-    case VK_GAMEPAD_RIGHT_SHOULDER:
+    case vkey::gamepad_right_shoulder:
       return hardware_index{ input_type::button, 5 };
-    case VK_GAMEPAD_A:
+    case vkey::gamepad_a:
       return hardware_index{ input_type::button, 6 };
-    case VK_GAMEPAD_B:
+    case vkey::gamepad_b:
       return hardware_index{ input_type::button, 7 };
-    case VK_GAMEPAD_X:
+    case vkey::gamepad_x:
       return hardware_index{ input_type::button, 8 };
-    case VK_GAMEPAD_Y:
+    case vkey::gamepad_y:
       return hardware_index{ input_type::button, 9 };
-    case VK_GAMEPAD_VIEW:
+    case vkey::gamepad_view:
       return hardware_index{ input_type::button, 10 };
-    case VK_GAMEPAD_MENU:
+    case vkey::gamepad_menu:
       return hardware_index{ input_type::button, 11 };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_LEFT:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT:
+    case vkey::gamepad_left_thumbstick_left:
+    case vkey::gamepad_left_thumbstick_right:
       return hardware_index{ input_type::axis, to_index(HID_USAGE_GENERIC_X) };
-    case VK_GAMEPAD_LEFT_THUMBSTICK_UP:
-    case VK_GAMEPAD_LEFT_THUMBSTICK_DOWN:
+    case vkey::gamepad_left_thumbstick_up:
+    case vkey::gamepad_left_thumbstick_down:
       return hardware_index{ input_type::axis, to_index(HID_USAGE_GENERIC_Y) };
     default:
       return std::nullopt;

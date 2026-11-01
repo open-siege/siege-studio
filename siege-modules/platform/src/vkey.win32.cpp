@@ -9,6 +9,7 @@ export namespace siege::platform
 {
   enum struct vkey : std::uint16_t
   {
+    none = 0,
     lbutton = VK_LBUTTON,
     rbutton = VK_RBUTTON,
     mbutton = VK_MBUTTON,
@@ -23,6 +24,7 @@ export namespace siege::platform
     alt = VK_MENU,
     pause = VK_PAUSE,
     caps_lock = VK_CAPITAL,
+    escape = VK_ESCAPE,
     space = VK_SPACE,
     page_up = VK_PRIOR,
     page_down = VK_NEXT,
@@ -32,8 +34,11 @@ export namespace siege::platform
     up = VK_UP,
     right = VK_RIGHT,
     down = VK_DOWN,
+    print = VK_PRINT,
+    snapshot = VK_SNAPSHOT,
     insert = VK_INSERT,
     del = VK_DELETE,
+    scroll_lock = VK_SCROLL,
 
     f1 = VK_F1,
     f2 = VK_F2,
@@ -47,9 +52,30 @@ export namespace siege::platform
     f10 = VK_F10,
     f11 = VK_F11,
     f12 = VK_F12,
+    f13 = VK_F13,
+    f14 = VK_F14,
+    f15 = VK_F15,
+    f16 = VK_F16,
+    f17 = VK_F17,
+    f18 = VK_F18,
+    f19 = VK_F19,
+    f20 = VK_F20,
+    f21 = VK_F21,
+    f22 = VK_F22,
+    f23 = VK_F23,
+    f24 = VK_F24,
 
     num_lock = VK_NUMLOCK,
+    numpad_0 = VK_NUMPAD0,
+    numpad_1 = VK_NUMPAD1,
     numpad_2 = VK_NUMPAD2,
+    numpad_3 = VK_NUMPAD3,
+    numpad_4 = VK_NUMPAD4,
+    numpad_5 = VK_NUMPAD5,
+    numpad_6 = VK_NUMPAD6,
+    numpad_7 = VK_NUMPAD7,
+    numpad_8 = VK_NUMPAD8,
+    numpad_9 = VK_NUMPAD9,
 
     left_shift = VK_LSHIFT,
     right_shift = VK_RSHIFT,
@@ -57,6 +83,8 @@ export namespace siege::platform
     right_control = VK_RCONTROL,
     left_alt = VK_LMENU,
     right_alt = VK_RMENU,
+    left_win = VK_LWIN,
+    right_win = VK_RWIN,
 
     oem_1 = VK_OEM_1,
     oem_plus = VK_OEM_PLUS,
@@ -68,6 +96,7 @@ export namespace siege::platform
     oem_4 = VK_OEM_4,
     oem_5 = VK_OEM_5,
     oem_6 = VK_OEM_6,
+    oem_7 = VK_OEM_7,
 
     gamepad_a = VK_GAMEPAD_A,
     gamepad_b = VK_GAMEPAD_B,
@@ -94,4 +123,9 @@ export namespace siege::platform
     gamepad_right_thumbstick_right = VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT,
     gamepad_right_thumbstick_left = VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT,
   };
+
+  constexpr std::strong_ordering operator<=>(vkey a, vkey b) noexcept
+  {
+    return std::to_underlying(a) <=> std::to_underlying(b);
+  }
 }

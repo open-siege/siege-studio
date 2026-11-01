@@ -11,10 +11,12 @@ import win32.capabilities;
 import win32.common_controls;
 import win32.window;
 import siege.extension.input_filter;
+import siege.platform;
 import exe.shared;
 
 namespace siege::views
 {
+  using vkey = siege::platform::vkey;
   using siege::views::controller_state;
   using siege::platform::hardware_context;
 
@@ -36,7 +38,7 @@ namespace siege::views
     up
   };
 
-  ::INPUT vk_to_input(WORD vkey, hardware_context context, std::uint32_t device_id, input_state state, int intensity);
+  ::INPUT vk_to_input(vkey key, hardware_context context, std::uint32_t device_id, input_state state, int intensity);
 
   struct input_injector
   {
@@ -276,14 +278,14 @@ namespace siege::views
         return 0;
       }
 
-      std::unordered_map<WORD, input_state_change> x_mouse_changes;
-      std::unordered_map<WORD, input_state_change> y_mouse_changes;
+      std::unordered_map<vkey, input_state_change> x_mouse_changes;
+      std::unordered_map<vkey, input_state_change> y_mouse_changes;
 
       for (auto mapped_vkey : changes)
       {
         for (auto& mapping : mappings)
         {
-          if (!mapping.from_vkey || !mapping.to_vkey)
+          if (mapping.from_vkey == vkey::none || mapping.to_vkey == vkey::none)
           {
             break;
           }
@@ -320,13 +322,13 @@ namespace siege::views
             continue;
           }
 
-          if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == VK_LEFT || mapping.to_vkey == VK_RIGHT))
+          if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == vkey::left || mapping.to_vkey == vkey::right))
           {
             x_mouse_changes[mapping.to_vkey] = mapped_vkey;
             continue;
           }
 
-          if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == VK_UP || mapping.to_vkey == VK_DOWN))
+          if (mapping.to_context == hardware_context::mouse && (mapping.to_vkey == vkey::up || mapping.to_vkey == vkey::down))
           {
             y_mouse_changes[mapping.to_vkey] = mapped_vkey;
             continue;
@@ -374,11 +376,11 @@ namespace siege::views
 
           if (max_x != x_mouse_changes.end())
           {
-            if (max_x->first == VK_RIGHT)
+            if (max_x->first == vkey::right)
             {
               mouse_intensity.x = max_x->second.new_value / 1000;
             }
-            else if (max_x->first == VK_LEFT)
+            else if (max_x->first == vkey::left)
             {
               mouse_intensity.x = -int(max_x->second.new_value / 1000);
             }
@@ -395,11 +397,11 @@ namespace siege::views
 
           if (max_y != y_mouse_changes.end())
           {
-            if (max_y->first == VK_DOWN)
+            if (max_y->first == vkey::down)
             {
               mouse_intensity.y = max_y->second.new_value / 1000;
             }
-            else if (max_y->first == VK_UP)
+            else if (max_y->first == vkey::up)
             {
               mouse_intensity.y = -int(max_y->second.new_value / 1000);
             }
@@ -539,11 +541,11 @@ namespace siege::views
     }
   };
 
-  ::INPUT vk_to_input(WORD vkey, hardware_context context, std::uint32_t device_id, input_state state, int intensity)
+  ::INPUT vk_to_input(vkey key, hardware_context context, std::uint32_t device_id, input_state state, int intensity)
   {
     ::INPUT result{};
 
-    if (vkey == VK_LBUTTON)
+    if (key == vkey::lbutton)
     {
       result.type = INPUT_MOUSE;
       result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_LEFTDOWN;
@@ -551,7 +553,7 @@ namespace siege::views
       return result;
     }
 
-    if (vkey == VK_RBUTTON)
+    if (key == vkey::rbutton)
     {
       result.type = INPUT_MOUSE;
       result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_RIGHTUP : MOUSEEVENTF_RIGHTDOWN;
@@ -559,7 +561,7 @@ namespace siege::views
       return result;
     }
 
-    if (vkey == VK_MBUTTON)
+    if (key == vkey::mbutton)
     {
       result.type = INPUT_MOUSE;
       result.mi.dwFlags = state == input_state::up ? MOUSEEVENTF_MIDDLEUP : MOUSEEVENTF_MIDDLEDOWN;
@@ -567,7 +569,7 @@ namespace siege::views
       return result;
     }
 
-    if (vkey == VK_XBUTTON1)
+    if (key == vkey::xbutton1)
     {
       result.type = INPUT_MOUSE;
       result.mi.dwFlags = XBUTTON1;
@@ -576,7 +578,7 @@ namespace siege::views
       return result;
     }
 
-    if (vkey == VK_XBUTTON2)
+    if (key == vkey::xbutton2)
     {
       result.type = INPUT_MOUSE;
       result.mi.dwFlags = XBUTTON2;
@@ -585,10 +587,10 @@ namespace siege::views
       return result;
     }
 
-    if (vkey >= VK_GAMEPAD_A && vkey <= VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT)
+    if (key >= vkey::gamepad_a && key <= vkey::gamepad_right_thumbstick_left)
     {
       result.type = INPUT_KEYBOARD;
-      result.ki.wVk = vkey;
+      result.ki.wVk = static_cast<WORD>(std::to_underlying(key));
 
       result.ki.dwFlags = state == input_state::up ? KEYEVENTF_KEYUP : 0;
       result.ki.dwExtraInfo = MAKELPARAM(device_id, intensity);
@@ -598,16 +600,16 @@ namespace siege::views
 
     // TODO handle extended codes correctly
     result.type = INPUT_KEYBOARD;
-    result.ki.wScan = ::MapVirtualKeyW(vkey, MAPVK_VK_TO_VSC);
+    result.ki.wScan = ::MapVirtualKeyW(std::to_underlying(key), MAPVK_VK_TO_VSC);
     result.ki.dwFlags = state == input_state::up ? KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP : KEYEVENTF_SCANCODE;
     result.ki.dwExtraInfo = device_id;
 
-    if (context == hardware_context::keyboard && (vkey == VK_HOME || vkey == VK_INSERT || vkey == VK_DELETE || vkey == VK_END || vkey == VK_NEXT || vkey == VK_PRIOR))
+    if (context == hardware_context::keyboard && (key == vkey::home || key == vkey::insert || key == vkey::del || key == vkey::end || key == vkey::page_down || key == vkey::page_up))
     {
       result.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
     }
 
-    if (context == hardware_context::keypad && (vkey == VK_RETURN))
+    if (context == hardware_context::keypad && (key == vkey::enter))
     {
       result.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
     }

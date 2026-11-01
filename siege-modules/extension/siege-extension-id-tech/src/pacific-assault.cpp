@@ -1,4 +1,3 @@
-#include <siege/platform/windows.hpp>
 import std;
 import win32.file;
 import win32.process;
@@ -7,6 +6,7 @@ import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
 import siege.extension.shared;
+import siege.platform;
 import siege.platform.shared;
 
 extern "C" {
@@ -15,6 +15,7 @@ using game_action = siege::platform::game_action;
 using keyboard_binding = siege::platform::keyboard_binding;
 using mouse_binding = siege::platform::mouse_binding;
 using controller_binding = siege::platform::controller_binding;
+using vkey = siege::platform::vkey;
 using game_action = siege::platform::game_action;
 using game_command_line_caps = siege::platform::game_command_line_caps;
 using predefined_int = siege::platform::game_command_line_predefined_setting<int>;
@@ -136,12 +137,12 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     }
   }
 
-  std::array<std::pair<WORD, std::string_view>, 4> axes{
+  std::array<std::pair<vkey, std::string_view>, 4> axes{
     {
-      std::make_pair<WORD, std::string_view>(VK_UP, "+lookup"),
-      std::make_pair<WORD, std::string_view>(VK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_LEFT, "+left"),
-      std::make_pair<WORD, std::string_view>(VK_RIGHT, "+right"),
+      { vkey::up, "+lookup"},
+      { vkey::down, "+lookdown"},
+      { vkey::left, "+left"},
+      { vkey::right, "+right"},
     }
   };
 
@@ -187,32 +188,32 @@ std::errc default_controller_inputs(controller_binding* binding, std::uint32_t l
     return std::errc::invalid_argument;
   }
 
-  std::array<std::pair<WORD, std::string_view>, 24> actions{
+  std::array<std::pair<vkey, std::string_view>, 24> actions{
     {
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_TRIGGER, "+attackprimary"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_TRIGGER, "+playeraim"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_A, "+moveup"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_B, "+movedown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_BUTTON, "+speed"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_UP, "+forward"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_DOWN, "+back"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_LEFT, "+moveleft"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT, "+moveright"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT, "+left"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT, "+right"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_UP, "+lookup"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN, "+lookdown"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_THUMBSTICK_BUTTON, "+attacksecondary"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_X, "holster"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_Y, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_LEFT_SHOULDER, "toggleitem"),
-      // std::make_pair<WORD, std::string_view>(VK_GAMEPAD_RIGHT_SHOULDER, "vstr swap-grenade"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_UP, "invnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_DOWN, "invprev"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_LEFT, "weapprev"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_DPAD_RIGHT, "weapnext"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_VIEW, "+scores"),
-      std::make_pair<WORD, std::string_view>(VK_GAMEPAD_MENU, "togglemenu"),
+      { vkey::gamepad_right_trigger, "+attackprimary"},
+      { vkey::gamepad_left_trigger, "+playeraim"},
+      { vkey::gamepad_a, "+moveup"},
+      { vkey::gamepad_b, "+movedown"},
+      { vkey::gamepad_left_thumbstick_button, "+speed"},
+      { vkey::gamepad_left_thumbstick_up, "+forward"},
+      { vkey::gamepad_left_thumbstick_down, "+back"},
+      { vkey::gamepad_left_thumbstick_left, "+moveleft"},
+      { vkey::gamepad_left_thumbstick_right, "+moveright"},
+      { vkey::gamepad_right_thumbstick_left, "+left"},
+      { vkey::gamepad_right_thumbstick_right, "+right"},
+      { vkey::gamepad_right_thumbstick_up, "+lookup"},
+      { vkey::gamepad_right_thumbstick_down, "+lookdown"},
+      { vkey::gamepad_right_thumbstick_button, "+attacksecondary"},
+      { vkey::gamepad_x, "holster"},
+      { vkey::gamepad_y, "weapnext"},
+      { vkey::gamepad_left_shoulder, "toggleitem"},
+      // { vkey::gamepad_right_shoulder, "vstr swap-grenade"},
+      { vkey::gamepad_dpad_up, "invnext"},
+      { vkey::gamepad_dpad_down, "invprev"},
+      { vkey::gamepad_dpad_left, "weapprev"},
+      { vkey::gamepad_dpad_right, "weapnext"},
+      { vkey::gamepad_view, "+scores"},
+      { vkey::gamepad_menu, "togglemenu"},
     }
   };
 

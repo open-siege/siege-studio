@@ -12,6 +12,8 @@ import std;
 import win32.module;
 import win32.file;
 
+import siege.platform;
+export import siege.platform;
 export import siege.platform.extension;
 import siege.platform.shared;
 import siege.platform.stream;
@@ -27,6 +29,7 @@ using namespace std::literals;
 
 namespace siege::views
 {
+  using vkey = siege::platform::vkey;
   export constexpr auto zt_fallback_ip = L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4"sv;
   export constexpr auto mouse_simulation_enabled_env = L"SIEGE_MOUSE_SIMULATION_ENABLED"sv;
   export constexpr auto keyboard_simulation_enabled_env = L"SIEGE_KEYBOARD_SIMULATION_ENABLED"sv;
@@ -43,7 +46,7 @@ namespace siege::views
 
   export struct input_action_binding
   {
-    std::uint16_t vkey;
+    vkey vkey;
     // The context starts off vague and becomes more
     // defined as more hardware information is detected.
     // For controller input especially, we eventually
@@ -150,7 +153,7 @@ namespace siege::views
       prefer_hid,
       prefer_winmm
     };
-    std::function<std::optional<hardware_index>(SHORT, button_preference)> get_hardware_index;
+    std::function<std::optional<hardware_index>(vkey, button_preference)> get_hardware_index;
     std::pair<std::uint32_t, std::uint32_t> vendor_product_id;
     bool is_system_preferred = false;
   };
@@ -159,7 +162,7 @@ namespace siege::views
 
   export struct input_state_change
   {
-    WORD vkey;
+    vkey vkey;
     std::uint16_t new_value;
     std::uint16_t old_value;
   };
@@ -174,7 +177,7 @@ namespace siege::views
 
   export struct ui_action_context
   {
-    WORD vkey;
+    vkey vkey;
     siege::platform::hardware_context context;
     siege::platform::game_action action;
     WORD action_index;
@@ -540,12 +543,12 @@ namespace siege::views
   export std::set<std::uint32_t> mapped_axes(const controller_info& info);
   export std::uint32_t mapped_hat_count(const controller_info& info);
   export std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer);
-  export bool is_vkey_for_controller(WORD vkey);
-  export bool is_vkey_for_mouse(WORD vkey);
-  export bool is_vkey_for_keyboard(WORD vkey);
-  export std::wstring category_for_vkey(SHORT vkey, siege::platform::hardware_context context);
-  export std::wstring label_for_vkey(SHORT vkey, siege::platform::controller_context context);
-  export std::wstring label_for_vkey(SHORT vkey, siege::platform::hardware_context context);
+  export bool is_vkey_for_controller(vkey key);
+  export bool is_vkey_for_mouse(vkey key);
+  export bool is_vkey_for_keyboard(vkey key);
+  export std::wstring category_for_vkey(vkey key, siege::platform::hardware_context context);
+  export std::wstring label_for_vkey(vkey key, siege::platform::controller_context context);
+  export std::wstring label_for_vkey(vkey key, siege::platform::hardware_context context);
 
   export std::span<game_setting> init_launch_settings(std::any& state)
   {
@@ -2070,7 +2073,7 @@ namespace siege::views
   using siege::platform::hardware_context_caps;
   using siege::platform::input_mapping_ex;
 
-  export std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context context, WORD virtual_key, std::uint16_t action_index)
+  export std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context context, vkey virtual_key, std::uint16_t action_index)
   {
     assert(has_extension_module(state));
 
@@ -2086,7 +2089,7 @@ namespace siege::views
     {
       binding.vkey = virtual_key;
       binding.action_name = action.action_name;
-      binding.hardware_index = ::MapVirtualKeyW(virtual_key, MAPVK_VK_TO_VSC_EX);
+      binding.hardware_index = ::MapVirtualKeyW(std::to_underlying(virtual_key), MAPVK_VK_TO_VSC_EX);
       binding.hardware_input_type = input_type::button;
       binding.context = context;
 
@@ -2101,14 +2104,14 @@ namespace siege::views
       binding.context = context;
 
       auto is_mouse_button = [&] {
-        return binding.vkey == VK_LBUTTON || binding.vkey == VK_RBUTTON || binding.vkey == VK_MBUTTON || binding.vkey == VK_XBUTTON1 || binding.vkey == VK_XBUTTON2;
+        return binding.vkey == vkey::lbutton || binding.vkey == vkey::rbutton || binding.vkey == vkey::mbutton || binding.vkey == vkey::xbutton1 || binding.vkey == vkey::xbutton2;
       };
 
       if ((binding.context == hardware_context::mouse || binding.context == hardware_context::mouse_wheel) && !is_mouse_button())
       {
         binding.hardware_input_type = input_type::axis;
 
-        if (binding.vkey == VK_LEFT || binding.vkey == VK_RIGHT)
+        if (binding.vkey == vkey::left || binding.vkey == vkey::right)
         {
           binding.hardware_index = 1;
         }
@@ -2116,7 +2119,7 @@ namespace siege::views
       else if (is_mouse_button())
       {
         binding.hardware_input_type = input_type::button;
-        binding.hardware_index = binding.vkey - VK_LBUTTON;
+        binding.hardware_index = static_cast<std::uint16_t>(std::to_underlying(binding.vkey) - std::to_underlying(vkey::lbutton));
       }
 
       return std::make_pair(hardware_context_caps{
@@ -2129,7 +2132,7 @@ namespace siege::views
     }
   }
 
-  export std::optional<WORD> get_expected_vkey_for_keyboard_mouse(const std::any& state, hardware_context context, WORD vkey, std::uint16_t action_index)
+  export std::optional<vkey> get_expected_vkey_for_keyboard_mouse(const std::any& state, hardware_context context, vkey key, std::uint16_t action_index)
   {
     assert(has_extension_module(state));
 
@@ -2137,7 +2140,7 @@ namespace siege::views
 
     assert(!actions.empty());
 
-    auto [caps, mapping] = get_full_info_for_binding(state, context, vkey, action_index);
+    auto [caps, mapping] = get_full_info_for_binding(state, context, key, action_index);
 
     if (get_extension(state)
           .is_input_mapping_valid(caps, mapping))
@@ -2145,17 +2148,17 @@ namespace siege::views
       return mapping.vkey;
     }
 
-    if (vkey == VK_LSHIFT || vkey == VK_RSHIFT)
+    if (key == vkey::left_shift || key == vkey::right_shift)
     {
-      mapping.vkey = VK_SHIFT;
+      mapping.vkey = vkey::shift;
     }
-    else if (vkey == VK_LCONTROL || vkey == VK_RCONTROL)
+    else if (key == vkey::left_control || key == vkey::right_control)
     {
-      mapping.vkey = VK_CONTROL;
+      mapping.vkey = vkey::control;
     }
-    else if (vkey == VK_LMENU || vkey == VK_RMENU)
+    else if (key == vkey::left_alt || key == vkey::right_alt)
     {
-      mapping.vkey = VK_MENU;
+      mapping.vkey = vkey::alt;
     }
 
     if (get_extension(state)
@@ -2232,7 +2235,7 @@ namespace siege::views
 
       if (action_iter == action_settings.end())
       {
-        action_settings.emplace_back(ui_action_context{ 0, siege::platform::hardware_context::global, action, action_index });
+        action_settings.emplace_back(ui_action_context{ vkey::none, siege::platform::hardware_context::global, action, action_index });
       }
 
       action_index++;
@@ -2865,14 +2868,14 @@ namespace siege::views
 
     std::size_t action_size = std::clamp<std::size_t>(game_args.action_bindings.size(), 0, old_args.action_bindings.size());
     std::size_t old_index = 0;
-    std::size_t fallback_index = stl::count_if(game_args.controller_to_send_input_mappings, [](auto& item) { return item.from_vkey != 0; });
+    std::size_t fallback_index = stl::count_if(game_args.controller_to_send_input_mappings, [](auto& item) { return item.from_vkey != vkey::none; });
 
     for (auto i = 0U; i < action_size; ++i)
     {
       auto& action = game_args.action_bindings[i];
 
       auto is_dpad_vkey = [&] {
-        return action.vkey == VK_GAMEPAD_DPAD_UP || action.vkey == VK_GAMEPAD_DPAD_DOWN || action.vkey == VK_GAMEPAD_DPAD_LEFT || action.vkey == VK_GAMEPAD_DPAD_RIGHT;
+        return action.vkey == vkey::gamepad_dpad_up || action.vkey == vkey::gamepad_dpad_down || action.vkey == vkey::gamepad_dpad_left || action.vkey == vkey::gamepad_dpad_right;
       };
 
       auto is_unmappable_dpad = [&] {

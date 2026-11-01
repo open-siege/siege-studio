@@ -6,6 +6,7 @@ export module siege.platform.extension;
 
 import std;
 import win32.module;
+import siege.platform;
 import siege.platform.shared;
 
 namespace siege::platform
@@ -24,11 +25,13 @@ namespace siege::platform
   {
     struct action_binding
     {
-      std::uint16_t virtual_key{};
+      vkey virtual_key{};
       controller_input_type input_type;
       std::uint16_t input_index{};
       Context context;
       std::array<char, 32> action_name{};
+      static_assert(sizeof(siege::platform::vkey) == sizeof(std::uint16_t));
+      static_assert(std::is_same_v<std::underlying_type_t<siege::platform::vkey>, std::uint16_t>);
     };
 
     int controller_index{};
@@ -100,24 +103,24 @@ namespace siege::platform
     return static_cast<int>(context) >= static_cast<int>(hardware_context::controller_xbox);
   }
 
-  export constexpr bool is_up_direction(WORD vkey)
+  export constexpr bool is_up_direction(vkey key)
   {
-    return vkey == VK_GAMEPAD_DPAD_UP || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_UP || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_UP || vkey == VK_GAMEPAD_Y;
+    return key == vkey::gamepad_dpad_up || key == vkey::gamepad_left_thumbstick_up || key == vkey::gamepad_right_thumbstick_up || key == vkey::gamepad_y;
   }
 
-  export constexpr bool is_down_direction(WORD vkey)
+  export constexpr bool is_down_direction(vkey key)
   {
-    return vkey == VK_GAMEPAD_DPAD_DOWN || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_DOWN || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_DOWN || vkey == VK_GAMEPAD_A;
+    return key == vkey::gamepad_dpad_down || key == vkey::gamepad_left_thumbstick_down || key == vkey::gamepad_right_thumbstick_down || key == vkey::gamepad_a;
   }
 
-  export constexpr bool is_left_direction(WORD vkey)
+  export constexpr bool is_left_direction(vkey key)
   {
-    return vkey == VK_GAMEPAD_DPAD_LEFT || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_LEFT || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_LEFT || vkey == VK_GAMEPAD_X;
+    return key == vkey::gamepad_dpad_left || key == vkey::gamepad_left_thumbstick_left || key == vkey::gamepad_right_thumbstick_left || key == vkey::gamepad_x;
   }
 
-  export constexpr bool is_right_direction(WORD vkey)
+  export constexpr bool is_right_direction(vkey key)
   {
-    return vkey == VK_GAMEPAD_DPAD_RIGHT || vkey == VK_GAMEPAD_LEFT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_RIGHT_THUMBSTICK_RIGHT || vkey == VK_GAMEPAD_B;
+    return key == vkey::gamepad_dpad_right || key == vkey::gamepad_left_thumbstick_right || key == vkey::gamepad_right_thumbstick_right || key == vkey::gamepad_b;
   }
 
   export struct game_action
@@ -217,7 +220,7 @@ namespace siege::platform
 
     struct input_mapping
     {
-      std::uint16_t vkey;
+      siege::platform::vkey vkey{};
       std::uint16_t hardware_index;
       hardware_context context = {};
       std::array<char, 32> action_name;
@@ -227,9 +230,9 @@ namespace siege::platform
 
     struct controller_to_send_input_mapping
     {
-      std::uint16_t from_vkey;
+      siege::platform::vkey from_vkey{};
       hardware_context from_context = {};
-      std::uint16_t to_vkey;
+      siege::platform::vkey to_vkey{};
       hardware_context to_context = {};
     };
 
@@ -239,7 +242,7 @@ namespace siege::platform
   export struct input_mapping_ex
   {
     std::size_t mapping_size = sizeof(input_mapping_ex);
-    std::uint16_t vkey;
+    siege::platform::vkey vkey{};
     std::uint16_t hardware_index;
     controller_input_type hardware_input_type;
     hardware_context context = {};
