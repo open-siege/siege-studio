@@ -3209,7 +3209,7 @@ namespace siege::views
 
       STARTUPINFOW startup_info{ .cb = sizeof(STARTUPINFOW) };
 
-      auto hook_path = (fs::path(extension_path).parent_path() / "siege-extension-input-filter-raw-input.dll").string();
+      auto hook_path = (fs::path(extension_path).parent_path() / "siege-input-filtration.dll").string();
 
       if (allow_input_filtering)
       {
