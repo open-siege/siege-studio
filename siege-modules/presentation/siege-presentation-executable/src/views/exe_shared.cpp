@@ -584,6 +584,37 @@ namespace siege::views
         .display_name = L"Extension Name",
         .group_id = setting_group::other,
       });
+
+      std::vector<std::pair<siege::fs_string, siege::fs_string>> values;
+      values.reserve(64);
+      siege::platform::setting_context context{
+        .state = std::ref(values),
+      };
+      siege::platform::common_game_settings game_settings{
+        .context = &context,
+        .append = [](siege::platform::setting_context* ctx, siege::platform::raw_string key, siege::platform::raw_string value) -> std::errc {
+          if (ctx == nullptr)
+          {
+            return std::errc::bad_address;
+          }
+
+          auto* stored = std::any_cast<std::reference_wrapper<decltype(values)>>(&ctx->state);
+
+          if (stored == nullptr)
+          {
+            return std::errc::invalid_argument;
+          }
+
+          stored->get().emplace_back(
+            siege::fs_string(key.value, key.size),
+            value.value ? siege::fs_string(value.value, value.size) : siege::fs_string{});
+
+          return std::errc{};
+        },
+      };
+
+      self.matching_extension->init_game_settings(game_settings);
+      // TODO: do something useful with the raw values
     }
 
     std::vector<std::wstring_view> real_options;

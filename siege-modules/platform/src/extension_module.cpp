@@ -157,9 +157,9 @@ namespace siege::platform
     const fs_char* map_list_setting = FSL"";
     const fs_char* custom_map_list_setting = FSL"";
     const fs_char* max_players_setting = FSL"";
-    const fs_char* bot_count_setting = FSL "";
-    const fs_char* auto_balance_bots_setting = FSL "";
-    const fs_char* auto_teams_setting = FSL "";
+    const fs_char* bot_count_setting = FSL"";
+    const fs_char* auto_balance_bots_setting = FSL"";
+    const fs_char* auto_teams_setting = FSL"";
     const fs_char* max_time_limit_setting = FSL"";
     const fs_char* max_score_limit_setting = FSL"";
     const fs_char* multiplayer_game_mode_setting = FSL"";
@@ -237,6 +237,59 @@ namespace siege::platform
     };
 
     std::array<controller_to_send_input_mapping, 256> controller_to_send_input_mappings;
+  };
+
+  export struct setting_context
+  {
+    std::any state;
+  };
+
+  export struct raw_string
+  {
+    std::size_t size;
+    const fs_char* value;
+  };
+
+  export struct common_game_settings
+  {
+    std::uint32_t size = sizeof(common_game_settings);
+
+    // keeping them raw is a design decision
+    // for keeping the extensions simple.
+    // they already hint at the types through the caps
+    // and it is better to let the top level code deal with the conversions
+    // than to try and preparse.
+    setting_context* context;
+    std::errc (*append)(setting_context*, raw_string, raw_string);
+
+    inline bool append_setting(fs_string_view key, fs_string_view value)
+    {
+      if (!context)
+      {
+        return false;
+      }
+
+      if (!append)
+      {
+        return false;
+      }
+
+      if (key.empty())
+      {
+        return false;
+      }
+
+      auto result = append(context, raw_string{ key.size(), key.data() }, raw_string{ value.size(), value.data() });
+
+      return result == std::errc{};
+    }
+
+    inline bool append_setting(std::string_view key, std::string_view value)
+    {
+      auto fs_key = fs_string(key.begin(), key.end());
+      auto fs_value = fs_string(value.begin(), value.end());
+      return append_setting(fs_string_view(fs_key), fs_string_view(fs_value));
+    }
   };
 
   export struct input_mapping_ex
@@ -349,6 +402,7 @@ namespace siege::platform
   export using apply_prelaunch_settings_ex = std::errc(const siege::fs_char* exe_path_str, siege::platform::game_command_line_args_ex*);
   export using format_command_line_ex = const siege::fs_char**(const siege::platform::game_command_line_args_ex*, std::uint32_t* new_size);
   export using is_input_mapping_valid = std::errc(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping);
+  export using init_game_settings = std::errc(siege::platform::common_game_settings*);
 
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
   export class game_extension_module : public win32::module
@@ -360,6 +414,7 @@ namespace siege::platform
     init_controller_inputs* init_controller_inputs_proc = nullptr;
     default_controller_inputs* default_controller_inputs_proc = nullptr;
     is_input_mapping_valid* is_input_mapping_valid_proc = nullptr;
+    init_game_settings* init_game_settings_proc = nullptr;
     change_working_directory* change_working_directory_proc = nullptr;
 
     std::variant<std::monostate, apply_prelaunch_settings*, apply_prelaunch_settings_ex*> apply_prelaunch_settings_proc;
@@ -423,6 +478,7 @@ namespace siege::platform
       init_mouse_inputs_proc = GetProcAddress<decltype(init_mouse_inputs_proc)>("init_mouse_inputs");
       init_controller_inputs_proc = GetProcAddress<decltype(init_controller_inputs_proc)>("init_controller_inputs");
       default_controller_inputs_proc = GetProcAddress<decltype(default_controller_inputs_proc)>("default_controller_inputs");
+      init_game_settings_proc = GetProcAddress<decltype(init_game_settings_proc)>("init_game_settings");
 
       is_input_mapping_valid_proc = GetProcAddress<decltype(is_input_mapping_valid_proc)>("is_input_mapping_valid");
 
@@ -548,6 +604,16 @@ namespace siege::platform
       }
 
       return binding;
+    }
+
+    std::errc init_game_settings(siege::platform::common_game_settings& settings) const noexcept
+    {
+      if (!init_game_settings_proc)
+      {
+        return std::errc::not_supported;
+      }
+
+      return init_game_settings_proc(&settings);
     }
 
     std::optional<bool> executable_is_supported(std::filesystem::path exe_path) const noexcept
@@ -688,13 +754,14 @@ namespace siege::platform
         return false;
       }
 
-      std::array<void*, 15> ptrs = { { executable_is_supported_proc,
+      std::array<void*, 16> ptrs = { { executable_is_supported_proc,
         change_working_directory_proc,
         init_keyboard_inputs_proc,
         init_mouse_inputs_proc,
         get_predefined_string_command_line_settings_proc,
         get_predefined_int_command_line_settings_proc,
         init_controller_inputs_proc,
+        init_game_settings_proc,
         GetProcAddress<game_command_line_caps*>("command_line_caps"),
         GetProcAddress<game_command_line_caps*>("controller_input_backends"),
         GetProcAddress<game_command_line_caps*>("apply_prelaunch_settings"),
@@ -704,6 +771,7 @@ namespace siege::platform
 
       return std::any_of(ptrs.begin(), ptrs.end(), [=](auto* ptr) { return ptr == export_ptr; });
     }
+
   private:
     std::span<const wchar_t*> create_span(const char* key) const
     {

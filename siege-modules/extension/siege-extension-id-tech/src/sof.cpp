@@ -23,27 +23,27 @@ namespace fs = std::filesystem;
 
 extern "C" {
 extern auto command_line_caps = game_command_line_caps{
-  .int_settings = { { FSL"dedicated", FSL"deathmatch", FSL"timelimit", FSL"fraglimit", FSL"maxclients", FSL"numbots", FSL"gl_mode", FSL"in_joystick" } },
-  .string_settings = { { FSL"name", FSL"connect", FSL"map", FSL"gl_driver", FSL"game" } },
-  .ip_connect_setting = FSL"connect",
-  .player_name_setting = FSL"name",
-  .listen_setting = FSL"connect",
-  .dedicated_setting = FSL"dedicated",
-  .render_backend_setting = FSL"gl_driver",
-  .selected_game_setting = FSL"game",
-  .controller_enabled_setting = FSL"in_joystick",
-  .selected_map_setting = FSL"map",
-  .max_players_setting = FSL"maxclients",
-  .bot_count_setting = FSL"numbots",
-  .max_time_limit_setting = FSL"timelimit",
-  .max_score_limit_setting = FSL"fraglimit",
-  .multiplayer_game_mode_setting = FSL"deathmatch",
-  .predefined_resolution_setting = FSL"gl_mode"
+  .int_settings = { { FSL "dedicated", FSL "deathmatch", FSL "timelimit", FSL "fraglimit", FSL "maxclients", FSL "numbots", FSL "gl_mode", FSL "in_joystick" } },
+  .string_settings = { { FSL "name", FSL "connect", FSL "map", FSL "gl_driver", FSL "game" } },
+  .ip_connect_setting = FSL "connect",
+  .player_name_setting = FSL "name",
+  .listen_setting = FSL "connect",
+  .dedicated_setting = FSL "dedicated",
+  .render_backend_setting = FSL "gl_driver",
+  .selected_game_setting = FSL "game",
+  .controller_enabled_setting = FSL "in_joystick",
+  .selected_map_setting = FSL "map",
+  .max_players_setting = FSL "maxclients",
+  .bot_count_setting = FSL "numbots",
+  .max_time_limit_setting = FSL "timelimit",
+  .max_score_limit_setting = FSL "fraglimit",
+  .multiplayer_game_mode_setting = FSL "deathmatch",
+  .predefined_resolution_setting = FSL "gl_mode"
 };
 
-extern auto controller_input_backends = std::array<const fs_char*, 2>{ { FSL"winmm" } };
+extern auto controller_input_backends = std::array<const fs_char*, 2>{ { FSL "winmm" } };
 
-extern auto network_backends = std::array<const fs_char*, 2>{ { FSL"wsock32" } };
+extern auto network_backends = std::array<const fs_char*, 2>{ { FSL "wsock32" } };
 
 extern auto game_actions = std::array<game_action, 33>{ {
   game_action{ game_action::analog, "+forward", u"Move Forward", u"Movement" },
@@ -137,10 +137,10 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  insert_string_setting_once(*args, FSL"exec", FSL"siege_studio_inputs.cfg");
-  insert_string_setting_once(*args, FSL"console", FSL"1");
+  insert_string_setting_once(*args, FSL "exec", FSL "siege_studio_inputs.cfg");
+  insert_string_setting_once(*args, FSL "console", FSL "1");
 
-  auto int_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.name == fs_string_view(FSL"numbots"); });
+  auto int_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.name == fs_string_view(FSL "numbots"); });
 
   if (int_iter != args->int_settings.end())
   {
@@ -162,7 +162,56 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
 
     config.save(custom_bindings);
 
-    insert_string_setting_once(*args, FSL"exec", FSL"add_bots.cfg");
+    insert_string_setting_once(*args, FSL "exec", FSL "add_bots.cfg");
+  }
+
+  return std::errc{};
+}
+
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  if (args == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  for (auto& config : {
+         load_config_from_pak(FSL "base\\default.cfg", FSL "base/pak0.pak", FSL "base/pak0.pak"),
+         load_config_from_file(FSL "user\\config.cfg"),
+       })
+  {
+    if (!config)
+    {
+      continue;
+    }
+
+    for (auto key : config->keys())
+    {
+      if (key.at(0) == "bind")
+      {
+        continue;
+      }
+
+      if (key.at(0) == "//")
+      {
+        continue;
+      }
+
+      auto real_key = key.at(1);
+
+      if (real_key.empty())
+      {
+        continue;
+      }
+
+      for (auto& entry : config->entries_for(key))
+      {
+        if (!args->append_setting(real_key, entry.value.at(0)))
+        {
+          return std::errc{};
+        }
+      }
+    }
   }
 
   return std::errc{};
@@ -175,12 +224,12 @@ std::errc init_mouse_inputs(mouse_binding* binding)
     return std::errc::bad_address;
   }
 
-  if (auto config = load_config_from_pak(FSL"base\\configs\\DEFAULT_KEYS.cfg", FSL"base/pak0.pak", FSL"base/pak0.pak/configs"))
+  if (auto config = load_config_from_pak(FSL "base\\configs\\DEFAULT_KEYS.cfg", FSL "base/pak0.pak", FSL "base/pak0.pak/configs"))
   {
     upsert_mouse_bindings(*config, *binding);
   }
 
-  if (auto config = load_config_from_file(FSL"user\\config.cfg"))
+  if (auto config = load_config_from_file(FSL "user\\config.cfg"))
   {
     upsert_mouse_bindings(*config, *binding);
   }
@@ -206,12 +255,12 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  if (auto config = load_config_from_pak(FSL"base\\configs\\DEFAULT_KEYS.cfg", FSL"base/pak0.pak", FSL"base/pak0.pak/configs"))
+  if (auto config = load_config_from_pak(FSL "base\\configs\\DEFAULT_KEYS.cfg", FSL "base/pak0.pak", FSL "base/pak0.pak/configs"))
   {
     upsert_keyboard_bindings(*config, *binding);
   }
 
-  if (auto config = load_config_from_file(FSL"user\\config.cfg"))
+  if (auto config = load_config_from_file(FSL "user\\config.cfg"))
   {
     upsert_keyboard_bindings(*config, *binding);
   }
@@ -274,32 +323,32 @@ predefined_int*
 
   auto name_str = fs_string_view(name);
 
-  if (name_str == FSL"gl_mode")
+  if (name_str == FSL "gl_mode")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = FSL"640x480", .value = 3 },
-      predefined_int{ .label = FSL"800x600", .value = 4 },
-      predefined_int{ .label = FSL"960x720", .value = 5 },
-      predefined_int{ .label = FSL"1024x768", .value = 6 },
-      predefined_int{ .label = FSL"1152x864", .value = 7 },
-      predefined_int{ .label = FSL"1280x960", .value = 8 },
-      predefined_int{ .label = FSL"1600x1200", .value = 9 },
+      predefined_int{ .label = FSL "640x480", .value = 3 },
+      predefined_int{ .label = FSL "800x600", .value = 4 },
+      predefined_int{ .label = FSL "960x720", .value = 5 },
+      predefined_int{ .label = FSL "1024x768", .value = 6 },
+      predefined_int{ .label = FSL "1152x864", .value = 7 },
+      predefined_int{ .label = FSL "1280x960", .value = 8 },
+      predefined_int{ .label = FSL "1600x1200", .value = 9 },
       predefined_int{},
     };
 
     return modes.data();
   }
 
-  if (name_str == FSL"deathmatch")
+  if (name_str == FSL "deathmatch")
   {
     static auto modes = std::array<predefined_int, 8>{
-      predefined_int{ .label = FSL"Deathmatch", .value = 1 },
-      predefined_int{ .label = FSL"Assassin", .value = 2 },
-      predefined_int{ .label = FSL"Arsenal (aka Gun Game)", .value = 3 },
-      predefined_int{ .label = FSL"Capture the Flag", .value = 4 },
-      predefined_int{ .label = FSL"Realistic", .value = 5 },
-      predefined_int{ .label = FSL"Control", .value = 6 },
-      predefined_int{ .label = FSL"Conquer the Bunker", .value = 7 },
+      predefined_int{ .label = FSL "Deathmatch", .value = 1 },
+      predefined_int{ .label = FSL "Assassin", .value = 2 },
+      predefined_int{ .label = FSL "Arsenal (aka Gun Game)", .value = 3 },
+      predefined_int{ .label = FSL "Capture the Flag", .value = 4 },
+      predefined_int{ .label = FSL "Realistic", .value = 5 },
+      predefined_int{ .label = FSL "Control", .value = 6 },
+      predefined_int{ .label = FSL "Conquer the Bunker", .value = 7 },
       predefined_int{},
     };
 
@@ -312,9 +361,9 @@ predefined_int*
 predefined_string*
   get_predefined_string_command_line_settings(const fs_char* name) noexcept
 {
-  if (name && fs_string_view(name) == FSL"map")
+  if (name && fs_string_view(name) == FSL "map")
   {
-    return get_predefined_id_tech_2_map_command_line_settings(FSL"base", false);
+    return get_predefined_id_tech_2_map_command_line_settings(FSL "base", false);
   }
 
   return nullptr;
