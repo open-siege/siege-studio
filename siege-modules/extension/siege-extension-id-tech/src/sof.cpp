@@ -84,6 +84,15 @@ constexpr static std::array<std::pair<std::string_view, std::string_view>, 3> fu
   { "joy_advancedupdate"sv, "+mlook"sv },
   { "rejected_violence"sv, "print"sv } } };
 
+constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8>{ { { "+melee-attack", "weaponselect 1; +attack" },
+  { "-melee-attack", "weaponbestsafe; -attack" },
+  { "+weapon-extra1", "+weaponextra1;" },
+  { "-weapon-extra1", "-weaponextra1;alias +weapon-extra +weapon-extra2; alias -weapon-extra -weapon-extra2" },
+  { "+weapon-extra2", "+weaponextra2;" },
+  { "-weapon-extra2", "-weaponextra2;alias +weapon-extra +weapon-extra1; alias -weapon-extra -weapon-extra1" },
+  { "+weapon-extra", "+weapon-extra1" },
+  { "-weapon-extra", "-weapon-extra1" } } };
+
 constexpr static std::array<std::pair<std::string_view, std::string_view>, 1> variable_name_ranges{ { { "joy_yawsensitivity"sv, "in_mouse"sv } } };
 
 std::errc executable_is_supported(const fs_char* filename) noexcept
@@ -109,14 +118,6 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
 
   unbind_joystick_for_quake_2_config(config);
 
-  constexpr static auto sof_aliases = std::array<std::array<std::string_view, 2>, 8>{ { { "+melee-attack", "weaponselect 1; +attack" },
-    { "-melee-attack", "weaponbestsafe; -attack" },
-    { "+weapon-extra1", "+weaponextra1;" },
-    { "-weapon-extra1", "-weaponextra1;alias +weapon-extra +weapon-extra2; alias -weapon-extra -weapon-extra2" },
-    { "+weapon-extra2", "+weaponextra2;" },
-    { "-weapon-extra2", "-weaponextra2;alias +weapon-extra +weapon-extra1; alias -weapon-extra -weapon-extra1" },
-    { "+weapon-extra", "+weapon-extra1" },
-    { "-weapon-extra", "-weapon-extra1" } } };
 
   for (auto& alias : sof_aliases)
   {
@@ -134,13 +135,25 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
     config.emplace(siege::configuration::key_type({ "set", "joy_pitchsensitivity" }), siege::configuration::key_type("1"));
   }
 
+
   std::ofstream custom_bindings("user/config.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
+
+  auto autoexec = load_config_from_file(FSL "user\\autoexec.cfg")
+                    .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
+
+
+  for (auto& alias : sof_aliases)
+  {
+    autoexec.emplace(siege::configuration::key_type({ "alias", alias[0] }), siege::configuration::key_type(alias[1]));
+  }
+
+  std::ofstream autoexec_stream("user/autoexec.cfg", std::ios::binary | std::ios::trunc);
+  autoexec.save(autoexec_stream);
 
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  insert_string_setting_once(*args, FSL "exec", FSL "siege_studio_inputs.cfg");
   insert_string_setting_once(*args, FSL "console", FSL "1");
 
   auto int_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.name == fs_string_view(FSL "numbots"); });
