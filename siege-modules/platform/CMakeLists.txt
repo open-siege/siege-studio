@@ -9,8 +9,7 @@ add_library(siege-platform STATIC
     src/stream.cpp
     src/bitmap.cpp
     src/palette.cpp
-    src/resource.cpp
-    src/http.cpp)
+    src/resource.cpp)
 
 if (WIN32)
     target_sources(siege-platform PRIVATE
@@ -56,7 +55,10 @@ if (WIN32)
     add_library(siege-win-desktop ALIAS siege-platform)
 else()
     target_compile_definitions(siege-platform PUBLIC FSL=)
-    target_sources(siege-platform PRIVATE src/vkey.cpp)
+    target_sources(siege-platform PRIVATE
+        src/vkey.cpp
+        src/http.cpp
+        src/platform_image.cpp)
 endif()
 
 set_property(TARGET siege-platform PROPERTY CXX_STANDARD 23)

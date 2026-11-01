@@ -17,5 +17,9 @@ namespace siege::platform
     std::function<void(std::size_t)> on_transmitted;
   };
 
-  export std::size_t download_http_data(http_client_context&, fs_string domain, fs_string remote_path, std::ostream& output, http_callbacks callbacks = {});
+  // TODO implement this for other platforms as needed
+  export std::size_t download_http_data(http_client_context&, fs_string, fs_string, std::ostream&, http_callbacks = {})
+  {
+    return 0;
+  }
 }// namespace siege::platform

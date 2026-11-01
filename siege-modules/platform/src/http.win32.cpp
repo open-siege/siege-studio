@@ -2,14 +2,25 @@ module;
 #include <siege/platform/windows.hpp>
 #include <winhttp.h>
 
-module siege.platform.http;
+export module siege.platform.http;
 
 import std;
 
-import siege.platform.shared;
+export import siege.platform.shared;
 
 namespace siege::platform
 {
+  export struct http_client_context : std::any
+  {
+    using std::any::any;
+  };
+
+  export struct http_callbacks
+  {
+    std::function<void(std::size_t)> on_received_content_length;
+    std::function<void(std::size_t)> on_transmitted;
+  };
+
   struct winhttp_context
   {
     std::shared_ptr<void> session;
@@ -26,7 +37,7 @@ namespace siege::platform
     return std::any_cast<winhttp_context&>(context);
   }
 
-  std::size_t download_http_data(http_client_context& context, fs_string domain, fs_string remote_path, std::ostream& output, http_callbacks callbacks)
+  export std::size_t download_http_data(http_client_context& context, fs_string domain, fs_string remote_path, std::ostream& output, http_callbacks callbacks = {})
   {
     auto& self = get(context);
 
