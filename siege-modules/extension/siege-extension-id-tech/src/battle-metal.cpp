@@ -3,6 +3,7 @@ import std;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v2_0;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -91,7 +92,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     return std::errc::bad_address;
   }
 
-  std::ofstream custom_bindings("baseq2/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
+  std::ofstream custom_bindings("metaldata/siege_studio_inputs.cfg", std::ios::binary | std::ios::trunc);
 
   siege::configuration::text_game_config config(siege::configuration::id_tech::id_tech_2::save_config);
 
@@ -120,11 +121,16 @@ std::errc init_mouse_inputs(mouse_binding* binding)
   {
     return std::errc::bad_address;
   }
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pak(L"metaldata\\default.cfg", L"metaldata/PAK0.pk3", L"metaldata/PAK0.pk3");
 
   if (config)
   {
     upsert_mouse_bindings(*config, *binding);
+  }
+
+  if (auto user_config = load_config_from_file(L"metaldata\\config.cfg"))
+  {
+    upsert_mouse_bindings(*user_config, *binding);
   }
 
   std::array<std::pair<vkey, std::string_view>, 4> axes{
@@ -148,11 +154,16 @@ std::errc init_keyboard_inputs(keyboard_binding* binding)
     return std::errc::bad_address;
   }
 
-  auto config = load_config_from_pak(L"baseq2\\default.cfg", L"baseq2/pak0.pak", L"baseq2/pak0.pak");
+  auto config = load_config_from_pak(L"metaldata\\default.cfg", L"metaldata/PAK0.pk3", L"metaldata/PAK0.pk3");
 
   if (config)
   {
     upsert_keyboard_bindings(*config, *binding);
+  }
+
+  if (auto user_config = load_config_from_file(L"metaldata\\config.cfg"))
+  {
+    upsert_keyboard_bindings(*user_config, *binding);
   }
 
   return std::errc{};
@@ -237,9 +248,21 @@ predefined_string*
 {
   if (name && std::wstring_view(name) == L"map")
   {
-    return get_predefined_id_tech_2_map_command_line_settings(L"baseq2", false);
+    return get_predefined_id_tech_2_map_command_line_settings(L"metaldata", false);
   }
 
   return nullptr;
+}
+
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  // TODO not strictly correct, since it can support
+  // newer constructs from future engines
+  return init_id_tech_2_0_game_settings(args, {
+    .packed_default_cfg = FSL"metaldata\\default.cfg",
+    .packed_default_cfg_pak = FSL"metaldata/PAK0.pk3",
+    .packed_default_cfg_pak_folder = FSL"metaldata/PAK0.pk3",
+    .loose_user_cfg = FSL"metaldata\\config.cfg",
+  });
 }
 }

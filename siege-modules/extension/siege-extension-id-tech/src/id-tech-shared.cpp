@@ -84,9 +84,6 @@ export void unbind_joystick_for_quake_3_config(siege::configuration::text_game_c
 export bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
 export void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<vk> not_target_vkey = std::nullopt);
 
-// Paths used when seeding common_game_settings from an install.
-// packed_default_cfg* is usually default.cfg living inside pak0 (or an on-disk extract of it).
-// loose_user_cfg is the writable config.cfg the game writes beside the install.
 export struct game_settings_files
 {
   siege::fs_string_view packed_default_cfg{};

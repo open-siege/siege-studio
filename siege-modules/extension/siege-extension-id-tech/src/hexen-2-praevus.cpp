@@ -6,6 +6,7 @@ import win32.window;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v2_0;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -286,6 +287,16 @@ predefined_string*
   }
 
   return nullptr;
+}
+
+std::errc init_game_settings(siege::platform::common_game_settings* args)
+{
+  return init_id_tech_2_0_game_settings(args, {
+    .packed_default_cfg = FSL"portals\\default.cfg",
+    .packed_default_cfg_pak = FSL"portals/pak3.pak",
+    .packed_default_cfg_pak_folder = FSL"portals/pak3.pak",
+    .loose_user_cfg = FSL"portals\\Config.cfg",
+  });
 }
 
 static std::string VirtualDriveLetter;

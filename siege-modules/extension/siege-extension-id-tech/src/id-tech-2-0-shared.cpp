@@ -244,3 +244,50 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   return raw_args.data();
 }
 }
+
+export std::errc init_id_tech_2_0_game_settings(siege::platform::common_game_settings* args, const game_settings_files& files)
+{
+  if (args == nullptr)
+  {
+    return std::errc::bad_address;
+  }
+
+  for (auto& config : {
+         load_config_from_pak(
+           files.packed_default_cfg,
+           std::wstring(files.packed_default_cfg_pak),
+           std::wstring(files.packed_default_cfg_pak_folder)),
+         load_config_from_file(files.loose_user_cfg),
+       })
+  {
+    if (!config)
+    {
+      continue;
+    }
+
+    for (auto key : config->keys())
+    {
+      if (key.at(0) == "bind" || key.at(0) == "unbind" || key.at(0) == "unbindall" || key.at(0) == "alias" || key.at(0) == "//")
+      {
+        continue;
+      }
+
+      auto real_key = key.at(0) == "set" || key.at(0) == "seta" ? key.at(1) : key.at(0);
+
+      if (real_key.empty())
+      {
+        continue;
+      }
+
+      for (auto& entry : config->entries_for(key))
+      {
+        if (!args->append_setting(real_key, entry.value.at(0)))
+        {
+          return std::errc{};
+        }
+      }
+    }
+  }
+
+  return std::errc{};
+}
