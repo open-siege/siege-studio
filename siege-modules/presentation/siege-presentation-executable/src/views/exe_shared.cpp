@@ -585,27 +585,45 @@ namespace siege::views
         .group_id = setting_group::other,
       });
 
-      std::vector<std::pair<siege::fs_string, siege::fs_string>> values;
-      values.reserve(64);
+      struct game_settings_callback_state
+      {
+        std::vector<std::pair<siege::fs_string, siege::fs_string>> values;
+        const siege::fs_char* player_name;
+      };
+
+      game_settings_callback_state callback_state{
+        .player_name = settings.last_player_name[0] ? settings.last_player_name.data() : nullptr,
+      };
+      callback_state.values.reserve(64);
+
       siege::platform::setting_context context{
-        .state = std::ref(values),
+        .state = std::ref(callback_state),
       };
       siege::platform::common_game_settings game_settings{
         .context = &context,
+        .get_player_name = [](siege::platform::setting_context* ctx) -> const siege::fs_char* {
+          if (ctx == nullptr)
+          {
+            return nullptr;
+          }
+
+          auto* stored = std::any_cast<std::reference_wrapper<game_settings_callback_state>>(&ctx->state);
+          return stored ? stored->get().player_name : nullptr;
+        },
         .append = [](siege::platform::setting_context* ctx, siege::platform::raw_string key, siege::platform::raw_string value) -> std::errc {
           if (ctx == nullptr)
           {
             return std::errc::bad_address;
           }
 
-          auto* stored = std::any_cast<std::reference_wrapper<decltype(values)>>(&ctx->state);
+          auto* stored = std::any_cast<std::reference_wrapper<game_settings_callback_state>>(&ctx->state);
 
           if (stored == nullptr)
           {
             return std::errc::invalid_argument;
           }
 
-          stored->get().emplace_back(
+          stored->get().values.emplace_back(
             siege::fs_string(key.value, key.size),
             value.value ? siege::fs_string(value.value, value.size) : siege::fs_string{});
 

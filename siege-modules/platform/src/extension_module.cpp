@@ -260,7 +260,18 @@ namespace siege::platform
     // and it is better to let the top level code deal with the conversions
     // than to try and preparse.
     setting_context* context;
+    const fs_char* (*get_player_name)(setting_context*);
     std::errc (*append)(setting_context*, raw_string, raw_string);
+
+    inline const fs_char* player_name() const
+    {
+      if (!context || !get_player_name)
+      {
+        return nullptr;
+      }
+
+      return get_player_name(context);
+    }
 
     inline bool append_setting(fs_string_view key, fs_string_view value)
     {
