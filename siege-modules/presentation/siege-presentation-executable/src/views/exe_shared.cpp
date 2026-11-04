@@ -617,7 +617,6 @@ namespace siege::views
           }
 
           auto* stored = std::any_cast<std::reference_wrapper<game_settings_callback_state>>(&ctx->state);
-
           if (stored == nullptr)
           {
             return std::errc::invalid_argument;
@@ -2235,8 +2234,28 @@ namespace siege::views
       return {};
     }
 
-    auto kb_bindings = get_extension(state).init_keyboard_inputs();
-    auto ms_bindings = get_extension(state).init_mouse_inputs();
+    siege::platform::setting_context context{
+      .state = std::function<const siege::fs_char*()>{ [&state]() -> const siege::fs_char* {
+        auto& settings = load_game_settings(state);
+        return settings.last_player_name[0] ? settings.last_player_name.data() : nullptr;
+      } },
+    };
+    siege::platform::common_game_settings game_settings{
+      .context = &context,
+      .get_player_name = [](siege::platform::setting_context* ctx) -> const siege::fs_char* {
+        if (ctx == nullptr)
+        {
+          return nullptr;
+        }
+
+        auto* fn = std::any_cast<std::function<const siege::fs_char*()>>(&ctx->state);
+        return fn && *fn ? (*fn)() : nullptr;
+      },
+      .append = nullptr,
+    };
+
+    auto kb_bindings = get_extension(state).init_keyboard_inputs(&game_settings);
+    auto ms_bindings = get_extension(state).init_mouse_inputs(&game_settings);
     std::vector<ui_action_context> action_settings;
 
     if (kb_bindings)

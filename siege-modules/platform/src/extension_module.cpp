@@ -403,6 +403,8 @@ namespace siege::platform
   export using get_predefined_int_command_line_settings = predefined_int*(const siege::fs_char* name) noexcept;
   export using init_keyboard_inputs = std::errc(keyboard_binding* binding) noexcept;
   export using init_mouse_inputs = std::errc(mouse_binding* binding) noexcept;
+  export using init_keyboard_inputs_ex = std::errc(keyboard_binding* binding, common_game_settings* settings) noexcept;
+  export using init_mouse_inputs_ex = std::errc(mouse_binding* binding, common_game_settings* settings) noexcept;
   export using init_controller_inputs = std::errc(controller_binding* binding) noexcept;
   export using default_controller_inputs = std::errc(controller_binding* binding, std::uint32_t layout_index) noexcept;
   export using change_working_directory = std::errc(const wchar_t* filename) noexcept;
@@ -422,6 +424,8 @@ namespace siege::platform
     executable_is_supported* executable_is_supported_proc = nullptr;
     init_keyboard_inputs* init_keyboard_inputs_proc = nullptr;
     init_mouse_inputs* init_mouse_inputs_proc = nullptr;
+    init_keyboard_inputs_ex* init_keyboard_inputs_ex_proc = nullptr;
+    init_mouse_inputs_ex* init_mouse_inputs_ex_proc = nullptr;
     init_controller_inputs* init_controller_inputs_proc = nullptr;
     default_controller_inputs* default_controller_inputs_proc = nullptr;
     is_input_mapping_valid* is_input_mapping_valid_proc = nullptr;
@@ -485,6 +489,8 @@ namespace siege::platform
       change_working_directory_proc = GetProcAddress<decltype(executable_is_supported_proc)>("change_working_directory");
       get_predefined_string_command_line_settings_proc = GetProcAddress<decltype(get_predefined_string_command_line_settings_proc)>("get_predefined_string_command_line_settings");
       get_predefined_int_command_line_settings_proc = GetProcAddress<decltype(get_predefined_int_command_line_settings_proc)>("get_predefined_int_command_line_settings");
+      init_keyboard_inputs_ex_proc = GetProcAddress<decltype(init_keyboard_inputs_ex_proc)>("init_keyboard_inputs_ex");
+      init_mouse_inputs_ex_proc = GetProcAddress<decltype(init_mouse_inputs_ex_proc)>("init_mouse_inputs_ex");
       init_keyboard_inputs_proc = GetProcAddress<decltype(init_keyboard_inputs_proc)>("init_keyboard_inputs");
       init_mouse_inputs_proc = GetProcAddress<decltype(init_mouse_inputs_proc)>("init_mouse_inputs");
       init_controller_inputs_proc = GetProcAddress<decltype(init_controller_inputs_proc)>("init_controller_inputs");
@@ -583,16 +589,23 @@ namespace siege::platform
     }
 
     std::optional<std::unique_ptr<siege::platform::keyboard_binding>>
-      init_keyboard_inputs() const
+      init_keyboard_inputs(common_game_settings* settings = nullptr) const
     {
-      if (!init_keyboard_inputs_proc)
+      if (!init_keyboard_inputs_ex_proc && !init_keyboard_inputs_proc)
       {
         return std::nullopt;
       }
 
       auto binding = std::make_unique<siege::platform::keyboard_binding>();
 
-      if (init_keyboard_inputs_proc(binding.get()) != std::errc{})
+      if (init_keyboard_inputs_ex_proc)
+      {
+        if (init_keyboard_inputs_ex_proc(binding.get(), settings) != std::errc{})
+        {
+          return std::nullopt;
+        }
+      }
+      else if (init_keyboard_inputs_proc(binding.get()) != std::errc{})
       {
         return std::nullopt;
       }
@@ -600,16 +613,24 @@ namespace siege::platform
       return binding;
     }
 
-    std::optional<std::unique_ptr<siege::platform::mouse_binding>> init_mouse_inputs() const
+    std::optional<std::unique_ptr<siege::platform::mouse_binding>>
+      init_mouse_inputs(common_game_settings* settings = nullptr) const
     {
-      if (!init_mouse_inputs_proc)
+      if (!init_mouse_inputs_ex_proc && !init_mouse_inputs_proc)
       {
         return std::nullopt;
       }
 
       auto binding = std::make_unique<siege::platform::mouse_binding>();
 
-      if (init_mouse_inputs_proc(binding.get()) != std::errc{})
+      if (init_mouse_inputs_ex_proc)
+      {
+        if (init_mouse_inputs_ex_proc(binding.get(), settings) != std::errc{})
+        {
+          return std::nullopt;
+        }
+      }
+      else if (init_mouse_inputs_proc(binding.get()) != std::errc{})
       {
         return std::nullopt;
       }
@@ -765,10 +786,12 @@ namespace siege::platform
         return false;
       }
 
-      std::array<void*, 16> ptrs = { { executable_is_supported_proc,
+      std::array<void*, 18> ptrs = { { executable_is_supported_proc,
         change_working_directory_proc,
         init_keyboard_inputs_proc,
         init_mouse_inputs_proc,
+        init_keyboard_inputs_ex_proc,
+        init_mouse_inputs_ex_proc,
         get_predefined_string_command_line_settings_proc,
         get_predefined_int_command_line_settings_proc,
         init_controller_inputs_proc,
