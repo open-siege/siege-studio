@@ -538,11 +538,18 @@ namespace siege::views
 
     if (count > 0)
     {
-      win32::com::com_string documents_folder;
-      if (::SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, documents_folder.put()) == S_OK)
+      const static std::array<std::pair<GUID, std::wstring_view>, 2> known_folders = { { { FOLDERID_Documents, L"KNOWN_FOLDER_DOCUMENTS"sv },
+        { FOLDERID_ProgramData, L"KNOWN_FOLDER_PROGRAMDATA"sv } } };
+
+      for (auto& [id, env_name] : known_folders)
       {
-        ::SetEnvironmentVariableW(L"KNOWN_FOLDER_DOCUMENTS", documents_folder.get());
+        win32::com::com_string knnown_folder;
+        if (::SHGetKnownFolderPath(id, 0, nullptr, knnown_folder.put()) == S_OK)
+        {
+          ::SetEnvironmentVariableW(env_name.data(), knnown_folder.get());
+        }
       }
+
 
       auto values = get_resource_names(state);
 
