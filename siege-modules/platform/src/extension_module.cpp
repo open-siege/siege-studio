@@ -417,8 +417,22 @@ namespace siege::platform
   export using is_input_mapping_valid = std::errc(const siege::platform::hardware_context_caps* caps, const siege::platform::input_mapping_ex* mapping);
   export using init_game_settings = std::errc(siege::platform::common_game_settings*);
 
+
+  export class game_extension
+  {
+  public:
+    virtual std::span<const game_action> game_actions() const = 0;
+    virtual std::span<const wchar_t* const> controller_input_backends() const = 0;
+    virtual std::span<const wchar_t* const> network_backends() const = 0;
+    virtual const std::optional<game_command_line_caps>& caps() const = 0;
+    virtual bool is_input_mapping_valid(const hardware_context_caps& caps, const input_mapping_ex& mapping) const = 0;
+
+  protected:
+    ~game_extension() = default;
+  };
+
   // TODO Port this code to linux using a "platform::module" instead of a "win32::module"
-  export class game_extension_module : public win32::module
+  export class game_extension_module final : public win32::module, public game_extension
   {
     using base = win32::module;
     executable_is_supported* executable_is_supported_proc = nullptr;
@@ -428,27 +442,28 @@ namespace siege::platform
     init_mouse_inputs_ex* init_mouse_inputs_ex_proc = nullptr;
     init_controller_inputs* init_controller_inputs_proc = nullptr;
     default_controller_inputs* default_controller_inputs_proc = nullptr;
-    is_input_mapping_valid* is_input_mapping_valid_proc = nullptr;
+    // Named distinctly from the virtual is_input_mapping_valid() so the method
+    // does not hide the exported function-type alias in this scope.
+    std::errc (*is_input_mapping_valid_proc)(const hardware_context_caps*, const input_mapping_ex*) = nullptr;
     init_game_settings* init_game_settings_proc = nullptr;
     change_working_directory* change_working_directory_proc = nullptr;
 
     std::variant<std::monostate, apply_prelaunch_settings*, apply_prelaunch_settings_ex*> apply_prelaunch_settings_proc;
     std::variant<std::monostate, format_command_line*, format_command_line_ex*> format_command_line_proc;
 
+    std::span<game_action> loaded_game_actions;
+    std::span<const wchar_t*> loaded_controller_input_backends;
+    std::span<const wchar_t*> loaded_network_backends;
+    std::optional<game_command_line_caps> loaded_caps;
+
   public:
     get_predefined_string_command_line_settings* get_predefined_string_command_line_settings_proc = nullptr;
     get_predefined_int_command_line_settings* get_predefined_int_command_line_settings_proc = nullptr;
 
-    const std::span<game_action> game_actions;
-    const std::span<const wchar_t*> controller_input_backends;
-    const std::span<const wchar_t*> network_backends;
-
-    const std::optional<game_command_line_caps> caps = std::nullopt;
-
     using base::base;
 
     game_extension_module(std::filesystem::path module_path) : base(module_path),
-                                                               game_actions([this] {
+                                                               loaded_game_actions([this] {
                                                                  auto* actions = GetProcAddress<game_action*>("game_actions");
 
                                                                  if (!actions)
@@ -468,9 +483,9 @@ namespace siege::platform
 
                                                                  return std::span(actions, size);
                                                                }()),
-                                                               controller_input_backends(create_span("controller_input_backends")),
-                                                               network_backends(create_span("network_backends")),
-                                                               caps([this]() -> std::optional<game_command_line_caps> {
+                                                               loaded_controller_input_backends(create_span("controller_input_backends")),
+                                                               loaded_network_backends(create_span("network_backends")),
+                                                               loaded_caps([this]() -> std::optional<game_command_line_caps> {
                                                                  auto raw_caps = GetProcAddress<game_command_line_caps*>("command_line_caps");
 
                                                                  if (raw_caps)
@@ -541,7 +556,27 @@ namespace siege::platform
       }
     }
 
-    bool is_input_mapping_valid(const siege::platform::hardware_context_caps& caps, const siege::platform::input_mapping_ex& mapping) const
+    std::span<const game_action> game_actions() const override
+    {
+      return loaded_game_actions;
+    }
+
+    std::span<const wchar_t* const> controller_input_backends() const override
+    {
+      return { loaded_controller_input_backends.data(), loaded_controller_input_backends.size() };
+    }
+
+    std::span<const wchar_t* const> network_backends() const override
+    {
+      return { loaded_network_backends.data(), loaded_network_backends.size() };
+    }
+
+    const std::optional<game_command_line_caps>& caps() const override
+    {
+      return loaded_caps;
+    }
+
+    bool is_input_mapping_valid(const siege::platform::hardware_context_caps& caps, const siege::platform::input_mapping_ex& mapping) const override
     {
       if (!is_input_mapping_valid_proc)
       {

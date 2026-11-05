@@ -96,7 +96,7 @@ namespace siege::views
         return;
       }
 
-      if (get_extension(state).game_actions.empty())
+      if (get_extension(state).game_actions().empty())
       {
         return;
       }
@@ -135,7 +135,7 @@ namespace siege::views
     });
 
     input.controller_table.bind_nm_click([this](win32::list_view controller_table, const NMITEMACTIVATE& message) {
-      if (has_extension_module(state) && !get_extension(state).controller_input_backends.empty())
+      if (has_extension_module(state) && !get_extension(state).controller_input_backends().empty())
       {
         auto input_result = get_controller_input_from_dialog(ref());
 
@@ -211,7 +211,7 @@ namespace siege::views
     return input;
   }
 
-  void exe_view::populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
+  void exe_view::populate_controller_table(std::span<const siege::platform::game_action> actions, std::span<const wchar_t* const> controller_input_backends)
   {
     auto set_tile_info = [this](auto index) {
       UINT columns[2] = { 1, 2 };
@@ -406,7 +406,7 @@ namespace siege::views
     }
   }
 
-  void exe_view::populate_keyboard_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends)
+  void exe_view::populate_keyboard_table(std::span<const siege::platform::game_action> actions, std::span<const wchar_t* const> controller_input_backends)
   {
     if (actions.empty())
     {

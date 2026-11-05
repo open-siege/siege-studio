@@ -87,8 +87,8 @@ namespace siege::views
     decltype(input) create_input_controls();
     decltype(launch) create_launch_controls();
 
-    void populate_controller_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends);
-    void populate_keyboard_table(std::span<siege::platform::game_action> actions, std::span<const wchar_t*> controller_input_backends);
+    void populate_controller_table(std::span<const siege::platform::game_action> actions, std::span<const wchar_t* const> controller_input_backends);
+    void populate_keyboard_table(std::span<const siege::platform::game_action> actions, std::span<const wchar_t* const> controller_input_backends);
 
     std::optional<LRESULT> window_proc(UINT message, WPARAM wparam, LPARAM lparam) override;
 
@@ -603,22 +603,22 @@ namespace siege::views
       {
         auto& extension = get_extension(state);
 
-        if (extension.caps)
+        if (extension.caps())
         {
           populate_launch_table();
         }
 
-        if (!extension.game_actions.empty())
+        if (!extension.game_actions().empty())
         {
-          populate_controller_table(extension.game_actions, extension.controller_input_backends);
-          populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
+          populate_controller_table(extension.game_actions(), extension.controller_input_backends());
+          populate_keyboard_table(extension.game_actions(), extension.controller_input_backends());
         }
         else
         {
           std::array<siege::platform::game_action, 0> actions{};
           std::array<const wchar_t*, 0> backends{};
           populate_controller_table(actions, backends);
-          populate_keyboard_table(extension.game_actions, extension.controller_input_backends);
+          populate_keyboard_table(extension.game_actions(), extension.controller_input_backends());
         }
         options.InsertString(1, L"Keyboard/Mouse Settings");
         options.InsertString(2, L"Controller");

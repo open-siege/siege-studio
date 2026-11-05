@@ -237,7 +237,7 @@ namespace siege::views
       {
         this->launch.launch_table_combo.SetWindowStyle(this->launch.launch_table_combo.GetWindowStyle() & ~WS_VISIBLE);
 
-        if (setting->get().setting_name == zt_fallback_ip || (has_extension_module(state) && get_extension(state).caps->ip_connect_setting != nullptr && setting->get().setting_name == get_extension(state).caps->ip_connect_setting))
+        if (setting->get().setting_name == zt_fallback_ip || (has_extension_module(state) && get_extension(state).caps()->ip_connect_setting != nullptr && setting->get().setting_name == get_extension(state).caps()->ip_connect_setting))
         {
           this->launch.launch_table_ip_address.SetWindowPos(result->second);
           this->launch.launch_table_ip_address.SetWindowPos(HWND_TOP);
@@ -293,8 +293,8 @@ namespace siege::views
       {
         return false;
       }
-      auto backends = has_extension_module(state) ? get_extension(state).controller_input_backends : std::span<const wchar_t*>{};
-      auto actions = has_extension_module(state) ? get_extension(state).game_actions : std::span<siege::platform::game_action>{};
+      auto backends = has_extension_module(state) ? get_extension(state).controller_input_backends() : std::span<const wchar_t* const>{};
+      auto actions = has_extension_module(state) ? get_extension(state).game_actions() : std::span<const siege::platform::game_action>{};
 
       auto bound_actions = get_action_bindings(state);
 
@@ -522,9 +522,6 @@ namespace siege::views
           }
         }
       }
-      ::LVITEMW info{
-        .mask = LVIF_PARAM
-      };
 
       auto ip_name = has_client_preference(state) ? L"ZeroTierCurrentClientIpGlobalHandle" : L"ZeroTierCurrentServerIpGlobalHandle";
 

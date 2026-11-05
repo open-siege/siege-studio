@@ -257,7 +257,7 @@ namespace siege::views
   {
     if (self.bound_actions.size() == 1 && self.bound_actions.capacity() == 1 && self.matching_extension)
     {
-      self.bound_actions.reserve(self.matching_extension->game_actions.size());
+      self.bound_actions.reserve(self.matching_extension->game_actions().size());
     }
   }
 
@@ -569,7 +569,7 @@ namespace siege::views
     self.string_settings.clear();
     self.environment_settings.clear();
     self.listen_setting_multiple_predefined = false;
-    auto& caps = self.matching_extension && self.matching_extension->caps ? *self.matching_extension->caps : empty_caps;
+    auto& caps = self.matching_extension && self.matching_extension->caps() ? *self.matching_extension->caps() : empty_caps;
 
     bool has_ip = caps.ip_connect_setting && !std::wstring_view(caps.ip_connect_setting).empty();
     bool has_listen = caps.listen_setting && !std::wstring_view(caps.listen_setting).empty();
@@ -666,7 +666,7 @@ namespace siege::views
     auto persist_ip_address = [&self]() {
       if (auto setting_iter = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](game_setting& setting) {
             siege::platform::game_command_line_caps empty_caps{};
-            auto& caps = self.matching_extension && self.matching_extension->caps ? *self.matching_extension->caps : empty_caps;
+            auto& caps = self.matching_extension && self.matching_extension->caps() ? *self.matching_extension->caps() : empty_caps;
 
             std::wstring_view ip_setting = caps.ip_connect_setting ? caps.ip_connect_setting : L"";
 
@@ -776,7 +776,7 @@ namespace siege::views
           }
 
           siege::platform::game_command_line_caps default_caps{};
-          auto& caps = has_extension_module(state) && get_extension(state).caps ? *get_extension(state).caps : default_caps;
+          auto& caps = has_extension_module(state) && get_extension(state).caps() ? *get_extension(state).caps() : default_caps;
 
           auto value = std::visit(convert_to_string, setting_iter->value);
 
@@ -1008,7 +1008,7 @@ namespace siege::views
           .group_id = has_ip ? setting_group::networking : setting_group::other,
           .persist = [&state, &self]() {
             siege::platform::game_command_line_caps default_caps{};
-            auto& caps = has_extension_module(state) && get_extension(state).caps ? *get_extension(state).caps : default_caps;
+            auto& caps = has_extension_module(state) && get_extension(state).caps() ? *get_extension(state).caps() : default_caps;
 
             std::wstring_view player_name_setting = caps.player_name_setting ? caps.player_name_setting : L"";
 
@@ -2121,16 +2121,8 @@ namespace siege::views
   using siege::platform::hardware_context_caps;
   using siege::platform::input_mapping_ex;
 
-  export std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context context, vkey virtual_key, std::uint16_t action_index)
+  export std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(siege::platform::hardware_context context, vkey virtual_key, const siege::platform::game_action& action)
   {
-    assert(has_extension_module(state));
-
-    auto actions = get_extension(state).game_actions;
-
-    assert(!actions.empty());
-
-    auto& action = actions[action_index];
-
     input_mapping_ex binding{};
 
     if (context == hardware_context::keyboard || context == hardware_context::keyboard_shifted || context == hardware_context::keypad)
@@ -2145,46 +2137,56 @@ namespace siege::views
                               .button_count = context == hardware_context::keypad ? 64u : 256u },
         binding);
     }
-    else
+
+    binding.vkey = virtual_key;
+    binding.action_name = action.action_name;
+    binding.context = context;
+
+    auto is_mouse_button = [&] {
+      return binding.vkey == vkey::lbutton || binding.vkey == vkey::rbutton || binding.vkey == vkey::mbutton || binding.vkey == vkey::xbutton1 || binding.vkey == vkey::xbutton2;
+    };
+
+    if ((binding.context == hardware_context::mouse || binding.context == hardware_context::mouse_wheel) && !is_mouse_button())
     {
-      binding.vkey = virtual_key;
-      binding.action_name = action.action_name;
-      binding.context = context;
+      binding.hardware_input_type = input_type::axis;
 
-      auto is_mouse_button = [&] {
-        return binding.vkey == vkey::lbutton || binding.vkey == vkey::rbutton || binding.vkey == vkey::mbutton || binding.vkey == vkey::xbutton1 || binding.vkey == vkey::xbutton2;
-      };
-
-      if ((binding.context == hardware_context::mouse || binding.context == hardware_context::mouse_wheel) && !is_mouse_button())
+      if (binding.vkey == vkey::left || binding.vkey == vkey::right)
       {
-        binding.hardware_input_type = input_type::axis;
-
-        if (binding.vkey == vkey::left || binding.vkey == vkey::right)
-        {
-          binding.hardware_index = 1;
-        }
+        binding.hardware_index = 1;
       }
-      else if (is_mouse_button())
-      {
-        binding.hardware_input_type = input_type::button;
-        binding.hardware_index = static_cast<std::uint16_t>(std::to_underlying(binding.vkey) - std::to_underlying(vkey::lbutton));
-      }
-
-      return std::make_pair(hardware_context_caps{
-                              .context = context,
-                              .button_count = binding.context == hardware_context::mouse ? 5u : 0u,
-                              .axis_count = binding.context == hardware_context::mouse_wheel ? 1u : 2u,
-
-                            },
-        binding);
     }
+    else if (is_mouse_button())
+    {
+      binding.hardware_input_type = input_type::button;
+      binding.hardware_index = static_cast<std::uint16_t>(std::to_underlying(binding.vkey) - std::to_underlying(vkey::lbutton));
+    }
+
+    return std::make_pair(hardware_context_caps{
+                            .context = context,
+                            .button_count = binding.context == hardware_context::mouse ? 5u : 0u,
+                            .axis_count = binding.context == hardware_context::mouse_wheel ? 1u : 2u,
+
+                          },
+      binding);
+  }
+
+  export std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(const std::any& state, siege::platform::hardware_context context, vkey virtual_key, std::uint16_t action_index)
+  {
+    assert(has_extension_module(state));
+
+    auto actions = get_extension(state).game_actions();
+
+    assert(!actions.empty());
+    assert(action_index < actions.size());
+
+    return get_full_info_for_binding(context, virtual_key, actions[action_index]);
   }
 
   export std::optional<vkey> get_expected_vkey_for_keyboard_mouse(const std::any& state, hardware_context context, vkey key, std::uint16_t action_index)
   {
     assert(has_extension_module(state));
 
-    auto actions = get_extension(state).game_actions;
+    auto actions = get_extension(state).game_actions();
 
     assert(!actions.empty());
 
@@ -2227,7 +2229,7 @@ namespace siege::views
       return {};
     }
 
-    auto actions = get_extension(state).game_actions;
+    auto actions = get_extension(state).game_actions();
 
     if (actions.empty())
     {
@@ -2442,12 +2444,12 @@ namespace siege::views
     }
     auto& extension = get_extension(state);
 
-    if (!extension.caps)
+    if (!extension.caps())
     {
       return false;
     }
 
-    return extension.caps->controller_enabled_setting && extension.caps->controller_enabled_setting[0] != '\0';
+    return extension.caps()->controller_enabled_setting && extension.caps()->controller_enabled_setting[0] != '\0';
   }
 
   export void enable_controller_for_extension(std::any& state)
@@ -2458,14 +2460,14 @@ namespace siege::views
     }
 
     auto& extension = get_extension(state);
-    assert(extension.caps != std::nullopt);
-    assert(extension.caps->controller_enabled_setting != nullptr);
-    assert(extension.caps->controller_enabled_setting[0] != '\0');
+    assert(extension.caps() != std::nullopt);
+    assert(extension.caps()->controller_enabled_setting != nullptr);
+    assert(extension.caps()->controller_enabled_setting[0] != '\0');
 
     auto& self = get(state);
 
     auto setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](auto& item) {
-      return item.setting_name == extension.caps->controller_enabled_setting;
+      return item.setting_name == extension.caps()->controller_enabled_setting;
     });
 
     if (setting != self.launch_settings.end())
@@ -2482,14 +2484,14 @@ namespace siege::views
       return;
     }
     auto& extension = get_extension(state);
-    assert(extension.caps != std::nullopt);
-    assert(extension.caps->controller_enabled_setting != nullptr);
-    assert(extension.caps->controller_enabled_setting[0] != '\0');
+    assert(extension.caps() != std::nullopt);
+    assert(extension.caps()->controller_enabled_setting != nullptr);
+    assert(extension.caps()->controller_enabled_setting[0] != '\0');
 
     auto& self = get(state);
 
     auto setting = std::find_if(self.launch_settings.begin(), self.launch_settings.end(), [&](auto& item) {
-      return item.setting_name == extension.caps->controller_enabled_setting;
+      return item.setting_name == extension.caps()->controller_enabled_setting;
     });
 
     if (setting != self.launch_settings.end())
@@ -2747,12 +2749,12 @@ namespace siege::views
       return true;
     }
 
-    if (self.matching_extension && !self.matching_extension->network_backends.empty())
+    if (self.matching_extension && !self.matching_extension->network_backends().empty())
     {
       networking_support result{
-        .wsock_32 = stl::any_of(self.matching_extension->network_backends, [](auto* name) { return name == std::wstring_view{ L"wsock32" }; }),
-        .ws2_32 = stl::any_of(self.matching_extension->network_backends, [](auto* name) { return name == std::wstring_view{ L"ws2_32" }; }),
-        .dplayx = stl::any_of(self.matching_extension->network_backends, [](auto* name) { return name == std::wstring_view{ L"dplayx" }; }),
+        .wsock_32 = stl::any_of(self.matching_extension->network_backends(), [](auto* name) { return name == std::wstring_view{ L"wsock32" }; }),
+        .ws2_32 = stl::any_of(self.matching_extension->network_backends(), [](auto* name) { return name == std::wstring_view{ L"ws2_32" }; }),
+        .dplayx = stl::any_of(self.matching_extension->network_backends(), [](auto* name) { return name == std::wstring_view{ L"dplayx" }; }),
       };
       self.detected_networking_support.emplace(self.loaded_path, result);
       return result;
@@ -2845,9 +2847,9 @@ namespace siege::views
     auto& self = get(state);
     if (self.matching_extension)
     {
-      bool has_ip = get_extension(state).caps->ip_connect_setting && get_extension(state).caps->ip_connect_setting[0];
-      bool has_dedicated = get_extension(state).caps->dedicated_setting && get_extension(state).caps->dedicated_setting[0];
-      bool has_listen = get_extension(state).caps->listen_setting && get_extension(state).caps->listen_setting[0];
+      bool has_ip = get_extension(state).caps()->ip_connect_setting && get_extension(state).caps()->ip_connect_setting[0];
+      bool has_dedicated = get_extension(state).caps()->dedicated_setting && get_extension(state).caps()->dedicated_setting[0];
+      bool has_listen = get_extension(state).caps()->listen_setting && get_extension(state).caps()->listen_setting[0];
 
       return has_ip || has_dedicated || has_listen;
     }
@@ -3165,7 +3167,7 @@ namespace siege::views
 
         if (has_extension_module(state))
         {
-          if (auto& caps = get_extension(state).caps; caps && caps->ip_connect_setting)
+          if (auto& caps = get_extension(state).caps(); caps && caps->ip_connect_setting)
           {
             auto connect_str = std::wstring_view(caps->ip_connect_setting);
 
@@ -3306,7 +3308,7 @@ namespace siege::views
 
       auto exe_path = self.loaded_path;
 
-      if (auto& caps = extension.caps; caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
+      if (auto& caps = extension.caps(); caps && caps->preferred_exe_setting && caps->preferred_exe_setting[0] != '\0')
       {
         auto preferred_game_exe = stl::find_if(game_args.string_settings, [=](auto& item) {
           return item.name && item.value && item.value[0] != '\0' && item.name == std::wstring_view(caps->preferred_exe_setting);
