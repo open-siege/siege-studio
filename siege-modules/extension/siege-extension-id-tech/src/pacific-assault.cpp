@@ -5,6 +5,7 @@ import win32.process;
 import siege.configuration.id_tech;
 import siege.configuration.shared;
 import siege.extension.id_tech;
+import siege.extension.id_tech.v3_0;
 import siege.extension.shared;
 import siege.platform;
 import siege.platform.shared;
@@ -107,7 +108,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   auto config = (user_cfg.empty() ? std::optional<siege::configuration::text_game_config>{} : load_config_from_file(user_cfg))
                   .or_else([]() { return load_config_from_pak(L"main\\default.cfg", L"main/pak0.rez", L"main/pak0.rez"); })
                   .value_or(siege::configuration::text_game_config(id_tech::id_tech_context{ .default_end_line = "\n" }, id_tech::save_config));
-  unbind_joystick_for_quake_3_config(config);
+  unbind_joystick_for_id_tech_3_0_config(config);
 
   save_bindings_to_config(*args, config, q3_mapping_context{});
 

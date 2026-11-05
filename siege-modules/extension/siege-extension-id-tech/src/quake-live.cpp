@@ -101,6 +101,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
                   .or_else([]() { return load_config_from_pk3(L"baseq3\\default.cfg", L"baseq3/pak00.pk3", L"baseq3/pak00.pk3"); })
                   .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
+  unbind_joystick_for_id_tech_3_0_config(config);
   save_bindings_to_config(*args, config);
 
   std::ofstream custom_bindings("baseq3/qzconfig.cfg", std::ios::binary | std::ios::trunc);

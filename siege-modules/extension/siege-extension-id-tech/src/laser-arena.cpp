@@ -106,7 +106,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
                   .or_else([]() { return load_config_from_pak(L"main\\default.cfg", L"main/pak0.pak", L"main/pak0.pak"); })
                   .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
-  unbind_joystick_for_quake_1_config(config);
+  unbind_joystick_for_id_tech_2_0_config(config);
 
   bool enable_controller = save_bindings_to_config(*args, config, mapping_context{ .index_to_axis = hardware_index_to_joystick_axis_id_tech_2_0, .axis_set_prefix = "" });
 

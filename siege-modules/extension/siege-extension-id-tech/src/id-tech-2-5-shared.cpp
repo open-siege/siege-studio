@@ -1,4 +1,5 @@
 module;
+#include <cassert>
 export module siege.extension.id_tech.v2_5;
 
 import std;
@@ -457,6 +458,26 @@ const wchar_t** format_command_line_sof(const siege::platform::game_command_line
 
   return raw_args.data();
 }
+}
+
+export void unbind_joystick_for_id_tech_2_5_config(siege::configuration::text_game_config& config)
+{
+  using siege::configuration::key_type;
+  constexpr std::size_t after_comment = 1;
+  config.upsert(key_type({ "set", "joy_advaxisx" }), key_type("0"), after_comment);
+  config.upsert(key_type({ "set", "joy_advaxisy" }), key_type("0"), after_comment);
+  config.upsert(key_type({ "set", "joy_advaxisz" }), key_type("0"), after_comment);
+  config.upsert(key_type({ "set", "joy_advaxisr" }), key_type("0"), after_comment);
+  config.upsert(key_type({ "set", "joy_advaxisu" }), key_type("0"), after_comment);
+  config.upsert(key_type({ "set", "joy_advaxisv" }), key_type("0"), after_comment);
+
+  config.upsert(key_type({ "unbind", "AUX29" }), key_type{}, after_comment);
+  for (auto i = 0; i < 15; ++i)
+  {
+    auto index = hardware_index_to_button_name_id_tech_2_0(static_cast<std::uint16_t>(i));
+    assert(index.has_value());
+    config.upsert(key_type({ "unbind", *index }), key_type{}, after_comment);
+  }
 }
 
 export std::errc init_id_tech_2_5_game_settings(siege::platform::common_game_settings* args, const game_settings_files& files)

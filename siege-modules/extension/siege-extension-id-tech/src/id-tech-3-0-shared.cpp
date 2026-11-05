@@ -1,4 +1,5 @@
 module;
+#include <cassert>
 export module siege.extension.id_tech.v3_0;
 
 import std;
@@ -308,6 +309,31 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
 
   return raw_args.data();
 }
+}
+
+export void unbind_joystick_for_id_tech_3_0_config(siege::configuration::text_game_config& config, mapping_context context = q3_mapping_context{})
+{
+  assert(context.index_to_axis != nullptr);
+  assert(context.index_to_button != nullptr);
+  using siege::configuration::key_type;
+  constexpr std::size_t after_comment = 1;
+
+  config.upsert(key_type({ "unbind", "JOY17" }), key_type{}, after_comment);
+  config.upsert(key_type({ "unbind", "JOY16" }), key_type{}, after_comment);
+  config.upsert(key_type({ "unbind", "JOY18" }), key_type{}, after_comment);
+  config.upsert(key_type({ "unbind", "JOY19" }), key_type{}, after_comment);
+
+  // dpad
+  config.upsert(key_type({ "unbind", "JOY24" }), key_type{}, after_comment);
+  config.upsert(key_type({ "unbind", "JOY25" }), key_type{}, after_comment);
+  config.upsert(key_type({ "unbind", "JOY27" }), key_type{}, after_comment);
+  config.upsert(key_type({ "unbind", "JOY26" }), key_type{}, after_comment);
+  for (auto i = 0; i < 15; ++i)
+  {
+    auto index = context.index_to_button(static_cast<std::uint16_t>(i));
+    assert(index.has_value());
+    config.upsert(key_type({ "unbind", *index }), key_type{}, after_comment);
+  }
 }
 
 export std::errc init_id_tech_3_0_game_settings(siege::platform::common_game_settings* args, const game_settings_files& files)

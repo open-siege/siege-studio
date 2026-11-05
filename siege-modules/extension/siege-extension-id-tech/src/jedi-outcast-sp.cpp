@@ -107,7 +107,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   auto config = load_config_from_file(L"base\\jk2config.cfg")
                   .or_else([]() { return load_config_from_pk3(L"base\\default.cfg", L"base/assets0.pk3", L"base/assets0.pk3"); })
                   .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
-  unbind_joystick_for_quake_3_config(config, raven_mapping_context{});
+  unbind_joystick_for_id_tech_3_0_config(config, raven_mapping_context{});
 
   bool enable_controller = save_bindings_to_config(*args, config, raven_mapping_context{});
 

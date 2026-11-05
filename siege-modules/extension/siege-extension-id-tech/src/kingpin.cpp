@@ -103,7 +103,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
                   .or_else([]() { return load_config_from_pak(L"main\\default.cfg", L"main/Pak0.pak", L"main/Pak0.pak"); })
                   .value_or(siege::configuration::text_game_config(siege::configuration::id_tech::id_tech_2::save_config));
 
-  unbind_joystick_for_quake_2_config(config);
+  unbind_joystick_for_id_tech_2_5_config(config);
 
   for (auto& alias : kingpin_aliases)
   {

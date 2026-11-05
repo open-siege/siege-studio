@@ -140,11 +140,19 @@ namespace siege::configuration
     text_game_config(persist&);
     text_game_config(std::any&& context, std::unique_ptr<char[]>&&, std::vector<config_line>&&, persist&);
 
+    struct append_options
+    {
+      bool replace = true;
+    };
+
     std::vector<key_type> keys() const;
     bool contains(key_type key) const;
     key_type find(key_type key) const;
     std::vector<config_line> entries_for(key_type key) const;
     text_game_config&& emplace(key_type key, key_type value);
+    text_game_config&& upsert(key_type key, key_type value, std::size_t index_hint = 0);
+    text_game_config&& insert(key_type key, key_type value, std::size_t index_hint = 0);
+    text_game_config&& append(key_type key, key_type value, append_options options = {});
     text_game_config&& remove(key_type key);
 
     void save(std::ostream&) const;
@@ -237,20 +245,45 @@ namespace siege::configuration
     return true;
   }
 
-  text_game_config&& text_game_config::emplace(key_type key, key_type value)
+  text_game_config&& text_game_config::upsert(key_type key, key_type value, std::size_t index_hint)
   {
     auto iter = std::find_if(line_entries.rbegin(), line_entries.rend(), [&](auto& entry) { return entry.key_segments == key; });
 
     if (iter != line_entries.rend())
     {
       iter->value = value;
-    }
-    else
-    {
-      line_entries.emplace_back(config_line{ "", key, value });
+      return std::move(*this);
     }
 
+    return insert(key, value, index_hint);
+  }
+
+  text_game_config&& text_game_config::insert(key_type key, key_type value, std::size_t index_hint)
+  {
+    auto index = (std::min)(index_hint, line_entries.size());
+    line_entries.insert(line_entries.begin() + static_cast<std::ptrdiff_t>(index), config_line{ "", key, value });
     return std::move(*this);
+  }
+
+  text_game_config&& text_game_config::append(key_type key, key_type value, append_options options)
+  {
+    if (options.replace)
+    {
+      auto iter = std::find_if(line_entries.rbegin(), line_entries.rend(), [&](auto& entry) { return entry.key_segments == key; });
+
+      if (iter != line_entries.rend())
+      {
+        iter->value = value;
+        return std::move(*this);
+      }
+    }
+
+    return insert(key, value, line_entries.size());
+  }
+
+  text_game_config&& text_game_config::emplace(key_type key, key_type value)
+  {
+    return append(key, value);
   }
 
   text_game_config&& text_game_config::remove(key_type key)

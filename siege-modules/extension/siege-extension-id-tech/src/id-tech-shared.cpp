@@ -78,9 +78,7 @@ export struct raven_mapping_context : mapping_context
   };
 };
 
-export void unbind_joystick_for_quake_1_config(siege::configuration::text_game_config& config);
 export void unbind_joystick_for_quake_2_config(siege::configuration::text_game_config& config);
-export void unbind_joystick_for_quake_3_config(siege::configuration::text_game_config& config, mapping_context context = q3_mapping_context{});
 export bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
 export void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<vk> not_target_vkey = std::nullopt);
 export void write_aliases_to_autoexec(std::filesystem::path autoexec_path, std::span<const std::array<std::string_view, 2>> aliases);
@@ -701,25 +699,6 @@ void append_controller_defaults(const std::span<siege::platform::game_action> ga
   }
 }
 
-void unbind_joystick_for_quake_1_config(siege::configuration::text_game_config& config)
-{
-  using siege::configuration::key_type;
-  config.emplace(key_type({ "joyadvaxisx" }), key_type("0"));
-  config.emplace(key_type({ "joyadvaxisy" }), key_type("0"));
-  config.emplace(key_type({ "joyadvaxisz" }), key_type("0"));
-  config.emplace(key_type({ "joyadvaxisr" }), key_type("0"));
-  config.emplace(key_type({ "joyadvaxisu" }), key_type("0"));
-  config.emplace(key_type({ "joyadvaxisv" }), key_type("0"));
-  config.emplace(key_type({ "unbind", "AUX29" }), key_type{});
-
-  for (auto i = 0; i < 15; ++i)
-  {
-    auto index = hardware_index_to_button_name_id_tech_2_0(i);
-    assert(index.has_value());
-    config.emplace(key_type({ "unbind", *index }), key_type{});
-  }
-}
-
 void unbind_joystick_for_quake_2_config(siege::configuration::text_game_config& config)
 {
   using siege::configuration::key_type;
@@ -734,30 +713,6 @@ void unbind_joystick_for_quake_2_config(siege::configuration::text_game_config& 
   for (auto i = 0; i < 15; ++i)
   {
     auto index = hardware_index_to_button_name_id_tech_2_0(i);
-    assert(index.has_value());
-    config.emplace(key_type({ "unbind", *index }), key_type{});
-  }
-}
-
-void unbind_joystick_for_quake_3_config(siege::configuration::text_game_config& config, mapping_context context)
-{
-  assert(context.index_to_axis != nullptr);
-  assert(context.index_to_button != nullptr);
-  using siege::configuration::key_type;
-
-  config.emplace(key_type({ "unbind", "JOY17" }), key_type{});
-  config.emplace(key_type({ "unbind", "JOY16" }), key_type{});
-  config.emplace(key_type({ "unbind", "JOY18" }), key_type{});
-  config.emplace(key_type({ "unbind", "JOY19" }), key_type{});
-
-  // dpad
-  config.emplace(key_type({ "unbind", "JOY24" }), key_type{});
-  config.emplace(key_type({ "unbind", "JOY25" }), key_type{});
-  config.emplace(key_type({ "unbind", "JOY27" }), key_type{});
-  config.emplace(key_type({ "unbind", "JOY26" }), key_type{});
-  for (auto i = 0; i < 15; ++i)
-  {
-    auto index = context.index_to_button(i);
     assert(index.has_value());
     config.emplace(key_type({ "unbind", *index }), key_type{});
   }
