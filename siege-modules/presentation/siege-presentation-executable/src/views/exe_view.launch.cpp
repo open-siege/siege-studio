@@ -298,13 +298,6 @@ namespace siege::views
 
       auto bound_actions = get_action_bindings(state);
 
-      // TODO instead of partitioning things,
-      // it's better to bind things according to the action
-      // type
-      std::partition(bound_actions.begin(), bound_actions.end(), [](auto& binding) {
-        return binding.context == hardware_context::mouse || binding.context == hardware_context::mouse_wheel;
-      });
-
       auto controller_actions = std::vector(bound_actions.begin(), bound_actions.end());
       controller_actions.erase(std::remove_if(controller_actions.begin(), controller_actions.end(), [](auto& item) {
         return !is_vkey_for_controller(item.vkey);
