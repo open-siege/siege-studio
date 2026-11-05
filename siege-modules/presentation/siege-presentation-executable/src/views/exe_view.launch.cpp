@@ -293,234 +293,16 @@ namespace siege::views
       {
         return false;
       }
-      auto backends = has_extension_module(state) ? get_extension(state).controller_input_backends() : std::span<const wchar_t* const>{};
-      auto actions = has_extension_module(state) ? get_extension(state).game_actions() : std::span<const siege::platform::game_action>{};
+      auto user_intent = create_user_intent(state);
+      auto config_intent = has_extension_module(state) ? generate_config(user_intent, get_extension(state)) : generate_config(user_intent);
 
-      auto bound_actions = get_action_bindings(state);
-
-      auto controller_actions = std::vector(bound_actions.begin(), bound_actions.end());
-      controller_actions.erase(std::remove_if(controller_actions.begin(), controller_actions.end(), [](auto& item) {
-        return !is_vkey_for_controller(item.vkey);
-      }),
-        controller_actions.end());
-
-      std::vector<siege::platform::input_mapping_ex> action_bindings;
-      action_bindings.reserve(actions.size());
-
-      if (!actions.empty() && has_extension_module(state))
+      if (config_intent.should_disable_controller)
       {
-        auto& extension = get_extension(state);
-
-        for (auto i = 0; i < input.keyboard_table.GetItemCount(); ++i)
-        {
-          auto item = input.keyboard_table.GetItem(LVITEMW{
-            .mask = LVIF_PARAM,
-            .iItem = i });
-
-          if (item && item->lParam)
-          {
-            auto virtual_key = bound_actions[item->lParam].vkey;
-            auto context = bound_actions[item->lParam].context;
-            auto action_index = bound_actions[item->lParam].action_index;
-
-            auto [caps, binding] = get_full_info_for_binding(state, context, virtual_key, action_index);
-
-            if (extension.is_input_mapping_valid({ .context = context,
-                                                   .button_count = context == hardware_context::keypad ? 64u : 256u },
-                  binding))
-            {
-              action_bindings.emplace_back(binding);
-            }
-          }
-        }
+        disable_controller_for_extension(state);
       }
-
-      std::vector<siege::platform::game_command_line_args::controller_to_send_input_mapping> controller_to_send_input_mappings;
-      using siege::platform::hardware_context;
-
-      auto add_fallback = [&](auto& bound_action, hardware_context from_context = {}) {
-        auto virtual_key = bound_action.vkey;
-
-        auto action_iter = stl::find_if(bound_actions, [&](auto& other) {
-          return other.action_index == bound_action.action_index && (other.vkey != bound_action.vkey && !(other.context == bound_action.context || other.context == from_context));
-        });
-
-        if (action_iter == bound_actions.end())
-        {
-          return;
-        }
-
-        if (stl::any_of(controller_to_send_input_mappings, [&](auto& mapping) {
-              return mapping.from_context == from_context && mapping.from_vkey == bound_action.vkey && mapping.to_context == action_iter->context && mapping.to_vkey == action_iter->vkey;
-            }))
-        {
-          return;
-        }
-
-        auto& mapping = controller_to_send_input_mappings.emplace_back();
-
-        mapping.from_context = from_context;
-        mapping.from_vkey = bound_action.vkey;
-        mapping.to_context = action_iter->context;
-        mapping.to_vkey = action_iter->vkey;
-      };
-
-      // For games which have no known actions - the user manually binds controller inputs directly to the keyboard and mouse.
-      if (actions.empty())
+      else
       {
-        for (auto i = 0; i < input.controller_table.GetItemCount(); ++i)
-        {
-          auto item = input.controller_table.GetItem(LVITEMW{
-            .mask = LVIF_PARAM,
-            .iItem = i });
-
-          if (!(item && item->lParam))
-          {
-            continue;
-          }
-
-          auto& mapping = controller_to_send_input_mappings.emplace_back();
-
-          mapping.from_context = input.bound_inputs.at(item->lParam).from_context;
-          mapping.from_vkey = input.bound_inputs.at(item->lParam).from_vkey;
-          mapping.to_context = input.bound_inputs.at(item->lParam).to_context;
-          mapping.to_vkey = input.bound_inputs.at(item->lParam).to_vkey;
-        }
-      }
-      // For games with no controller mappings, we automatically map controller inputs to keyboard and mouse inputs.
-      else if (backends.empty())
-      {
-        stl::for_each(controller_actions, add_fallback);
-      }
-      else if (has_extension_module(state))
-      {
-        auto& extension = get_extension(state);
-
-        auto controllers = get_connected_controllers();
-
-        if (controllers.empty())
-        {
-          stl::for_each(controller_actions, add_fallback);
-          // TODO disable controller input
-          // or trigger controller config refresh
-        }
-        else
-        {
-          const bool uses_winmm = std::count_if(backends.begin(), backends.end(), [](std::wstring_view value) {
-            return value == L"winmm";
-          });
-
-          std::uint32_t controller_index = 0;
-
-          struct bound_mapping
-          {
-            siege::views::input_action_binding bound_action;
-            siege::platform::input_mapping_ex binding;
-            bool is_unbindable = false;
-            bool is_bindable = false;
-
-            std::uint32_t controller_index;
-            siege::views::controller_info* controller_info;
-          };
-
-          std::vector<bound_mapping> bindings{};
-
-          for (auto& controller : controllers)
-          {
-            auto _ = std::shared_ptr<void>{
-              nullptr, [&](...) { controller_index++; }
-            };
-
-            if (controller.get_hardware_index == nullptr)
-            {
-              continue;
-            }
-
-            if (!siege::platform::is_for_controller(controller.detected_context))
-            {
-              continue;
-            }
-
-            for (auto& bound_action : controller_actions)
-            {
-              auto preference = actions[bound_action.action_index].type == actions[bound_action.action_index].analog ? controller_info::prefer_axis : controller_info::prefer_button;
-              auto hardware_index = controller.get_hardware_index(bound_action.vkey, preference);
-
-              if (!hardware_index)
-              {
-                add_fallback(bound_action);
-                continue;
-              }
-
-              auto& binding = bindings.emplace_back(bound_action);
-              binding.binding.vkey = bound_action.vkey;
-              binding.binding.context = controller.detected_context;
-              binding.binding.action_name = actions[bound_action.action_index].action_name;
-
-              if (uses_winmm)
-              {
-                auto mapped = map_hid_to_winmm(*hardware_index, mapped_axes(controller));
-                binding.binding.hardware_index = mapped.index;
-                binding.binding.hardware_input_type = mapped.type;
-              }
-              else
-              {
-                binding.binding.hardware_index = hardware_index->index;
-                binding.binding.hardware_input_type = hardware_index->type;
-              }
-              binding.controller_index = controller_index;
-              binding.controller_info = &controller;
-            }
-          }
-
-          for (auto& binding : bindings)
-          {
-            assert(binding.controller_info != nullptr);
-
-            auto empty_binding = binding.binding;
-            empty_binding.action_name.fill('\0');
-
-            auto buttons = mapped_buttons(*binding.controller_info);
-            auto axes = mapped_axes(*binding.controller_info);
-            siege::platform::hardware_context_caps controller_caps{
-              .context = binding.controller_info->detected_context,
-              .hardware_index = binding.controller_index,
-              .button_count = buttons.empty() ? 0 : *buttons.rbegin() + 1,
-              .axis_count = axes.empty() ? 0 : *axes.rbegin() + 1,
-              .hat_count = mapped_hat_count(*binding.controller_info),
-            };
-
-            binding.is_unbindable = extension.is_input_mapping_valid(controller_caps, empty_binding);
-            binding.is_bindable = extension.is_input_mapping_valid(controller_caps, binding.binding);
-          }
-
-          const auto can_bind_game_backend = stl::all_of(bindings, [](auto& binding) {
-            return binding.is_bindable || binding.is_unbindable;
-          });
-
-          if (can_bind_game_backend)
-          {
-            enable_controller_for_extension(state);
-            for (auto& binding : bindings)
-            {
-              if (binding.is_bindable)
-              {
-                action_bindings.emplace_back(binding.binding);
-              }
-              else
-              {
-                add_fallback(binding.bound_action, binding.controller_info->detected_context);
-              }
-            }
-          }
-          else
-          {
-            disable_controller_for_extension(state);
-            stl::for_each(bindings, [&](auto& binding) {
-              add_fallback(binding.bound_action);
-            });
-          }
-        }
+        enable_controller_for_extension(state);
       }
 
       auto ip_name = has_client_preference(state) ? L"ZeroTierCurrentClientIpGlobalHandle" : L"ZeroTierCurrentServerIpGlobalHandle";
@@ -539,8 +321,8 @@ namespace siege::views
       }
 
       auto game_args = get_packaged_args(state);
-      game_args.action_bindings = std::move(action_bindings);
-      game_args.controller_to_send_input_mappings = controller_to_send_input_mappings;
+      game_args.action_bindings = std::move(config_intent.action_bindings);
+      game_args.controller_to_send_input_mappings = config_intent.controller_to_send_input_mappings;
       game_args.controller_to_send_input_mappings.resize(256);
 
       auto simulate_mouse = stl::any_of(game_args.environment_settings, [&](const auto& setting) {

@@ -55,20 +55,11 @@ namespace siege::views
       constexpr static int launch_selected_id = 10;
     } launch;
 
-    struct controller_send_input_binding
-    {
-      siege::platform::vkey from_vkey;
-      siege::platform::hardware_context from_context;
-      siege::platform::vkey to_vkey;
-      siege::platform::hardware_context to_context;
-    };
-
     struct input_controls
     {
       win32::list_view keyboard_table;
       win32::list_view controller_table;
       win32::image_list controller_table_icons;
-      std::vector<controller_send_input_binding> bound_inputs{ {} };
       constexpr static int controllers_selected_id = 11;
     } input;
 

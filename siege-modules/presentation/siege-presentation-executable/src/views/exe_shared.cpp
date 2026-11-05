@@ -175,6 +175,33 @@ namespace siege::views
     std::array<input_state_change, 64> buffer;
   };
 
+  using siege::platform::game_action;
+  using siege::platform::game_command_line_args;
+  using siege::platform::hardware_context;
+  using siege::platform::hardware_context_caps;
+  using siege::platform::input_mapping_ex;
+  using siege::platform::vkey;
+  using controller_to_send_input_mapping = game_command_line_args::controller_to_send_input_mapping;
+
+  export struct user_intent
+  {
+    // empty when no extension
+    std::vector<input_action_binding> keyboard_mouse_actions;
+    // empty when no extension
+    std::vector<input_action_binding> controller_actions;
+
+    std::vector<controller_to_send_input_mapping> controller_fallbacks;
+    std::move_only_function<std::vector<controller_info>() const> get_connected_controllers =
+      []() -> std::vector<controller_info> { return {}; };
+  };
+
+  export struct config_intent
+  {
+    std::vector<input_mapping_ex> action_bindings;
+    std::vector<controller_to_send_input_mapping> controller_to_send_input_mappings;
+    bool should_disable_controller = false;
+  };
+
   export struct ui_action_context
   {
     vkey vkey;
@@ -228,6 +255,7 @@ namespace siege::views
     std::map<fs::path, networking_support> detected_networking_support;
 
     std::vector<input_action_binding> bound_actions = { {} };
+    std::vector<controller_to_send_input_mapping> bound_inputs{ {} };
 
     std::vector<const siege::fs_char*> flags;
     std::vector<siege::platform::game_command_line_args::int_setting> int_settings;
@@ -261,13 +289,26 @@ namespace siege::views
     }
   }
 
+  export config_intent generate_config(const user_intent& user);
+
+  export config_intent generate_config(const user_intent& user, const siege::platform::game_extension& extension);
+
+  export user_intent create_user_intent(std::any& state);
+
   export std::span<input_action_binding> get_action_bindings(std::any& state)
   {
     auto& self = get(state);
 
     init_capacity(self);
 
-    return self.bound_actions;
+    return std::span<input_action_binding>{ self.bound_actions };
+  }
+
+  export std::span<controller_to_send_input_mapping> get_input_simulation_bindings(std::any& state)
+  {
+    auto& self = get(state);
+
+    return std::span<controller_to_send_input_mapping>{ self.bound_inputs };
   }
 
   export std::size_t add_action_binding(std::any& state, input_action_binding binding)
@@ -276,6 +317,14 @@ namespace siege::views
     init_capacity(self);
     auto new_index = self.bound_actions.size();
     self.bound_actions.emplace_back(binding);
+    return new_index;
+  }
+
+  export std::size_t add_input_simulation(std::any& state, controller_to_send_input_mapping fallback)
+  {
+    auto& self = get(state);
+    auto new_index = self.bound_inputs.size();
+    self.bound_inputs.emplace_back(fallback);
     return new_index;
   }
 
@@ -2116,10 +2165,6 @@ namespace siege::views
 
     return std::nullopt;
   }
-
-  using siege::platform::hardware_context;
-  using siege::platform::hardware_context_caps;
-  using siege::platform::input_mapping_ex;
 
   export std::pair<hardware_context_caps, input_mapping_ex> get_full_info_for_binding(siege::platform::hardware_context context, vkey virtual_key, const siege::platform::game_action& action)
   {

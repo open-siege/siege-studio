@@ -185,7 +185,7 @@ namespace siege::views
         return;
       }
 
-      auto& binding = this->input.bound_inputs.at(item->lParam);
+      auto& binding = get_input_simulation_bindings(state)[item->lParam];
 
       auto context = static_cast<siege::platform::hardware_context>(win32::hiword(result));
       auto vkey = static_cast<siege::platform::vkey>(win32::loword(result));
@@ -315,13 +315,13 @@ namespace siege::views
         win32::list_view_item up(label_for_vkey(mapping.first, siege::platform::hardware_context::controller_xbox), get_image_index_for_button(mapping.first));
         up.iGroupId = grouping[mapping.first];
 
-        up.lParam = input.bound_inputs.size();
-        auto& bound_input = input.bound_inputs.emplace_back();
+        up.lParam = add_input_simulation(state, {
+          .from_vkey = mapping.first,
+          .from_context = siege::platform::hardware_context::controller_xbox,
+          .to_vkey = mapping.second.first,
+          .to_context = mapping.second.second,
+        });
 
-        bound_input.from_vkey = mapping.first;
-        bound_input.from_context = siege::platform::hardware_context::controller_xbox;
-        bound_input.to_vkey = mapping.second.first;
-        bound_input.to_context = mapping.second.second;
         up.mask = up.mask | LVIF_GROUPID | LVIF_PARAM;
 
         up.sub_items.emplace_back(category_for_vkey(mapping.second.first, mapping.second.second));
