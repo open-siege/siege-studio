@@ -289,3 +289,13 @@ TEST_CASE("Saving more than 4096 bytes through ofstream keeps the full file")
 
   std::filesystem::remove(path);
 }
+
+
+TEST_CASE("With unbind, the raw button is in the find key")
+{
+  std::stringstream raw_config("\"unbind\" \"JOY1\"");
+
+  auto value = id_tech::id_tech_2::load_config(raw_config, raw_config.str().size());
+
+  REQUIRE(value.value().find({ "unbind", "JOY1" }) == key_type{});
+}

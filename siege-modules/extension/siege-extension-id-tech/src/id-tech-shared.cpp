@@ -744,7 +744,9 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
 
     if (setting)
     {
-      if ((binding.vkey == vk::gamepad_left_trigger || binding.vkey == vk::gamepad_right_trigger) && context.supports_triggers_as_buttons)
+      // TODO update the code to use extended settings
+      if ((binding.vkey == vk::gamepad_left_trigger || binding.vkey == vk::gamepad_right_trigger)
+          && (context.supports_triggers_as_buttons || binding.context != hardware_context::controller_xbox))
       {
         goto button_section;
       }
@@ -944,6 +946,12 @@ std::errc apply_dpi_awareness(const wchar_t* exe_path_str)
   std::error_code last_error;
 
   auto exe_path = fs::path(exe_path_str);
+
+  if (exe_path.empty())
+  {
+    return std::errc::invalid_argument;
+  }
+  // TODO maybe it is worth adding validation here.
 
   HKEY current_user = nullptr;
   if (::RegOpenCurrentUser(KEY_WRITE, &current_user) == 0)

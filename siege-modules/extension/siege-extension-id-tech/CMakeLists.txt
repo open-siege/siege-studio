@@ -122,4 +122,27 @@ if (WIN32)
             target_link_libraries(${EXT_TARGET} PRIVATE siege-extension siege-content-id-tech-resource siege-content-id-tech-scripting)
         endif()
     endforeach()
+
+    find_package(Catch2 REQUIRED)
+
+    add_executable(siege-extension-quake-tests src/quake.test.cpp)
+    set_target_properties(siege-extension-quake-tests PROPERTIES
+        CXX_STANDARD 23
+        CXX_STANDARD_REQUIRED ON
+        CXX_SCAN_FOR_MODULES ON)
+    target_link_libraries(siege-extension-quake-tests PRIVATE
+        Catch2::Catch2WithMain
+        siege-win-desktop)
+    add_dependencies(siege-extension-quake-tests siege-extension-quake)
+
+    include(CTest)
+    include(Catch)
+    catch_discover_tests(siege-extension-quake-tests)
+
+    add_custom_command(TARGET siege-extension-quake-tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:siege-extension-quake> $<TARGET_FILE_DIR:siege-extension-quake-tests>
+       # COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIGURATION> --output-on-failure
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Copying Quake 1 extension DLL and running siege-extension-quake-tests"
+    )
 endif()

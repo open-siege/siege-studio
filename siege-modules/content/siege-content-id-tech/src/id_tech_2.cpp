@@ -148,6 +148,13 @@ namespace siege::configuration::id_tech
           continue;
         }
 
+        // unbind is a special case because the config key should be {unbind + BUTTON}.
+        if (segments.size() == 2 && segments [0] == "unbind")
+        {
+          config_data.emplace_back(config_line{ line, segments, key_type{ std::vector<std::string_view>{} } });
+          continue;
+        }
+
         auto value = segments.back();
         segments.pop_back();
         config_data.emplace_back(config_line{ line, segments, value });
