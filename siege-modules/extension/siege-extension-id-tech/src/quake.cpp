@@ -130,7 +130,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings_ex(const wchar_t* exe_path_str, siege::platform::game_command_line_args_ex* args)
 {
   if (auto result = apply_dpi_awareness(exe_path_str); result != std::errc{})
   {

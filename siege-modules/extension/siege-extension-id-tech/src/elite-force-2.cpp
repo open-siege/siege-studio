@@ -92,7 +92,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings_ex(const wchar_t* exe_path_str, siege::platform::game_command_line_args_ex* args)
 {
   if (exe_path_str == nullptr)
   {
@@ -114,10 +114,10 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   std::ofstream custom_bindings("base/global/defaultoptions.cfg", std::ios::binary | std::ios::trunc);
   config.save(custom_bindings);
   insert_string_setting_once(*args, L"console", L"1");
-  auto iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name == nullptr; });
-  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.value != nullptr && setting.value[0] != '\0' && std::wstring_view(setting.name) == L"connect"; });
+  auto iter = std::find_if(args->string_settings, args->string_settings + args->string_settings_size, [](auto& setting) { return setting.name == nullptr; });
+  auto connect_iter = std::find_if(args->string_settings, args->string_settings + args->string_settings_size, [](auto& setting) { return setting.name != nullptr && setting.value != nullptr && setting.value[0] != '\0' && std::wstring_view(setting.name) == L"connect"; });
 
-  if (connect_iter != args->string_settings.end())
+  if (connect_iter != args->string_settings + args->string_settings_size)
   {
     // TODO do this at the top level
     static std::wstring address_port{};
@@ -127,9 +127,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   }
 
   // TODO update to use new setting functions
-  auto server_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.value != nullptr && setting.value[0] != '\0' && (std::wstring_view(setting.name) == L"dedicated" || std::wstring_view(setting.name) == L"connect" || std::wstring_view(setting.name) == L"map"); });
+  auto server_iter = std::find_if(args->string_settings, args->string_settings + args->string_settings_size, [](auto& setting) { return setting.name != nullptr && setting.value != nullptr && setting.value[0] != '\0' && (std::wstring_view(setting.name) == L"dedicated" || std::wstring_view(setting.name) == L"connect" || std::wstring_view(setting.name) == L"map"); });
 
-  if (server_iter != args->string_settings.end())
+  if (server_iter != args->string_settings + args->string_settings_size)
   {
     std::advance(iter, 1);
     iter->name = L"com_introplayed";
@@ -146,9 +146,9 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
     iter->value = L"";
   }
 
-  auto mode_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && std::wstring_view(setting.name) == L"r_mode"; });
+  auto mode_iter = std::find_if(args->int_settings, args->int_settings + args->int_settings_size, [](auto& setting) { return setting.name != nullptr && std::wstring_view(setting.name) == L"r_mode"; });
 
-  if (mode_iter != args->int_settings.end())
+  if (mode_iter != args->int_settings + args->int_settings_size)
   {
     auto value = mode_iter->value;
     std::advance(mode_iter, 1);

@@ -77,7 +77,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings_ex(const wchar_t* exe_path_str, siege::platform::game_command_line_args_ex* args)
 {
   if (exe_path_str == nullptr)
   {
@@ -101,7 +101,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   insert_string_setting_once(*args, L"console", L"1");
   insert_string_setting_once(*args, L"s_Alice2URL", L".");
 
-  if (auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; }); free_iter != args->flags.end())
+  if (auto free_iter = std::find_if(args->flags, args->flags + args->flags_size, [](auto& setting) { return setting == nullptr; }); free_iter != args->flags + args->flags_size)
   {
     *free_iter = L"-RunningFromAlice2";
   }

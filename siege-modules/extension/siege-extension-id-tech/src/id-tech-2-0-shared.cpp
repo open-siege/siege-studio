@@ -109,7 +109,7 @@ using namespace std::literals;
 
 // TODO
 // Copy glide files to the game folder - use to-be-implemented shared list of detected items
-const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
+const wchar_t** format_command_line_ex(const siege::platform::game_command_line_args_ex* args, std::uint32_t* new_size)
 {
   if (!args)
   {
@@ -125,31 +125,31 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   string_args.clear();
 
   // Should always be first or else hosting won't work
-  auto connect_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) {
+  auto connect_iter = std::find_if(args->string_settings, args->string_settings + args->string_settings_size, [](auto& setting) {
     return setting.name && setting.value && setting.value[0] != '\0' && std::wstring_view(setting.name) == command_line_caps.ip_connect_setting;
   });
 
-  auto listen_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) {
+  auto listen_iter = std::find_if(args->int_settings, args->int_settings + args->int_settings_size, [](auto& setting) {
     return setting.name && setting.value && setting.name == L"listen"sv;
   });
 
-  auto map_iter = std::find_if(args->string_settings.begin(), args->string_settings.end(), [](auto& setting) {
+  auto map_iter = std::find_if(args->string_settings, args->string_settings + args->string_settings_size, [](auto& setting) {
     return setting.name && setting.value && setting.name == L"map"sv;
   });
 
-  if (connect_iter != args->string_settings.end() && map_iter != args->string_settings.end() && listen_iter == args->int_settings.end())
+  if (connect_iter != args->string_settings + args->string_settings_size && map_iter != args->string_settings + args->string_settings_size && listen_iter == args->int_settings + args->int_settings_size)
   {
     string_args.emplace_back(L"listen");
     string_args.emplace_back(L"1");
   }
 
-  if (connect_iter != args->string_settings.end())
+  if (connect_iter != args->string_settings + args->string_settings_size)
   {
     string_args.emplace_back(L"+connect");
     string_args.emplace_back(connect_iter->value);
   }
 
-  for (auto& setting : args->string_settings)
+  for (auto& setting : std::span(args->string_settings, args->string_settings_size))
   {
     if (!setting.name)
     {
@@ -194,7 +194,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     }
   }
 
-  for (auto& setting : args->int_settings)
+  for (auto& setting : std::span(args->int_settings, args->int_settings_size))
   {
     if (!setting.name)
     {
@@ -223,7 +223,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     }
   }
 
-  for (auto& flag : args->flags)
+  for (auto& flag : std::span(args->flags, args->flags_size))
   {
     if (!flag)
     {

@@ -90,7 +90,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   return std::errc::not_supported;
 }
 
-std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings_ex(const wchar_t* exe_path_str, siege::platform::game_command_line_args_ex* args)
 {
   if (exe_path_str == nullptr)
   {

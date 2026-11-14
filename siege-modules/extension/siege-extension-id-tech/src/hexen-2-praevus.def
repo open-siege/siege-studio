@@ -7,8 +7,8 @@ EXPORTS
 	get_predefined_string_command_line_settings PRIVATE
 	get_predefined_int_command_line_settings PRIVATE
 	init_keyboard_inputs PRIVATE
-	format_command_line PRIVATE
+	format_command_line_ex PRIVATE
 	init_mouse_inputs PRIVATE
 	default_controller_inputs PRIVATE
-	apply_prelaunch_settings PRIVATE
+	apply_prelaunch_settings_ex PRIVATE
 	init_game_settings PRIVATE

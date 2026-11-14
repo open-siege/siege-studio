@@ -77,7 +77,7 @@ std::errc executable_is_supported(const wchar_t* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings_ex(const wchar_t* exe_path_str, siege::platform::game_command_line_args_ex* args)
 {
   if (auto result = apply_dpi_awareness(exe_path_str); result != std::errc{})
   {
@@ -111,7 +111,7 @@ std::errc apply_prelaunch_settings(const wchar_t* exe_path_str, siege::platform:
   bind_axis_to_send_input(*args, "+lookup", "+mlook");
   bind_axis_to_send_input(*args, "+lookdown", "+mlook");
 
-  auto free_iter = std::find_if(args->flags.begin(), args->flags.end(), [](auto& setting) { return setting == nullptr; });
+  auto free_iter = std::find_if(args->flags, args->flags + args->flags_size, [](auto& setting) { return setting == nullptr; });
   *free_iter = L"notwarezed";
 
   std::advance(free_iter, 1);

@@ -100,7 +100,7 @@ std::errc executable_is_supported(const fs_char* filename) noexcept
   return siege::executable_is_supported(filename, verification_strings[0], function_name_ranges, variable_name_ranges);
 }
 
-std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform::game_command_line_args* args)
+std::errc apply_prelaunch_settings_ex(const fs_char* exe_path_str, siege::platform::game_command_line_args_ex* args)
 {
   if (exe_path_str == nullptr)
   {
@@ -146,9 +146,9 @@ std::errc apply_prelaunch_settings(const fs_char* exe_path_str, siege::platform:
 
   insert_string_setting_once(*args, FSL "console", FSL "1");
 
-  auto int_iter = std::find_if(args->int_settings.begin(), args->int_settings.end(), [](auto& setting) { return setting.name != nullptr && setting.name == fs_string_view(FSL "numbots"); });
+  auto int_iter = std::find_if(args->int_settings, args->int_settings + args->int_settings_size, [](auto& setting) { return setting.name != nullptr && setting.name == fs_string_view(FSL "numbots"); });
 
-  if (int_iter != args->int_settings.end())
+  if (int_iter != args->int_settings + args->int_settings_size)
   {
     std::ofstream bots_stream("user/add_bots.cfg", std::ios::binary | std::ios::trunc);
 

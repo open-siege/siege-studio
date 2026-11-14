@@ -2,21 +2,38 @@
 
 import std;
 import win32.module;
+import siege.platform;
 import siege.platform.extension;
 
 namespace fs = std::filesystem;
 namespace str = std::ranges;
+
+using siege::platform::game_command_line_args_ex;
+using siege::platform::hardware_context;
+using siege::platform::input_mapping_ex;
+using siege::platform::vkey;
 
 fs::path self_path();
 fs::path extension_path(std::string_view name);
 std::string read_text(fs::path);
 bool has_once(std::string_view, std::string_view);
 
+input_mapping_ex make_binding(vkey key, std::string_view action, hardware_context context = {}, std::uint16_t hardware_index = 0);
+
+game_command_line_args_ex args_with_bindings(std::span<input_mapping_ex> bindings)
+{
+  return game_command_line_args_ex{
+    .input_mapping_struct_size = sizeof(input_mapping_ex),
+    .action_bindings_size = bindings.size(),
+    .action_bindings = reinterpret_cast<std::byte*>(bindings.data()),
+  };
+}
+
 TEST_CASE("apply_prelaunch_settings accepts an empty executable path")
 {
   siege::platform::game_extension_module extension(extension_path("siege-extension-quake.dll"));
 
-  siege::platform::game_command_line_args args{};
+  game_command_line_args_ex args{};
   REQUIRE(extension.apply_prelaunch_settings({}, args) == std::errc::invalid_argument);
 }
 
@@ -36,7 +53,7 @@ TEST_CASE("apply_prelaunch_settings writes relevant config files correctly")
   };
 
   SECTION("empty config") {
-    siege::platform::game_command_line_args args{};
+    game_command_line_args_ex args{};
     REQUIRE(extension.apply_prelaunch_settings(self_path(), args) == std::errc{});
 
     auto config_text = read_text(id1 / "config.cfg");
@@ -77,7 +94,7 @@ TEST_CASE("apply_prelaunch_settings writes relevant config files correctly")
     config_existing.flush();
     config_existing.close();
 
-    siege::platform::game_command_line_args args{};
+    game_command_line_args_ex args{};
     REQUIRE(extension.apply_prelaunch_settings(self_path(), args) == std::errc{});
 
     auto config_text = read_text(id1 / "config.cfg");
@@ -91,22 +108,16 @@ TEST_CASE("apply_prelaunch_settings writes relevant config files correctly")
     // TODO autoexec.cfg
   }
 
-  using siege::platform::vkey;
-  using siege::platform::game_command_line_args;
-  using siege::platform::hardware_context;
-
   SECTION("generates correct bindings for keyboard and mouse inputs")
   {
-    game_command_line_args args{
-      .action_bindings = std::array<game_command_line_args::input_mapping, 256>{ {
-        {.vkey = vkey{'W'},.action_name = "+forward"},
-        {.vkey = vkey{'A'},.action_name = "+moveleft"},
-        {.vkey = vkey{'S'},.action_name = "+back"},
-        {.vkey = vkey{'D'},.action_name = "+moveright"},
-        { .vkey = vkey::lbutton, .context = hardware_context::mouse, .action_name = "+attack" },
-      } }
-
-    };
+    std::array<input_mapping_ex, 5> bindings{ {
+      make_binding(vkey{ 'W' }, "+forward"),
+      make_binding(vkey{ 'A' }, "+moveleft"),
+      make_binding(vkey{ 'S' }, "+back"),
+      make_binding(vkey{ 'D' }, "+moveright"),
+      make_binding(vkey::lbutton, "+attack", hardware_context::mouse),
+    } };
+    auto args = args_with_bindings(bindings);
     REQUIRE(extension.apply_prelaunch_settings(self_path(), args) == std::errc{});
 
     auto config_text = read_text(id1 / "config.cfg");
@@ -123,16 +134,14 @@ TEST_CASE("apply_prelaunch_settings writes relevant config files correctly")
 
   SECTION("generates correct bindings for keyboard and mouse inputs")
   {
-    game_command_line_args args{
-      .action_bindings = std::array<game_command_line_args::input_mapping, 256>{ {
-        { .vkey = vkey{ 'W' }, .action_name = "+forward" },
-        { .vkey = vkey{ 'A' }, .action_name = "+moveleft" },
-        { .vkey = vkey{ 'S' }, .action_name = "+back" },
-        { .vkey = vkey{ 'D' }, .action_name = "+moveright" },
-        { .vkey = vkey::lbutton, .context = hardware_context::mouse, .action_name = "+attack" },
-      } }
-
-    };
+    std::array<input_mapping_ex, 5> bindings{ {
+      make_binding(vkey{ 'W' }, "+forward"),
+      make_binding(vkey{ 'A' }, "+moveleft"),
+      make_binding(vkey{ 'S' }, "+back"),
+      make_binding(vkey{ 'D' }, "+moveright"),
+      make_binding(vkey::lbutton, "+attack", hardware_context::mouse),
+    } };
+    auto args = args_with_bindings(bindings);
     REQUIRE(extension.apply_prelaunch_settings(self_path(), args) == std::errc{});
 
     auto config_text = read_text(id1 / "config.cfg");
@@ -150,23 +159,22 @@ TEST_CASE("apply_prelaunch_settings writes relevant config files correctly")
   // TODO controller tests
   SECTION("generates correct bindings for controller inputs")
   {
-    game_command_line_args args{
-      .action_bindings = std::array<game_command_line_args::input_mapping, 256>{ {
-        { .vkey = vkey::gamepad_right_trigger, .hardware_index = 5, .context = hardware_context::controller_playstation_3, .action_name = "+attack" },
-        { .vkey = vkey::gamepad_a, .hardware_index = 0, .context = hardware_context::controller_playstation_3, .action_name = "+moveup" },
-        { .vkey = vkey::gamepad_b, .hardware_index = 1, .context = hardware_context::controller_playstation_3, .action_name = "+movedown" },
-        { .vkey = vkey::gamepad_right_thumbstick_button, .hardware_index = 9, .context = hardware_context::controller_playstation_3, .action_name = "+melee-attack" },
-        { .vkey = vkey::gamepad_left_thumbstick_up, .hardware_index = 1, .context = hardware_context::controller_playstation_3, .action_name = "+forward" },
-        { .vkey = vkey::gamepad_left_thumbstick_down, .hardware_index = 1, .context = hardware_context::controller_playstation_3, .action_name = "+back" },
-        { .vkey = vkey::gamepad_left_thumbstick_left, .hardware_index = 0, .context = hardware_context::controller_playstation_3, .action_name = "+moveleft" },
-        { .vkey = vkey::gamepad_left_thumbstick_right, .hardware_index = 0, .context = hardware_context::controller_playstation_3, .action_name = "+moveright" },
-        { .vkey = vkey::gamepad_right_thumbstick_up, .hardware_index = 2, .context = hardware_context::controller_playstation_3, .action_name = "+lookup" },
-        { .vkey = vkey::gamepad_right_thumbstick_down, .hardware_index = 2, .context = hardware_context::controller_playstation_3, .action_name = "+lookdown" },
-        { .vkey = vkey::gamepad_right_thumbstick_left, .hardware_index = 3, .context = hardware_context::controller_playstation_3, .action_name = "+left" },
-        { .vkey = vkey::gamepad_right_thumbstick_right, .hardware_index = 3, .context = hardware_context::controller_playstation_3, .action_name = "+right" },
-      } }
-
-    };
+    auto ps3 = hardware_context::controller_playstation_3;
+    std::array<input_mapping_ex, 12> bindings{ {
+      make_binding(vkey::gamepad_right_trigger, "+attack", ps3, 5),
+      make_binding(vkey::gamepad_a, "+moveup", ps3, 0),
+      make_binding(vkey::gamepad_b, "+movedown", ps3, 1),
+      make_binding(vkey::gamepad_right_thumbstick_button, "+melee-attack", ps3, 9),
+      make_binding(vkey::gamepad_left_thumbstick_up, "+forward", ps3, 1),
+      make_binding(vkey::gamepad_left_thumbstick_down, "+back", ps3, 1),
+      make_binding(vkey::gamepad_left_thumbstick_left, "+moveleft", ps3, 0),
+      make_binding(vkey::gamepad_left_thumbstick_right, "+moveright", ps3, 0),
+      make_binding(vkey::gamepad_right_thumbstick_up, "+lookup", ps3, 2),
+      make_binding(vkey::gamepad_right_thumbstick_down, "+lookdown", ps3, 2),
+      make_binding(vkey::gamepad_right_thumbstick_left, "+left", ps3, 3),
+      make_binding(vkey::gamepad_right_thumbstick_right, "+right", ps3, 3),
+    } };
+    auto args = args_with_bindings(bindings);
     REQUIRE(extension.apply_prelaunch_settings(self_path(), args) == std::errc{});
 
     auto config_text = read_text(id1 / "config.cfg");
@@ -210,4 +218,16 @@ bool has_once(std::string_view text, std::string_view value)
   }
 
   return index == text.rfind(value);
+}
+
+input_mapping_ex make_binding(vkey key, std::string_view action, hardware_context context, std::uint16_t hardware_index)
+{
+  input_mapping_ex binding{
+    .vkey = key,
+    .hardware_index = hardware_index,
+    .context = context,
+  };
+
+  std::copy_n(action.data(), std::min(action.size(), binding.action_name.size() - 1), binding.action_name.data());
+  return binding;
 }

@@ -42,7 +42,7 @@ export void upsert_mouse_bindings(siege::configuration::text_game_config& config
 export void upsert_keyboard_bindings(siege::configuration::text_game_config& config, siege::platform::keyboard_binding& binding);
 export void upsert_mouse_axis_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<vk, std::string_view>> actions, siege::platform::mouse_binding& binding, mouse_context default_context = mouse_context::mouse);
 export void append_controller_defaults(const std::span<siege::platform::game_action> game_actions, const std::span<std::pair<vk, std::string_view>> actions, siege::platform::controller_binding& binding);
-export void insert_string_setting_once(siege::platform::game_command_line_args& args, std::wstring_view name, std::wstring_view value);
+export void insert_string_setting_once(siege::platform::game_command_line_args_ex& args, std::wstring_view name, std::wstring_view value);
 export void insert_string_setting_once(std::span<siege::platform::game_command_line_args::string_setting> settings, std::wstring_view name, std::wstring_view value);
 
 export struct mapping_context
@@ -79,8 +79,8 @@ export struct raven_mapping_context : mapping_context
 };
 
 export void unbind_joystick_for_quake_2_config(siege::configuration::text_game_config& config);
-export bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context = {});
-export void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<vk> not_target_vkey = std::nullopt);
+export bool save_bindings_to_config(siege::platform::game_command_line_args_ex& args, siege::configuration::text_game_config& config, mapping_context context = {});
+export void bind_axis_to_send_input(siege::platform::game_command_line_args_ex& args, std::string_view source, std::string_view target, std::optional<vk> not_target_vkey = std::nullopt);
 export void write_aliases_to_autoexec(std::filesystem::path autoexec_path, std::span<const std::array<std::string_view, 2>> aliases);
 
 export struct game_settings_files
@@ -718,23 +718,25 @@ void unbind_joystick_for_quake_2_config(siege::configuration::text_game_config& 
   }
 }
 
-bool save_bindings_to_config(siege::platform::game_command_line_args& args, siege::configuration::text_game_config& config, mapping_context context)
+bool save_bindings_to_config(siege::platform::game_command_line_args_ex& args, siege::configuration::text_game_config& config, mapping_context context)
 {
   static std::set<std::string> storage;
+  auto intern = [&](std::string_view value) -> std::string_view {
+    return *storage.emplace(value).first;
+  };
   bool enable_controller = false;
-  for (auto& binding : args.action_bindings)
+  auto packaged = static_cast<siege::platform::packaged_args>(args);
+  for (auto& binding : packaged.action_bindings)
   {
+    auto action_name = intern(binding.action_name.data());
+
     if (!is_vkey_for_controller(binding.vkey))
     {
       auto game_key = vkey_to_key(binding.vkey, binding.context);
 
       if (game_key)
       {
-        auto iter = storage.emplace(*game_key);
-
-        *binding.action_name.rbegin() = '\0';
-
-        config.emplace(siege::configuration::key_type({ "bind", *iter.first }), siege::configuration::key_type(binding.action_name.data()));
+        config.emplace(siege::configuration::key_type({ "bind", intern(*game_key) }), siege::configuration::key_type(action_name));
       }
       continue;
     }
@@ -763,7 +765,6 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
         { "+movedown", "5" }
       };
 
-      auto action_name = std::string_view(binding.action_name.data());
       auto index = std::string_view("0");
 
       if (auto iter = controller_button_mapping.find(action_name); iter != controller_button_mapping.end())
@@ -790,19 +791,19 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
       auto dpad_name = context.dpad_name(binding.vkey);
       if (binding.vkey == vk::gamepad_dpad_up && dpad_name)
       {
-        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(action_name));
       }
       else if (binding.vkey == vk::gamepad_dpad_down && dpad_name)
       {
-        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(action_name));
       }
       else if (binding.vkey == vk::gamepad_dpad_left && dpad_name)
       {
-        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(action_name));
       }
       else if (binding.vkey == vk::gamepad_dpad_right && dpad_name)
       {
-        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(binding.action_name.data()));
+        config.emplace(siege::configuration::key_type({ "bind", *dpad_name }), siege::configuration::key_type(action_name));
       }
       else if (binding.vkey == vk::gamepad_left_trigger || binding.vkey == vk::gamepad_right_trigger)
       {
@@ -811,7 +812,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
           auto axis = context.index_to_axis(binding.vkey, binding.hardware_index);
           if (axis)
           {
-            config.emplace(siege::configuration::key_type({ "bind", *axis }), siege::configuration::key_type(binding.action_name.data()));
+            config.emplace(siege::configuration::key_type({ "bind", *axis }), siege::configuration::key_type(action_name));
           }
         }
         else if (binding.context != hardware_context::controller_xbox)
@@ -819,7 +820,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
           auto button = context.index_to_button(binding.hardware_index);
           if (button)
           {
-            config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
+            config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(action_name));
           }
         }
       }
@@ -828,7 +829,7 @@ bool save_bindings_to_config(siege::platform::game_command_line_args& args, sieg
         auto button = context.index_to_button(binding.hardware_index);
         if (button)
         {
-          config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(binding.action_name.data()));
+          config.emplace(siege::configuration::key_type({ "bind", *button }), siege::configuration::key_type(action_name));
         }
       }
     }
@@ -857,14 +858,17 @@ void insert_string_setting_once(std::span<siege::platform::game_command_line_arg
   }
 }
 
-void insert_string_setting_once(siege::platform::game_command_line_args& args, std::wstring_view name, std::wstring_view value)
+void insert_string_setting_once(siege::platform::game_command_line_args_ex& args, std::wstring_view name, std::wstring_view value)
 {
-  insert_string_setting_once(args.string_settings, name, value);
+  insert_string_setting_once(std::span{ args.string_settings, args.string_settings_size }, name, value);
 }
 
-void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std::string_view source, std::string_view target, std::optional<vk> not_target_vkey)
+void bind_axis_to_send_input(siege::platform::game_command_line_args_ex& args, std::string_view source, std::string_view target, std::optional<vk> not_target_vkey)
 {
-  for (auto& binding : args.action_bindings)
+  auto packaged = static_cast<siege::platform::packaged_args>(args);
+  auto controller_mappings = std::span{ args.controller_to_send_input_mappings, args.controller_to_send_input_mappings_size };
+
+  for (auto& binding : packaged.action_bindings)
   {
     if (!is_vkey_for_controller(binding.vkey))
     {
@@ -885,16 +889,16 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
       continue;
     }
 
-    auto free_mapping = std::find_if(args.controller_to_send_input_mappings.begin(), args.controller_to_send_input_mappings.end(), [](auto& mapping) {
+    auto free_mapping = std::find_if(controller_mappings.begin(), controller_mappings.end(), [](auto& mapping) {
       return mapping.from_vkey == vk::none;
     });
 
-    if (free_mapping == args.controller_to_send_input_mappings.end())
+    if (free_mapping == controller_mappings.end())
     {
       continue;
     }
 
-    auto keyboard = std::find_if(args.action_bindings.begin(), args.action_bindings.end(), [&](auto& existing) {
+    auto keyboard = std::find_if(packaged.action_bindings.begin(), packaged.action_bindings.end(), [&](auto& existing) {
       auto result = existing.action_name.data() == target && (existing.context == siege::platform::hardware_context::global || existing.context == siege::platform::hardware_context::keyboard);
 
       if (not_target_vkey)
@@ -905,7 +909,7 @@ void bind_axis_to_send_input(siege::platform::game_command_line_args& args, std:
       return result;
     });
 
-    if (keyboard != args.action_bindings.end())
+    if (keyboard != packaged.action_bindings.end())
     {
       free_mapping->from_vkey = binding.vkey;
       free_mapping->from_context = binding.context;

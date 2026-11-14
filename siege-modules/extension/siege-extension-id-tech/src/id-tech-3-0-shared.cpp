@@ -209,7 +209,7 @@ extern game_command_line_caps command_line_caps;
 
 // TODO
 // Specify controller cfg in the command line
-const wchar_t** format_command_line(const siege::platform::game_command_line_args* args, std::uint32_t* new_size)
+const wchar_t** format_command_line_ex(const siege::platform::game_command_line_args_ex* args, std::uint32_t* new_size)
 {
   if (!args)
   {
@@ -224,7 +224,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
   static std::vector<std::wstring> string_args;
   string_args.clear();
 
-  for (auto& setting : args->string_settings)
+  for (auto& setting : std::span(args->string_settings, args->string_settings_size))
   {
     if (!setting.name)
     {
@@ -264,7 +264,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     }
   }
 
-  for (auto& setting : args->int_settings)
+  for (auto& setting : std::span(args->int_settings, args->int_settings_size))
   {
     if (!setting.name)
     {
@@ -284,7 +284,7 @@ const wchar_t** format_command_line(const siege::platform::game_command_line_arg
     }
   }
 
-  for (auto& flag : args->flags)
+  for (auto& flag : std::span(args->flags, args->flags_size))
   {
     if (!flag)
     {
