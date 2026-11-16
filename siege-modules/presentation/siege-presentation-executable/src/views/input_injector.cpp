@@ -28,6 +28,13 @@ namespace siege::views
     bool simulate_keyboard;
     std::function<HRESULT(siege::platform::packaged_args& game_args, PROCESS_INFORMATION* process_info)> launch_game_with_extension;
     std::function<void()> on_process_closed;
+
+    double refresh_rate_hz = 60.0;
+
+    // in mickeys
+    double max_turn_speed = 750.0;
+
+    double response_curve_exponent = 2.0;
   };
 
   export std::any bind_to_window(win32::window_ref, input_injector_args);
@@ -54,8 +61,12 @@ namespace siege::views
     std::map<HANDLE, controller_state> registered_controllers;
     std::map<std::string_view, bool> action_states;
 
-    std::function<bool()> mouse_timer;
-    POINT mouse_intensity{};
+    std::atomic<POINT> mouse_velocity{};
+    HANDLE mouse_timer_handle{};
+    HANDLE mouse_stop_event{};
+    std::jthread mouse_thread;
+
+    static_assert(std::atomic<POINT>::is_always_lock_free);
 
     input_injector(HWND target_window, input_injector_args args) : target_window(target_window), injector_args(std::move(args))
     {
@@ -110,6 +121,87 @@ namespace siege::views
       catch (...)
       {
       }
+
+      mouse_stop_event = ::CreateEventW(nullptr, /*bManualReset*/ TRUE, /*bInitialState*/ FALSE, nullptr);
+
+      if (!mouse_stop_event)
+      {
+        return;
+      }
+
+      mouse_timer_handle = ::CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+
+      if (!mouse_timer_handle)
+      {
+        // in case we older than on windows 10
+        mouse_timer_handle = ::CreateWaitableTimerExW(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
+      }
+
+      const double refresh_hz = std::clamp(injector_args.refresh_rate_hz, 1.0, 60.0);
+      const double tick_seconds = 1.0 / refresh_hz;
+      
+      if (mouse_timer_handle)
+      {
+        const LONG period_ms = std::clamp((LONG)std::lround(1000.0 / refresh_hz), 1L, 16L);
+        LARGE_INTEGER due_time{};
+        due_time.QuadPart = -1;
+        ::SetWaitableTimer(mouse_timer_handle, &due_time, period_ms, nullptr, nullptr, FALSE);
+
+        mouse_thread = std::jthread([this, tick_seconds] {
+          std::array<HANDLE, 2> waits{ mouse_stop_event, mouse_timer_handle };
+
+          // we keep these around
+          // because smaller movements
+          // will have left over units
+          // that can be carried over into
+          // future intervals.
+          double remainder_x = 0.0;
+          double remainder_y = 0.0;
+
+          while (true)
+          {
+            auto signalled = ::WaitForMultipleObjects((DWORD)waits.size(), waits.data(), FALSE, INFINITE);
+
+            // only caring about the timer and nothing else
+            if (signalled != WAIT_OBJECT_0 + 1)
+            {
+              break;
+            }
+
+            const POINT velocity = mouse_velocity.load(std::memory_order_relaxed);
+
+            if (velocity.x == 0 && velocity.y == 0)
+            {
+              remainder_x = 0.0;
+              remainder_y = 0.0;
+              continue;
+            }
+
+            // the new value
+            // will contain anything that
+            // couldn't be simulated last time
+            // to help smooth out the movement.
+            remainder_x += velocity.x * tick_seconds;
+            remainder_y += velocity.y * tick_seconds;
+            const LONG dx = (LONG)remainder_x;
+            const LONG dy = (LONG)remainder_y;
+            remainder_x -= dx;
+            remainder_y -= dy;
+
+            if (dx == 0 && dy == 0)
+            {
+              continue;
+            }
+
+            ::INPUT mouse_move{ .type = INPUT_MOUSE };
+            mouse_move.mi.dwFlags = MOUSEEVENTF_MOVE;
+            mouse_move.mi.dx = dx;
+            mouse_move.mi.dy = dy;
+
+            ::SendInput(1, &mouse_move, sizeof(INPUT));
+          }
+        });
+      }
     }
 
     ~input_injector()
@@ -144,9 +236,25 @@ namespace siege::views
         // registration failed. Call GetLastError for the cause of the error.
       }
 
-      if (mouse_timer)
+      if (mouse_stop_event)
       {
-        mouse_timer();
+        ::SetEvent(mouse_stop_event);
+      }
+
+      if (mouse_thread.joinable())
+      {
+        mouse_thread.join();
+      }
+
+      if (mouse_timer_handle)
+      {
+        ::CancelWaitableTimer(mouse_timer_handle);
+        ::CloseHandle(mouse_timer_handle);
+      }
+
+      if (mouse_stop_event)
+      {
+        ::CloseHandle(mouse_stop_event);
       }
 
       ::CloseHandle(process_handle);
@@ -181,7 +289,7 @@ namespace siege::views
       return std::make_pair(x, y);
     }
 
-    LRESULT wm_input(win32::window_ref window, win32::input_message message)
+    LRESULT wm_input(win32::window_ref, win32::input_message message)
     {
       DWORD exit_code = 0;
       if (::GetExitCodeProcess(child_process.hProcess, &exit_code) && exit_code != STILL_ACTIVE)
@@ -345,94 +453,85 @@ namespace siege::views
         }
       }
 
-      if (!(x_mouse_changes.empty() || y_mouse_changes.empty()))
+      if (!(x_mouse_changes.empty() && y_mouse_changes.empty()))
       {
         constexpr static auto dead_zone = std::numeric_limits<std::uint16_t>::max() / 8;
 
-        bool should_reset = std::all_of(x_mouse_changes.begin(), x_mouse_changes.end(), [](auto& item) {
-          return item.second.new_value < dead_zone;
-        }) && std::all_of(y_mouse_changes.begin(), y_mouse_changes.end(), [](auto& item) {
-          return item.second.new_value < dead_zone;
-        });
+        const auto to_velocity = [max_speed = injector_args.max_turn_speed, exponent = injector_args.response_curve_exponent](std::uint16_t magnitude, bool negative) {
+          const double fraction = (double)magnitude / std::numeric_limits<std::uint16_t>::max();
+          const double shaped = std::pow(fraction, exponent);
+          const double speed = shaped * max_speed;
+          return (LONG)std::lround(negative ? -speed : speed);
+        };
 
-        if (should_reset)
+        // seed from current velocity so an axis with no change this packet keeps moving
+        POINT velocity = mouse_velocity.load(std::memory_order_relaxed);
+
+        if (!x_mouse_changes.empty())
         {
-          if (mouse_timer)
+          bool reset_x = std::all_of(x_mouse_changes.begin(), x_mouse_changes.end(), [](auto& item) {
+            return item.second.new_value < dead_zone;
+          });
+
+          if (reset_x)
           {
-            mouse_timer();
+            velocity.x = 0;
           }
-          mouse_timer = nullptr;
-          mouse_intensity = {};
-        }
-        else
-        {
-          auto max_x = std::max_element(x_mouse_changes.begin(), x_mouse_changes.end(), [](const auto& a, const auto& b) {
-            return a.second.new_value < b.second.new_value;
-          });
-
-          auto max_y = std::max_element(y_mouse_changes.begin(), y_mouse_changes.end(), [](const auto& a, const auto& b) {
-            return a.second.new_value < b.second.new_value;
-          });
-
-          if (max_x != x_mouse_changes.end())
+          else
           {
+            auto max_x = std::max_element(x_mouse_changes.begin(), x_mouse_changes.end(), [](const auto& a, const auto& b) {
+              return a.second.new_value < b.second.new_value;
+            });
+
             if (max_x->first == vkey::right)
             {
-              mouse_intensity.x = max_x->second.new_value / 1000;
+              velocity.x = to_velocity(max_x->second.new_value, false);
             }
             else if (max_x->first == vkey::left)
             {
-              mouse_intensity.x = -int(max_x->second.new_value / 1000);
+              velocity.x = to_velocity(max_x->second.new_value, true);
             }
             else
             {
               assert(false);
-              mouse_intensity.x = 0;
+              velocity.x = 0;
             }
+          }
+        }
+
+        if (!y_mouse_changes.empty())
+        {
+          bool reset_y = std::all_of(y_mouse_changes.begin(), y_mouse_changes.end(), [](auto& item) {
+            return item.second.new_value < dead_zone;
+          });
+
+          if (reset_y)
+          {
+            velocity.y = 0;
           }
           else
           {
-            mouse_intensity.x = 0;
-          }
+            auto max_y = std::max_element(y_mouse_changes.begin(), y_mouse_changes.end(), [](const auto& a, const auto& b) {
+              return a.second.new_value < b.second.new_value;
+            });
 
-          if (max_y != y_mouse_changes.end())
-          {
             if (max_y->first == vkey::down)
             {
-              mouse_intensity.y = max_y->second.new_value / 1000;
+              velocity.y = to_velocity(max_y->second.new_value, false);
             }
             else if (max_y->first == vkey::up)
             {
-              mouse_intensity.y = -int(max_y->second.new_value / 1000);
+              velocity.y = to_velocity(max_y->second.new_value, true);
             }
             else
             {
               assert(false);
-              mouse_intensity.y = 0;
+              velocity.y = 0;
             }
           }
-          else
-          {
-            mouse_intensity.y = 0;
-          }
-
-          if (!mouse_timer)
-          {
-            mouse_timer = win32::SetTimer(window.ref(), 10, [this](auto, auto, auto, auto) {
-              ::INPUT mouse_move{
-                .type = INPUT_MOUSE
-              };
-              mouse_move.type = INPUT_MOUSE;
-              mouse_move.mi.dwFlags = MOUSEEVENTF_MOVE;
-
-              mouse_move.mi.dx = mouse_intensity.x;
-              mouse_move.mi.dy = mouse_intensity.y;
-              const auto size = ::SendInput(1, &mouse_move, sizeof(INPUT));
-
-              assert(size == 1);
-            });
-          }
         }
+
+        mouse_velocity.store(velocity, std::memory_order_relaxed);
       }
 
       if (!simulated_inputs.empty())
@@ -619,7 +718,7 @@ namespace siege::views
 
   std::any bind_to_window(win32::window_ref ref, input_injector_args args)
   {
-    return std::make_any<input_injector>(std::move(ref), std::move(args));
+    return std::make_any<std::shared_ptr<input_injector>>(std::make_shared<input_injector>(std::move(ref), std::move(args)));
   }
 
 }// namespace siege::views

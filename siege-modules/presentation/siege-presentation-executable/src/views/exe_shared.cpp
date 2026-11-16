@@ -33,6 +33,7 @@ namespace siege::views
   export constexpr auto zt_fallback_ip = L"SIEGE_WSOCK_FALLBACK_BROADCAST_IP_V4"sv;
   export constexpr auto mouse_simulation_enabled_env = L"SIEGE_MOUSE_SIMULATION_ENABLED"sv;
   export constexpr auto keyboard_simulation_enabled_env = L"SIEGE_KEYBOARD_SIMULATION_ENABLED"sv;
+  export constexpr auto mouse_sensitivity_env = L"SIEGE_MOUSE_SENSITIVITY"sv;
 
   export enum struct setting_group {
     other = 1,
@@ -941,7 +942,7 @@ namespace siege::views
       self.launch_settings.emplace_back(game_setting{
         .setting_name = std::wstring{ mouse_simulation_enabled_env },
         .type = extension_setting_type::env_setting,
-        .value = std::wstring{ L"No" },
+        .value = std::wstring{ L"Yes" },
         .display_name = L"Simulate Mouse Input",
         .group_id = setting_group::input,
         .get_predefined_string = [results = std::vector<predefined_string>{
@@ -977,6 +978,13 @@ namespace siege::views
           }
           return results;
         } });
+
+      self.launch_settings.emplace_back(game_setting{
+        .setting_name = std::wstring{ mouse_sensitivity_env },
+        .type = extension_setting_type::env_setting,
+        .value = std::wstring{ L"750" },
+        .display_name = L"Simulated Mouse Sensitivity",
+        .group_id = setting_group::input });
     }
 
     std::wstring_view dedicated_setting = caps.dedicated_setting ? caps.dedicated_setting : L"";

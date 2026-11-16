@@ -954,7 +954,7 @@ namespace siege::views
 
       auto scale_value = [](auto value) { return static_cast<std::uint16_t>(static_cast<std::uint16_t>(value) * 2 + 1); };
 
-      if (b > 0)
+      if (b >= 0)
       {
         buffer[result++] = input_state_change{
           .vkey = key_positive,
@@ -992,7 +992,7 @@ namespace siege::views
     if (a.Gamepad.bLeftTrigger != b.Gamepad.bLeftTrigger)
     {
       auto trigger_b = (std::uint16_t)b.Gamepad.bLeftTrigger;
-      auto trigger_a = (std::uint16_t)b.Gamepad.bLeftTrigger;
+      auto trigger_a = (std::uint16_t)a.Gamepad.bLeftTrigger;
       buffer[result++] = input_state_change{
         .vkey = vkey::gamepad_left_trigger,
         .new_value = static_cast<std::uint16_t>(trigger_b * 257),

@@ -363,6 +363,40 @@ namespace siege::views
       });
 
 
+      double mouse_sensitivity = 750.0;
+      for (auto& setting : game_args.environment_settings)
+      {
+        if (setting.name && setting.value && std::wstring_view(setting.name) != mouse_sensitivity_env)
+        {
+          continue;
+        }
+
+        try
+        {
+          mouse_sensitivity = std::stod(std::wstring(setting.value));
+        }
+        catch (...)
+        {
+        }
+        break;
+      }
+
+      double refresh_rate_hz = [this] {
+        MONITORINFOEXW monitor_info{};
+        monitor_info.cbSize = sizeof(monitor_info);
+        DEVMODEW display_mode{
+          .dmSize = sizeof(DEVMODEW)
+        };
+
+        if (::GetMonitorInfoW(::MonitorFromWindow(ref(), MONITOR_DEFAULTTONEAREST), &monitor_info)
+            && ::EnumDisplaySettingsW(monitor_info.szDevice, ENUM_CURRENT_SETTINGS, &display_mode)
+            && display_mode.dmDisplayFrequency > 1)
+        {
+          return (double)display_mode.dmDisplayFrequency;
+        }
+        return 60.0;
+      }();
+
       this->launch.injector = bind_to_window(ref(), input_injector_args{ .args = std::move(game_args), .simulate_mouse = simulate_mouse, .simulate_keyboard = simulate_keyboard, .launch_game_with_extension = [this](auto& args, auto* process_info) -> HRESULT { return launch_game_with_extension(state, args, process_info); }, .on_process_closed = [this, global, for_client = has_client_preference(state)] mutable {
                                                     reset_launch_state(state);
                                                     apply_launch_button_state(*this);
@@ -400,7 +434,9 @@ namespace siege::views
                                                       ::CloseHandle(global);
                                                       ::SetEnvironmentVariableW(L"SIEGE_WSOCK_CURRENT_IP_GLOBAL_HANDLE", nullptr); }
 
-                                                    });
+                                                      ,
+                                                      .refresh_rate_hz = refresh_rate_hz,
+                                                      .max_turn_speed = mouse_sensitivity });
 
       disable_launch(state);
       apply_launch_button_state(*this);

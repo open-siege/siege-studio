@@ -1,3 +1,7 @@
+# Siege Studio + Siege Launcher 26.XX Development Release
+* Fixed mouse simulation being too fast when using a controller. The movement is smoother and more correct.
+* Fixed random issues where simulation will go in the opposite direction.
+
 # Siege Studio + Siege Launcher 26.42 Development Release
 * Fixed crash in several games, like Unreal Tournament 2004, when using the Zero Tier wrapper.
 * Renamed "Darkstar" to 3Space 3.5 to be more consistent and accurate.
