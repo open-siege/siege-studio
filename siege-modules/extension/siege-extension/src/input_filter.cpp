@@ -23,6 +23,11 @@ namespace siege
       std::uint16_t id = 0;
       std::uint16_t group_id = 0;
       std::uint16_t enabled = true;
+
+      // TODO this is actually scoped per process
+      // so other parts can't read this properly.
+      // we need to store the identifier too so that we can correctly identify
+      // devices when we are out of process
       HANDLE device_handle;
     };
 

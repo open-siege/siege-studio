@@ -132,31 +132,6 @@ TEST_CASE("apply_prelaunch_settings writes relevant config files correctly")
     REQUIRE(joystick_is_not_configured);
   }
 
-  SECTION("generates correct bindings for keyboard and mouse inputs")
-  {
-    std::array<input_mapping_ex, 5> bindings{ {
-      make_binding(vkey{ 'W' }, "+forward"),
-      make_binding(vkey{ 'A' }, "+moveleft"),
-      make_binding(vkey{ 'S' }, "+back"),
-      make_binding(vkey{ 'D' }, "+moveright"),
-      make_binding(vkey::lbutton, "+attack", hardware_context::mouse),
-    } };
-    auto args = args_with_bindings(bindings);
-    REQUIRE(extension.apply_prelaunch_settings(self_path(), args) == std::errc{});
-
-    auto config_text = read_text(id1 / "config.cfg");
-
-    REQUIRE(has_once(config_text, "bind W +forward"));
-    REQUIRE(has_once(config_text, "bind A +moveleft"));
-    REQUIRE(has_once(config_text, "bind S +back"));
-    REQUIRE(has_once(config_text, "bind D +moveright"));
-    REQUIRE(has_once(config_text, "bind MOUSE1 +attack"));
-
-    auto joystick_is_not_configured = !config_text.contains("joystick") || has_once(config_text, "joystick \"0\"");
-    REQUIRE(joystick_is_not_configured);
-  }
-
-  // TODO controller tests
   SECTION("generates correct bindings for controller inputs")
   {
     auto ps3 = hardware_context::controller_playstation_3;
@@ -190,6 +165,13 @@ TEST_CASE("apply_prelaunch_settings writes relevant config files correctly")
     REQUIRE(has_once(config_text, "joyadvaxisu \"0\""));
   }
 
+  // TODO we need to test if unbind is before bind for joystick inputs
+  // TODO we need to check if fallbacks are added correctly
+  // TODO a test for default loading
+  // TODO an end-to-end test which does everything
+  // TODO a test for Quake 2
+  // TODO a test for Quake 3
+  // TODO a test for multiple games per base type
 }
 
 fs::path self_path()

@@ -479,6 +479,7 @@ namespace siege::views
 
     return result;
   }
+
   XINPUT_STATE get_current_state_for_handle(controller_state& state, HRAWINPUT handle)
   {
     if (!populate_caps(state))
@@ -681,7 +682,7 @@ namespace siege::views
 
     std::array<BYTE, 29> response{};
     DWORD size;
-    if (!DeviceIoControl(file_handle, 0x8000e00c, request.data(), (DWORD)request.size(), response.data(), (DWORD)response.size(), &size, NULL) || size != response.size())
+    if (!::DeviceIoControl(file_handle, 0x8000e00c, request.data(), (DWORD)request.size(), response.data(), (DWORD)response.size(), &size, NULL) || size != response.size())
     {
       return std::nullopt;
     }
@@ -790,6 +791,7 @@ namespace siege::views
   {
     return (int)hint >= (int)hardware_context::global && (int)hint <= (int)hardware_context::mouse_wheel;
   }
+
   controller_info store_controller_context(const controller_info& info, siege::platform::hardware_context context)
   {
     if (is_non_controller_context(context))
@@ -820,6 +822,7 @@ namespace siege::views
 
     return result;
   }
+
   controller_info detect_and_store_controller_context_from_hint(const controller_info& info, hardware_context hint)
   {
     if (is_non_controller_context(hint))
@@ -870,6 +873,7 @@ namespace siege::views
 
     return indexes;
   }
+
   std::set<std::uint32_t> mapped_axes(const controller_info& info)
   {
     if (!info.get_hardware_index)
@@ -919,6 +923,8 @@ namespace siege::views
 
     return (std::uint32_t)indexes.size();
   }
+
+  // TODO add tests for this function
   std::span<input_state_change> get_changes(const XINPUT_STATE& a, const XINPUT_STATE& b, std::span<input_state_change> buffer)
   {
     std::size_t result = 0;
