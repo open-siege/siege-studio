@@ -37,5 +37,5 @@ Other files which contain LZ-Huffman compressed data:
 * [VEH files](/siege-modules/content/siege-content-3space/src/VEH.md)
 
 The core game engine:
-* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
+* [3Space Game Engine](/siege-modules/extension/siege-extension-3space/src/3space.md)
 

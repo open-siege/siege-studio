@@ -24,9 +24,8 @@ The technology has since powered many indie games and morphed into various incar
 * PNG
 * [MIS](/siege-modules/content/siege-content-3space/src/mis/MIS.md)
 * GUI
-* [CS](CS.md)
+* [CS](/siege-modules/content/siege-content-3space/src/cscript/CS.md)
 * [DSO](DSO.md)
 
 ### See Also
-* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
 * [3Space Game Engine](/siege-modules/extension/siege-extension-3space/src/3space.md)

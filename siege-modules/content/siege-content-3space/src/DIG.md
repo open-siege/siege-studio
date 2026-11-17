@@ -13,4 +13,4 @@ DIG files are typically embedded into [VOL files](/siege-modules/content/siege-c
 
 The core game engine:
 
-* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
+* [3Space Game Engine](/siege-modules/extension/siege-extension-3space/src/3space.md)

@@ -29,8 +29,10 @@ As more game extensions are fully implemented, tested and documented, they will 
 
 For games which are not in the list, it is still possible to drag-and-drop the game's exectuable into Siege Launcher.
 
-Generally, the Zero Tier networking feature works with several other games and if no extension is available for the game it is also possible to map controller inputs to keyboard buttons.
+Currently, Zero Tier networking is not available with Siege Studio for licensing reasons. A replacement is in development for allowing Siege Launcher to have feature parity with Siege Studio.
 
-These are general purpose features designed to work with as many other games as possible, but work is still needed to improve the experience (for example, there is no support for DirectPlay or WinSock2 yet nor is there support for configuring mouse emulation).
+If no extension is available for the game it is also possible to map controller inputs to keyboard buttons.
+
+These are general purpose features designed to work with as many other games as possible, but work is still needed to improve the experience.
 
 See the [release notes](/docs/release-notes.md) for future updates, improvements and bugfixes.

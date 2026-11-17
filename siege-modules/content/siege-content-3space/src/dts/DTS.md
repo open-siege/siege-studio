@@ -32,7 +32,7 @@ Here is a list of the variations of the DTS format:
         * Pro Pilot '98
         * Pro Pilot USA
         * Pro Pilot '99
-* Darkstar
+* 3Space 3.0 / 3.5
     * DTS files with the PERS tag, with the subsequent TS::Shape string, are present in:
         * Front Page Sports: Ski Racing
         * Trophy Bass 3D

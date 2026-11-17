@@ -1,6 +1,6 @@
 ### DIL File Format
 
-Represents the lighting for an interior shape, typically for the Darkstar engine.
+Represents the lighting for an interior shape, typically for the 3Space 3.0 / 3.5 engine.
 
 Contents of the file are compressed using the LZ-Huffman-based algorithm inside of the game.
 
@@ -20,4 +20,4 @@ Other files which contain LZ-Huffman compressed data:
 * [VEH files](/siege-modules/content/siege-content-3space/src/VEH.md)
 
 The core game engine:
-* [Darkstar Game Engine](/siege-modules/extension/siege-extension-3space/src/darkstar.md)
+* [3Space Game Engine](/siege-modules/extension/siege-extension-3space/src/3space.md)

@@ -27,6 +27,8 @@ The project contains the following components:
       * Current publicly available families of extensions are:
         * id Tech (for games built using id Tech or related engines).
         * 3Space (for games built using 3Space or Torque).
+        * Vampire (for games built with Raven's vampire engine).
+        * Cyclone (for games built by Cyclone Studios such as Uprising).
         * Other (for games or tools which aren't logically organised).
       * There are also two additonal dynamic libraries meant for supporting advanced features available to every game:
         * Input Filtration - which allows for keyboard and mouse input to be restricted to specific devices.
